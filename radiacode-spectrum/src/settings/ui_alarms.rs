@@ -21,7 +21,6 @@ pub fn draw_monitor_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
     dose_rate_card(ui, draft, dose_unit);
     ui.add_space(6.0);
     count_rate_card(ui, draft, count_unit);
-    draw_alarm_signal_mode(ui, draft);
 }
 
 pub fn draw_dosimeter_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
