@@ -1,4 +1,4 @@
-# Radiacode (Rust)
+# Radiacode Toolkit
 
 Linux-first tooling for [RadiaCode](https://www.radiacode.com/) radiation detectors and spectrometers (RC-1xx series). Connect over USB or Bluetooth LE, monitor live readings, capture spectra, and manage device settings from a native desktop app.
 

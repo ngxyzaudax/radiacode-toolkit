@@ -358,6 +358,9 @@ impl SpectrogramState {
     }
 
     pub fn reset_accumulation(&mut self) {
+        if self.is_recording() {
+            return;
+        }
         if self.display == SpectrogramDisplay::Loaded {
             self.close_loaded();
         }

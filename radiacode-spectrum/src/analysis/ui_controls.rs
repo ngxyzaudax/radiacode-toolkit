@@ -34,6 +34,9 @@ pub fn draw_analysis_controls(
         ui.selectable_value(&mut state.outline_only, false, "Filled");
         ui.selectable_value(&mut state.outline_only, true, "Outline");
     });
+    ui.add_enabled_ui(state.background.is_some(), |ui| {
+        ui.checkbox(&mut state.subtract_background, "Background subtraction");
+    });
     ui.add_space(4.0);
     ui.label("Smooth window (channels)");
     let mut slider = state.smooth_window.clamp(1, 16) as i32;

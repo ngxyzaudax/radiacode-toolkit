@@ -28,8 +28,11 @@ pub fn draw_analysis_view(ui: &mut Ui, state: &AnalysisState, y_scale: YScale) {
         y_scale,
         state.smooth_window,
         style,
+        state.subtract_background,
     );
-    draw_footer_readouts(ui, state);
+    if state.subtract_background {
+        draw_footer_readouts(ui, state);
+    }
 }
 
 fn draw_footer_readouts(ui: &mut Ui, state: &AnalysisState) {

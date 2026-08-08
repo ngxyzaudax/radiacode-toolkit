@@ -21,6 +21,7 @@ pub struct AnalysisState {
     pub samples: Vec<SampleAnalysis>,
     pub smooth_window: usize,
     pub outline_only: bool,
+    pub subtract_background: bool,
     pub status: String,
     pub error: String,
 }
@@ -36,6 +37,7 @@ impl AnalysisState {
             samples: Vec::new(),
             smooth_window: 1,
             outline_only: false,
+            subtract_background: false,
             status: String::new(),
             error: String::new(),
         }

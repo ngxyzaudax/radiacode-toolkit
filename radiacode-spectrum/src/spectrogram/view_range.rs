@@ -67,9 +67,14 @@ impl SpectrogramViewRange {
         let span = (self.energy_max_kev - self.energy_min_kev).max(1.0);
         let full_span = self.full_series_span();
         if span >= full_span * FIT_FULL_THRESHOLD {
-            self.snap_full_spectrum();
+            self.energy_min_kev = bounds_min;
+            self.energy_max_kev = bounds_max;
+            if self.fit_full_spectrum {
+                self.channel_start = 0;
+            }
             return;
         }
+        self.fit_full_spectrum = false;
         let mut min = self.energy_min_kev.max(bounds_min);
         let mut max = self.energy_max_kev.min(bounds_max);
         if max - min < 1.0 {
@@ -253,5 +258,18 @@ mod tests {
         range.zoom_energy(500.0, 6.0);
         assert!(range.fit_full_spectrum);
         assert!((range.energy_max_kev - 2804.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn channel_pan_survives_series_bound_refresh() {
+        let mut range = SpectrogramViewRange::new();
+        let energies = sample_energies();
+        range.fit_series_energy(&energies);
+        range.scroll_channels(40, energies.len(), 80);
+        assert!(!range.fit_full_spectrum);
+        assert_eq!(range.channel_start, 40);
+        range.set_series_energy_bounds(&energies);
+        assert_eq!(range.channel_start, 40);
+        assert!(!range.fit_full_spectrum);
     }
 }

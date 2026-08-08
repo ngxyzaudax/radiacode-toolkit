@@ -16,6 +16,7 @@ pub fn draw_analysis_plots(
     y_scale: YScale,
     smooth_window: usize,
     style: HistogramStyle,
+    subtract_background: bool,
 ) {
     if samples.is_empty() && background.is_none() {
         return;
@@ -25,30 +26,18 @@ pub fn draw_analysis_plots(
     };
     let energies = &axis.energies_kev;
     let width = axis.a1 as f64;
-    draw_legend(ui, samples, background.is_some());
-    ui.label("Overlay");
-    draw_overlay_plot(
-        ui,
-        energies,
-        width,
-        samples,
-        background,
-        y_scale,
-        smooth_window,
-        style,
-    );
-    ui.add_space(12.0);
-    ui.label("Net (sample − background)");
-    draw_net_plot(
-        ui,
-        energies,
-        width,
-        samples,
-        background,
-        y_scale,
-        smooth_window,
-        style,
-    );
+    let show_net = subtract_background && background.is_some();
+    draw_legend(ui, samples, background.is_some() && !show_net);
+    ui.label(if show_net {
+        "Net (sample − background)"
+    } else {
+        "Overlay"
+    });
+    if show_net {
+        draw_net_plot(ui, energies, width, samples, background, y_scale, smooth_window, style);
+    } else {
+        draw_overlay_plot(ui, energies, width, samples, background, y_scale, smooth_window, style);
+    }
 }
 
 fn draw_overlay_plot(
@@ -95,7 +84,7 @@ fn draw_overlay_plot(
             log_floor,
         ));
     }
-    show_owned_series(ui, "analysis_overlay", &owned, y_scale, style);
+    show_owned_series(ui, "analysis_plot", &owned, y_scale, style);
 }
 
 fn draw_net_plot(
@@ -146,5 +135,5 @@ fn draw_net_plot(
             )
         })
         .collect();
-    show_owned_series(ui, "analysis_net", &owned, y_scale, style);
+    show_owned_series(ui, "analysis_plot", &owned, y_scale, style);
 }

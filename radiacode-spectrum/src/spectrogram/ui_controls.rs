@@ -26,9 +26,11 @@ pub fn draw_spectrogram_controls(
     let settings_changed = draw_spectrogram_settings(ui, state);
 
     ui.add_space(4.0);
-    if ui.button("Reset accumulation").clicked() {
-        state.reset_accumulation();
-    }
+    ui.add_enabled_ui(!state.is_recording(), |ui| {
+        if ui.button("Reset accumulation").clicked() {
+            state.reset_accumulation();
+        }
+    });
 
     if settings_changed {
         action = Some(SpectrogramControlsAction::SettingsChanged);
