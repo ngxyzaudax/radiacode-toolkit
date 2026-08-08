@@ -1,5 +1,6 @@
 mod about;
 mod analysis;
+mod device;
 mod dosimeter;
 mod app;
 mod app_config;
@@ -16,7 +17,6 @@ mod smooth;
 mod spectrogram;
 mod theme;
 mod ui_controls;
-mod ui_device;
 mod ui_device_status;
 mod ui_disconnected;
 mod ui_plot;

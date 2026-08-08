@@ -9,7 +9,9 @@ use crate::spectrogram::color_scheme::ColorScheme;
 pub const DEFAULT_CAPTURE_INTERVAL_SECS: f64 = 5.0;
 pub const DEFAULT_MAX_SAMPLES: usize = 10_000;
 pub const MIN_CAPTURE_INTERVAL_SECS: f64 = 1.0;
-pub const MAX_CAPTURE_INTERVAL_SECS: f64 = 600.0;
+pub const MAX_CAPTURE_INTERVAL_SECS: f64 = 20.0;
+pub const MIN_MAX_SAMPLES: usize = 100;
+pub const MAX_MAX_SAMPLES: usize = 10_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpectrogramSettings {
@@ -43,8 +45,9 @@ impl SpectrogramSettings {
     pub fn clamp(&mut self) {
         self.capture_interval_secs = self
             .capture_interval_secs
-            .clamp(MIN_CAPTURE_INTERVAL_SECS, MAX_CAPTURE_INTERVAL_SECS);
-        self.max_samples = self.max_samples.clamp(100, 20_000);
+            .clamp(MIN_CAPTURE_INTERVAL_SECS, MAX_CAPTURE_INTERVAL_SECS)
+            .round();
+        self.max_samples = self.max_samples.clamp(MIN_MAX_SAMPLES, MAX_MAX_SAMPLES);
         if self.z_max <= self.z_min {
             self.z_max = self.z_min + 1.0;
         }

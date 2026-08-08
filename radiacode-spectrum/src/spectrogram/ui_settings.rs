@@ -1,7 +1,10 @@
-use egui::{CollapsingHeader, RichText, Ui};
+use egui::{CollapsingHeader, Response, RichText, Ui};
 
 use crate::spectrogram::color_scheme::ColorScheme;
-use crate::spectrogram::settings::SpectrogramSettings;
+use crate::spectrogram::settings::{
+    SpectrogramSettings, MAX_CAPTURE_INTERVAL_SECS, MAX_MAX_SAMPLES, MIN_CAPTURE_INTERVAL_SECS,
+    MIN_MAX_SAMPLES,
+};
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
 
@@ -40,19 +43,20 @@ pub fn draw_capture_controls(
 ) -> bool {
     let mut changed = false;
     ui.add_enabled_ui(!recording, |ui| {
-        changed |= ui
-            .add(
-                egui::Slider::new(&mut settings.capture_interval_secs, 1.0..=600.0)
-                    .text("Interval (s)"),
+        let interval = ui.add(
+            egui::Slider::new(
+                &mut settings.capture_interval_secs,
+                MIN_CAPTURE_INTERVAL_SECS..=MAX_CAPTURE_INTERVAL_SECS,
             )
-            .changed();
-        changed |= ui
-            .add(
-                egui::Slider::new(&mut settings.max_samples, 100..=20_000)
-                    .logarithmic(true)
-                    .text("Max samples"),
-            )
-            .changed();
+            .step_by(1.0)
+            .text("Interval (s)"),
+        );
+        changed |= slider_committed(&interval);
+        let samples = ui.add(
+            egui::Slider::new(&mut settings.max_samples, MIN_MAX_SAMPLES..=MAX_MAX_SAMPLES)
+                .text("Max samples"),
+        );
+        changed |= slider_committed(&samples);
     });
     if recording {
         ui.label(
@@ -70,12 +74,10 @@ pub fn draw_display_controls(ui: &mut Ui, settings: &mut SpectrogramSettings) ->
         .checkbox(&mut settings.auto_brightness, "Auto brightness")
         .changed();
     if !settings.auto_brightness {
-        changed |= ui
-            .add(egui::Slider::new(&mut settings.z_min, 0.0..=10_000.0).text("Z min"))
-            .changed();
-        changed |= ui
-            .add(egui::Slider::new(&mut settings.z_max, 1.0..=50_000.0).text("Z max"))
-            .changed();
+        let z_min = ui.add(egui::Slider::new(&mut settings.z_min, 0.0..=10_000.0).text("Z min"));
+        changed |= slider_committed(&z_min);
+        let z_max = ui.add(egui::Slider::new(&mut settings.z_max, 1.0..=50_000.0).text("Z max"));
+        changed |= slider_committed(&z_max);
     }
     ui.horizontal(|ui| {
         ui.label(RichText::new("Palette").small().color(MUTED));
@@ -96,4 +98,8 @@ fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool {
     changed |= ui.checkbox(&mut state.show_count_rate, "Count rate").changed();
     changed |= ui.checkbox(&mut state.show_isotopes, "Isotope lines").changed();
     changed
+}
+
+fn slider_committed(response: &Response) -> bool {
+    response.drag_stopped() || (response.changed() && !response.dragged())
 }

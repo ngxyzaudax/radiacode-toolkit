@@ -1,5 +1,6 @@
 use crate::dosimeter::state::DosimeterState;
 
+
 const Y_HEADROOM: f64 = 0.2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

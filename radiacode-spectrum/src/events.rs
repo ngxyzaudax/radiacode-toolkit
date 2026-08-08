@@ -97,11 +97,11 @@ impl AppState {
                 let fresh_session = self.connection != ConnectionState::Connected;
                 self.connection = ConnectionState::Connected;
                 self.connecting_endpoint = None;
-                self.device_info = Some(info);
                 if fresh_session {
                     self.monitor.on_connect();
-                    self.dosimeter.on_connect();
+                    self.dosimeter.on_connect(&info.serial);
                 }
+                self.device_info = Some(info);
                 self.spectrum_fetch_pending = false;
                 self.monitor_fetch_pending = false;
                 self.status = "Connected. Acquiring monitor data…".into();

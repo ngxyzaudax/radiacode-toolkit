@@ -9,7 +9,7 @@ pub fn draw_disconnected_view(ui: &mut Ui, connection: ConnectionState) {
         let message = match connection {
             ConnectionState::Connecting => "Connecting to device…",
             ConnectionState::Disconnected | ConnectionState::Connected => {
-                "Connect a device to start monitoring."
+                "Connect a device on the Device tab to start monitoring."
             }
         };
         ui.label(RichText::new(message).size(18.0).color(MUTED));
@@ -23,7 +23,8 @@ pub fn shows_tab_content(connection: ConnectionState) -> bool {
 pub fn tab_works_offline(tab: crate::view_tab::ViewTab) -> bool {
     matches!(
         tab,
-        crate::view_tab::ViewTab::Settings
+        crate::view_tab::ViewTab::Device
+            | crate::view_tab::ViewTab::Settings
             | crate::view_tab::ViewTab::Analysis
             | crate::view_tab::ViewTab::About
     )

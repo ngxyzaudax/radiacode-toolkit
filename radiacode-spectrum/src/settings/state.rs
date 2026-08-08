@@ -10,11 +10,27 @@ pub enum SettingsDeviceOp {
     Saving,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettingsSection {
+    Device,
+    Application,
+}
+
+impl SettingsSection {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Device => "Device",
+            Self::Application => "Application",
+        }
+    }
+}
+
 pub struct SettingsState {
     pub baseline: Option<DeviceConfig>,
     pub draft: Option<DeviceConfig>,
     pub device_op: SettingsDeviceOp,
     pub show_load_confirm: bool,
+    pub section: SettingsSection,
     pub app: AppConfig,
     pub spectrogram: SpectrogramSettings,
     pub status: String,
@@ -27,6 +43,7 @@ impl SettingsState {
             draft: None,
             device_op: SettingsDeviceOp::Idle,
             show_load_confirm: false,
+            section: SettingsSection::Device,
             app: load_app_config(),
             spectrogram: load_settings(),
             status: String::new(),

@@ -3,8 +3,9 @@ use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
 
 use radiacode_core::dose_accum_unit_label;
 
+use crate::dosimeter::format::format_session_duration;
 use crate::dosimeter::plot_bounds::{dose_points, plot_bounds, PlotBounds};
-use crate::dosimeter::state::{format_session_duration, DosimeterState};
+use crate::dosimeter::state::DosimeterState;
 use crate::monitor::AlarmLevel;
 use crate::theme::{ACCENT, MUTED};
 

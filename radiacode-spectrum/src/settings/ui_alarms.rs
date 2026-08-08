@@ -7,12 +7,29 @@ use crate::settings::ui_alarm_card::alarm_card;
 pub fn draw_alarms_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
     let dose_unit = dose_unit_label(draft.alarms.dose_unit_sv);
     let count_unit = count_unit_label(draft.alarms.count_unit_cpm);
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
-        dose_rate_card(ui, draft, dose_unit);
-        count_rate_card(ui, draft, count_unit);
-        accum_dose_card(ui, draft, dose_unit);
+    ui.columns(3, |columns| {
+        dose_rate_card(&mut columns[0], draft, dose_unit);
+        count_rate_card(&mut columns[1], draft, count_unit);
+        accum_dose_card(&mut columns[2], draft, dose_unit);
     });
+    draw_alarm_signal_mode(ui, draft);
+}
+
+pub fn draw_monitor_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
+    let dose_unit = dose_unit_label(draft.alarms.dose_unit_sv);
+    let count_unit = count_unit_label(draft.alarms.count_unit_cpm);
+    dose_rate_card(ui, draft, dose_unit);
+    ui.add_space(6.0);
+    count_rate_card(ui, draft, count_unit);
+    draw_alarm_signal_mode(ui, draft);
+}
+
+pub fn draw_dosimeter_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
+    let dose_unit = dose_unit_label(draft.alarms.dose_unit_sv);
+    accum_dose_card(ui, draft, dose_unit);
+}
+
+fn draw_alarm_signal_mode(ui: &mut Ui, draft: &mut DeviceConfig) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
         ui.label("Signal mode");

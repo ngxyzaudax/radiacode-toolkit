@@ -8,21 +8,25 @@ use tracing::{debug, info, warn};
 
 use crate::about::draw_about_view;
 use crate::analysis::{draw_analysis_controls, draw_analysis_view, AnalysisAction, AnalysisState};
-use crate::dosimeter::{draw_dosimeter_controls, draw_dosimeter_view, DosimeterAction};
+use crate::dosimeter::{
+    draw_dosimeter_controls, draw_dosimeter_view, DosimeterControlsAction,
+};
 use crate::events::AppState;
 use crate::icon::app_icon;
 use crate::model::{ConnectionState, DeviceInfo};
 use crate::monitor::{draw_monitor_controls, draw_monitor_view, AlarmLevel};
 use crate::pc_alarm::maybe_beep_alarm;
 use crate::scale::YScale;
-use crate::settings::{draw_settings_view, SettingsAction, SettingsDeviceOp, SettingsState};
+use crate::settings::{
+    draw_settings_controls, draw_settings_view, SettingsAction, SettingsDeviceOp, SettingsState,
+};
 use crate::spectrogram::capture::SpectrogramCapture;
 use crate::spectrogram::ui_controls::{draw_spectrogram_controls, SpectrogramControlsAction};
 use crate::spectrogram::ui_view::draw_spectrogram_view;
 use crate::spectrogram::SpectrogramState;
 use crate::theme;
 use crate::ui_controls::{draw_spectrum_controls, ControlsAction, ControlsProps};
-use crate::ui_device::{draw_device_panel, DeviceAction, DevicePanelProps};
+use crate::device::{draw_device_view, DeviceAction, DeviceViewProps};
 use crate::ui_disconnected::{draw_disconnected_view, shows_tab_content, tab_works_offline};
 use crate::ui_plot::draw_spectrum_plot;
 use crate::usb_access::{
@@ -66,8 +70,8 @@ impl SpectrumApp {
             settings,
             spectrogram,
             analysis,
-            active_tab: ViewTab::Monitor,
-            previous_tab: ViewTab::Monitor,
+            active_tab: ViewTab::Device,
+            previous_tab: ViewTab::Device,
             y_scale: YScale::Linear,
             smooth_window: 1,
             theme_ready: false,
@@ -188,6 +192,7 @@ impl SpectrumApp {
                         SettingsDeviceOp::Idle => {}
                     }
                     self.state.monitor.apply_limits(config.alarms);
+                    self.state.dosimeter.apply_limits(config.alarms);
                 }
             }
             if let WorkerEvent::Error(message) = &event {
@@ -214,7 +219,11 @@ impl SpectrumApp {
                     self.sync_monitor_poll_interval();
                     self.spectrogram.sync_from_capture();
                     self.remember_connected_device(info);
-                    if self.active_tab == ViewTab::Settings && !self.settings.draft_dirty() {
+                    if matches!(
+                        self.active_tab,
+                        ViewTab::Settings | ViewTab::Monitor | ViewTab::Dosimeter
+                    ) && !self.settings.draft_dirty()
+                    {
                         self.start_device_load();
                     }
                 }
@@ -345,9 +354,14 @@ impl SpectrumApp {
         }
     }
 
-    fn handle_dosimeter_action(&mut self, action: DosimeterAction) {
-        if matches!(action, DosimeterAction::ResetDose) {
-            self.send(WorkerCommand::ResetDose);
+    fn handle_dosimeter_action(&mut self, action: DosimeterControlsAction) {
+        match action {
+            DosimeterControlsAction::ResetDose => {
+                self.send(WorkerCommand::ResetDose);
+            }
+            DosimeterControlsAction::Settings(settings_action) => {
+                self.handle_settings_action(settings_action);
+            }
         }
     }
 
@@ -389,13 +403,21 @@ impl SpectrumApp {
                 self.sync_monitor_poll_interval();
             }
             SettingsAction::SpectrogramChanged => {
+                let previous_interval = self.spectrogram.settings.capture_interval_secs;
+                let previous_dir = self.spectrogram.settings.recordings_dir.clone();
                 self.settings.persist_spectrogram();
                 self.settings
                     .apply_spectrogram_to(&mut self.spectrogram.settings);
                 self.spectrogram.on_settings_changed();
-                self.analysis
-                    .refresh_library(&self.spectrogram.settings.recordings_dir);
-                self.sync_capture_interval();
+                if self.spectrogram.settings.recordings_dir != previous_dir {
+                    self.analysis
+                        .refresh_library(&self.spectrogram.settings.recordings_dir);
+                }
+                if (previous_interval - self.spectrogram.settings.capture_interval_secs).abs()
+                    > 1e-9
+                {
+                    self.sync_capture_interval();
+                }
             }
         }
     }
@@ -411,8 +433,11 @@ impl SpectrumApp {
         self.send(WorkerCommand::FetchDeviceConfig);
     }
 
-    fn maybe_settings_auto_load(&mut self) {
-        if self.active_tab != ViewTab::Settings {
+    fn maybe_device_config_auto_load(&mut self) {
+        if !matches!(
+            self.active_tab,
+            ViewTab::Settings | ViewTab::Monitor | ViewTab::Dosimeter
+        ) {
             return;
         }
         if self.state.connection != ConnectionState::Connected {
@@ -424,7 +449,7 @@ impl SpectrumApp {
         self.start_device_load();
     }
 
-    fn enter_settings_tab(&mut self) {
+    fn enter_device_config_tab(&mut self) {
         if self.state.connection != ConnectionState::Connected {
             return;
         }
@@ -433,6 +458,26 @@ impl SpectrumApp {
             return;
         }
         self.start_device_load();
+    }
+
+    fn sync_draft_alarm_limits(&mut self) {
+        let Some(draft) = self.settings.draft.as_ref() else {
+            return;
+        };
+        self.state.monitor.apply_limits(draft.alarms);
+        self.state.dosimeter.apply_limits(draft.alarms);
+    }
+
+    fn enter_settings_tab(&mut self) {
+        self.enter_device_config_tab();
+    }
+
+    fn enter_monitor_tab(&mut self) {
+        self.enter_device_config_tab();
+    }
+
+    fn enter_dosimeter_tab(&mut self) {
+        self.enter_device_config_tab();
     }
 
     fn handle_spectrogram_action(&mut self, action: SpectrogramControlsAction) {
@@ -481,10 +526,14 @@ impl SpectrumApp {
             SpectrogramControlsAction::CloseLoaded => self.spectrogram.close_loaded(),
             SpectrogramControlsAction::Load(path) => self.spectrogram.request_load(path),
             SpectrogramControlsAction::SettingsChanged => {
-                self.spectrogram.persist_settings();
+                let previous_interval = self.settings.spectrogram.capture_interval_secs;
                 self.settings.spectrogram = self.spectrogram.settings.clone();
                 self.spectrogram.on_settings_changed();
-                self.sync_capture_interval();
+                if (previous_interval - self.spectrogram.settings.capture_interval_secs).abs()
+                    > 1e-9
+                {
+                    self.sync_capture_interval();
+                }
             }
             SpectrogramControlsAction::LibraryChanged => {}
         }
@@ -582,7 +631,7 @@ impl App for SpectrumApp {
             self.spectrogram.sync_from_capture();
         }
         self.maybe_live_refresh();
-        self.maybe_settings_auto_load();
+        self.maybe_device_config_auto_load();
         ctx.request_repaint_after(Duration::from_millis(200));
     }
 
@@ -597,26 +646,19 @@ impl App for SpectrumApp {
             .resizable(true)
             .default_size(300.0)
             .show(ui, |ui| {
-                let device_action = draw_device_panel(
-                    ui,
-                    DevicePanelProps {
-                        devices: &self.state.devices,
-                        connection: self.state.connection,
-                        connecting_endpoint: self.state.connecting_endpoint.as_ref(),
-                        device_info: self.state.device_info.as_ref(),
-                        scanning: self.state.scanning,
-                        busy: self.state.busy,
-                        scanned_once: self.state.scanned_once,
-                        status: &self.state.status,
-                    },
-                );
-                if let Some(action) = device_action {
-                    self.handle_device_action(action);
-                }
-
                 if shows_tab_content(self.state.connection) || tab_works_offline(self.active_tab) {
                     match self.active_tab {
-                        ViewTab::Monitor => draw_monitor_controls(ui),
+                        ViewTab::Device => {}
+                        ViewTab::Monitor => {
+                            if let Some(action) = draw_monitor_controls(
+                                ui,
+                                &mut self.settings,
+                                self.state.connection,
+                            ) {
+                                self.handle_settings_action(action);
+                            }
+                            self.sync_draft_alarm_limits();
+                        }
                         ViewTab::Spectrum => {
                             if let Some(action) = draw_spectrum_controls(
                                 ui,
@@ -639,9 +681,14 @@ impl App for SpectrumApp {
                             }
                         }
                         ViewTab::Dosimeter => {
-                            if let Some(action) = draw_dosimeter_controls(ui) {
+                            if let Some(action) = draw_dosimeter_controls(
+                                ui,
+                                &mut self.settings,
+                                self.state.connection,
+                            ) {
                                 self.handle_dosimeter_action(action);
                             }
+                            self.sync_draft_alarm_limits();
                         }
                         ViewTab::Analysis => {
                             if let Some(action) = draw_analysis_controls(
@@ -652,7 +699,9 @@ impl App for SpectrumApp {
                                 self.handle_analysis_action(action);
                             }
                         }
-                        ViewTab::Settings => {}
+                        ViewTab::Settings => {
+                            draw_settings_controls(ui, &mut self.settings);
+                        }
                         ViewTab::About => {}
                     }
                 }
@@ -661,6 +710,11 @@ impl App for SpectrumApp {
         CentralPanel::default().show(ui, |ui| {
             let previous_tab = self.previous_tab;
             ui.horizontal(|ui| {
+                ui.selectable_value(
+                    &mut self.active_tab,
+                    ViewTab::Device,
+                    ViewTab::Device.label(),
+                );
                 ui.selectable_value(
                     &mut self.active_tab,
                     ViewTab::Monitor,
@@ -706,12 +760,38 @@ impl App for SpectrumApp {
             if self.active_tab == ViewTab::Analysis && previous_tab != ViewTab::Analysis {
                 self.enter_analysis_tab();
             }
+            if self.active_tab == ViewTab::Monitor && previous_tab != ViewTab::Monitor {
+                self.enter_monitor_tab();
+            }
+            if self.active_tab == ViewTab::Dosimeter && previous_tab != ViewTab::Dosimeter {
+                self.enter_dosimeter_tab();
+            }
             if self.active_tab == ViewTab::Settings && previous_tab != ViewTab::Settings {
                 self.enter_settings_tab();
             }
             self.previous_tab = self.active_tab;
             ui.separator();
-            if self.active_tab == ViewTab::Settings {
+            if self.active_tab == ViewTab::Device {
+                let content_rect = ui.available_rect_before_wrap();
+                ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
+                    ui.set_clip_rect(content_rect);
+                    if let Some(action) = draw_device_view(
+                        ui,
+                        DeviceViewProps {
+                            devices: &self.state.devices,
+                            connection: self.state.connection,
+                            connecting_endpoint: self.state.connecting_endpoint.as_ref(),
+                            device_info: self.state.device_info.as_ref(),
+                            scanning: self.state.scanning,
+                            busy: self.state.busy,
+                            scanned_once: self.state.scanned_once,
+                            status: &self.state.status,
+                        },
+                    ) {
+                        self.handle_device_action(action);
+                    }
+                });
+            } else if self.active_tab == ViewTab::Settings {
                 let content_rect = ui.available_rect_before_wrap();
                 ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
                     ui.set_clip_rect(content_rect);
@@ -757,7 +837,7 @@ impl App for SpectrumApp {
                         ViewTab::Dosimeter => {
                             draw_dosimeter_view(ui, &self.state.dosimeter);
                         }
-                        ViewTab::Analysis | ViewTab::Settings | ViewTab::About => {}
+                        ViewTab::Device | ViewTab::Analysis | ViewTab::Settings | ViewTab::About => {}
                     }
                 });
             } else {

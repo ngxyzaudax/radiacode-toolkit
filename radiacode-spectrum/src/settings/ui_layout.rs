@@ -13,11 +13,11 @@ pub fn settings_section(
         .show(ui, |ui| {
             if !hint.is_empty() {
                 ui.label(RichText::new(hint).small().color(MUTED));
-                ui.add_space(4.0);
+                ui.add_space(2.0);
             }
             add_contents(ui);
         });
-    ui.add_space(4.0);
+    ui.add_space(2.0);
 }
 
 pub fn toggle_knob(ui: &mut Ui, on: &mut bool) -> bool {

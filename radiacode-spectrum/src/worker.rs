@@ -126,7 +126,7 @@ async fn recv_batch(commands: &mut UnboundedReceiver<WorkerCommand>) -> Option<C
 }
 
 fn capture_duration(secs: f64) -> Duration {
-    Duration::from_secs_f64(secs.clamp(1.0, 600.0))
+    Duration::from_secs_f64(secs.clamp(1.0, 20.0))
 }
 
 fn monitor_poll_duration(secs: u64) -> Duration {

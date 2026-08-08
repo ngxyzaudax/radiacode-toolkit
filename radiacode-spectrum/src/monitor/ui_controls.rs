@@ -1,14 +1,16 @@
-use egui::{RichText, Ui};
+use egui::Ui;
 
-use crate::theme::MUTED;
+use crate::model::ConnectionState;
+use crate::settings::{
+    draw_alarm_sidebar_shell, draw_monitor_alarms_sidebar, SettingsAction, SettingsState,
+};
 
-pub fn draw_monitor_controls(ui: &mut Ui) {
-    ui.add_space(8.0);
-    ui.separator();
-    ui.add_space(8.0);
-    ui.label(
-        RichText::new("Alarm thresholds and units are edited in the Settings tab.")
-            .small()
-            .color(MUTED),
-    );
+pub fn draw_monitor_controls(
+    ui: &mut Ui,
+    settings: &mut SettingsState,
+    connection: ConnectionState,
+) -> Option<SettingsAction> {
+    draw_alarm_sidebar_shell(ui, settings, connection, "Alarms", |ui, draft| {
+        draw_monitor_alarms_sidebar(ui, draft);
+    })
 }

@@ -1,16 +1,23 @@
 mod action;
 mod state;
 mod ui_alarm_card;
+mod ui_alarm_cells;
+mod ui_alarm_sidebar;
 mod ui_alarms;
 mod ui_app;
 mod ui_columns;
+mod ui_confirm;
 mod ui_device;
 mod ui_icons;
 mod ui_layout;
+mod ui_nav;
 mod ui_signals;
 mod ui_toolbar;
 mod ui_view;
 
 pub use action::SettingsAction;
 pub use state::{SettingsDeviceOp, SettingsState};
+pub use ui_alarm_sidebar::draw_alarm_sidebar_shell;
+pub use ui_alarms::{draw_dosimeter_alarms_sidebar, draw_monitor_alarms_sidebar};
+pub use ui_nav::draw_settings_controls;
 pub use ui_view::draw_settings_view;

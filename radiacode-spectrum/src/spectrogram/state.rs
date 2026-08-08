@@ -292,33 +292,44 @@ impl SpectrogramState {
 
     pub fn on_settings_changed(&mut self) {
         self.settings.clamp();
-        let previous_interval = self
-            .capture
-            .lock()
-            .ok()
-            .map(|cap| cap.settings.capture_interval_secs)
-            .unwrap_or(self.settings.capture_interval_secs);
+        let previous = self.capture.lock().ok().map(|cap| {
+            (
+                cap.settings.capture_interval_secs,
+                cap.settings.recordings_dir.clone(),
+            )
+        });
+        let (previous_interval, previous_dir) = previous.unwrap_or((
+            self.settings.capture_interval_secs,
+            self.settings.recordings_dir.clone(),
+        ));
         let interval_changed =
             (previous_interval - self.settings.capture_interval_secs).abs() > 1e-9;
+        let dir_changed = previous_dir != self.settings.recordings_dir;
         self.persist_settings();
         if let Ok(mut cap) = self.capture.lock() {
             cap.settings = self.settings.clone();
         }
         if interval_changed {
-            self.reset_accumulation();
-            self.apply_capture_interval_to_live_header();
-            if let Ok(mut cap) = self.capture.lock() {
-                cap.status = format!(
-                    "Capture interval set to {:.0}s. Accumulation reset.",
-                    self.settings.capture_interval_secs
-                );
-                cap.mark_dirty();
-            }
-            self.sync_from_capture();
+            self.apply_interval_change();
         }
-        self.refresh_history();
+        if dir_changed {
+            self.refresh_history();
+        }
         self.z_range_rows = 0;
         self.texture.dirty = true;
+    }
+
+    fn apply_interval_change(&mut self) {
+        self.reset_accumulation();
+        self.apply_capture_interval_to_live_header();
+        if let Ok(mut cap) = self.capture.lock() {
+            cap.status = format!(
+                "Capture interval set to {:.0}s. Accumulation reset.",
+                self.settings.capture_interval_secs
+            );
+            cap.mark_dirty();
+        }
+        self.sync_from_capture();
     }
 
     fn apply_capture_interval_to_live_header(&mut self) {
