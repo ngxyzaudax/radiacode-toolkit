@@ -1,15 +1,16 @@
-use egui::{RichText, Ui, Vec2};
+use egui::{Ui, Vec2};
 
 use crate::settings::ui_alarm_cells::{
-    fixed_label, fixed_unit, fixed_value, icon_cell, oos_label, signal_check, CHECK_WIDTH,
-    LABEL_WIDTH, UNIT_WIDTH, VALUE_WIDTH,
+    fixed_gap, fixed_label, fixed_title, fixed_unit, fixed_value, icon_cell, oos_label,
+    signal_check, CHECK_WIDTH, LABEL_WIDTH, UNIT_WIDTH, VALUE_WIDTH,
 };
 use crate::settings::ui_icons::{paint_signal_icon, SignalIconKind};
+use crate::theme::{SPACE_SM, SPACE_XS};
 
-const COL_SPACING: f32 = 6.0;
-const ROW_SPACING: f32 = 2.0;
-const PAD_X: f32 = 16.0;
-const PAD_Y: f32 = 12.0;
+const COL_SPACING: f32 = SPACE_SM;
+const ROW_SPACING: f32 = SPACE_XS / 2.0;
+const FRAME_MARGIN: f32 = SPACE_SM;
+const PAD_Y: f32 = FRAME_MARGIN * 2.0;
 const INNER_WIDTH: f32 =
     LABEL_WIDTH + VALUE_WIDTH + UNIT_WIDTH + CHECK_WIDTH + CHECK_WIDTH + COL_SPACING * 4.0;
 const ROW_COUNT: f32 = 4.0;
@@ -25,15 +26,16 @@ pub fn alarm_card(
 ) {
     let [(sw, vw), (sd, vd), (so, vo)] = signals;
     let row_h = ui.spacing().interact_size.y;
+    let card_width = ui.available_width();
     let size = Vec2::new(
-        INNER_WIDTH + PAD_X,
+        card_width,
         ROW_COUNT * row_h + (ROW_COUNT - 1.0) * ROW_SPACING + PAD_Y,
     );
     ui.allocate_ui_with_layout(size, egui::Layout::top_down(egui::Align::Min), |ui| {
         ui.set_min_size(size);
         ui.set_max_size(size);
         egui::Frame::group(ui.style())
-            .inner_margin(egui::Margin::symmetric(8, 6))
+            .inner_margin(egui::Margin::same(FRAME_MARGIN as i8))
             .show(ui, |ui| {
                 ui.set_min_size(Vec2::new(INNER_WIDTH, size.y - PAD_Y));
                 ui.set_max_width(INNER_WIDTH);
@@ -42,9 +44,9 @@ pub fn alarm_card(
                     .spacing([COL_SPACING, ROW_SPACING])
                     .min_col_width(0.0)
                     .show(ui, |ui| {
-                        ui.label(RichText::new(title).strong());
-                        ui.label("");
-                        ui.label("");
+                        fixed_title(ui, title);
+                        fixed_gap(ui, VALUE_WIDTH);
+                        fixed_gap(ui, UNIT_WIDTH);
                         icon_cell(ui, |ui| {
                             paint_signal_icon(ui, SignalIconKind::Sound, true);
                         });

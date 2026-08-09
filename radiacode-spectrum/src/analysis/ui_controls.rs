@@ -5,7 +5,8 @@ use crate::analysis::ui_role_cards::{draw_background_card, draw_samples_card, dr
 use crate::scale::YScale;
 use crate::smooth::normalize_window;
 use crate::spectrogram::model::RecordingEntry;
-use crate::theme::{analysis_sample_color, MUTED};
+use crate::theme::{analysis_sample_color, MUTED, SPACE_SM, SPACE_XS};
+use crate::ui_chrome::draw_sidebar_header;
 use crate::ui_recording_library::{
     analysis_name_color, draw_analysis_role_badges, draw_empty_library, draw_recording_card,
     draw_recording_meta, draw_recording_search, draw_recording_title, scroll_recording_list,
@@ -21,10 +22,9 @@ pub fn draw_analysis_controls(
     state: &mut AnalysisState,
     y_scale: &mut YScale,
 ) -> Option<AnalysisAction> {
-    ui.label(RichText::new("Library").strong());
-    ui.add_space(4.0);
+    draw_sidebar_header(ui, "Library");
     draw_library_list(ui, state);
-    ui.add_space(8.0);
+    ui.add_space(SPACE_SM);
     ui.label(RichText::new("Y axis").strong());
     ui.horizontal(|ui| {
         ui.selectable_value(y_scale, YScale::Linear, "Linear");
@@ -37,7 +37,7 @@ pub fn draw_analysis_controls(
     ui.add_enabled_ui(state.background.is_some(), |ui| {
         ui.checkbox(&mut state.subtract_background, "Background subtraction");
     });
-    ui.add_space(4.0);
+    ui.add_space(SPACE_XS);
     ui.label("Smooth window (channels)");
     let mut slider = state.smooth_window.clamp(1, 16) as i32;
     if ui
@@ -46,9 +46,9 @@ pub fn draw_analysis_controls(
     {
         state.smooth_window = normalize_window(slider as usize);
     }
-    ui.add_space(8.0);
+    ui.add_space(SPACE_SM);
     draw_background_card(ui, state.background.as_ref());
-    ui.add_space(6.0);
+    ui.add_space(SPACE_SM);
     draw_samples_card(ui, state);
     draw_warnings(ui, state);
     if ui.button("Clear selection").clicked() {
@@ -67,7 +67,7 @@ fn draw_library_list(ui: &mut Ui, state: &mut AnalysisState) {
     let total_count = state.library.len();
     let entries: Vec<RecordingEntry> = state.filtered_library();
     draw_recording_search(ui, &mut state.library_filter, entries.len(), total_count);
-    ui.add_space(4.0);
+    ui.add_space(SPACE_XS);
     if entries.is_empty() {
         draw_empty_library(ui, state.library_filter.trim().is_empty());
         return;
@@ -94,7 +94,7 @@ fn draw_library_entry(ui: &mut Ui, state: &mut AnalysisState, entry: &RecordingE
         if !entry.comment.is_empty() {
             ui.label(RichText::new(&entry.comment).small().italics().color(MUTED));
         }
-        ui.add_space(4.0);
+        ui.add_space(SPACE_XS);
         ui.horizontal(|ui| {
             ui.add_enabled_ui(sample_tint.is_none(), |ui| {
                 if ui.selectable_label(is_bg, "Background").clicked() && !is_bg {

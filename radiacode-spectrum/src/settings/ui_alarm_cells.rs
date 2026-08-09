@@ -2,10 +2,23 @@ use egui::{RichText, Ui, Vec2};
 
 use crate::theme::MUTED;
 
-pub const LABEL_WIDTH: f32 = 52.0;
+pub const LABEL_WIDTH: f32 = 84.0;
 pub const VALUE_WIDTH: f32 = 72.0;
-pub const UNIT_WIDTH: f32 = 44.0;
+pub const UNIT_WIDTH: f32 = 48.0;
 pub const CHECK_WIDTH: f32 = 20.0;
+
+pub fn fixed_title(ui: &mut Ui, title: &str) {
+    sized_cell(ui, LABEL_WIDTH, |ui| {
+        ui.label(RichText::new(title).strong());
+    });
+}
+
+pub fn fixed_gap(ui: &mut Ui, width: f32) {
+    ui.allocate_exact_size(
+        Vec2::new(width, ui.spacing().interact_size.y),
+        egui::Sense::hover(),
+    );
+}
 
 pub fn fixed_label(ui: &mut Ui, label: &str) {
     sized_cell(ui, LABEL_WIDTH, |ui| {

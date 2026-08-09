@@ -1,57 +1,24 @@
 use egui::{RichText, Ui, Vec2b};
 use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
 
-use radiacode_core::dose_accum_unit_label;
+use crate::dosimeter::{dose_points, plot_bounds, DosimeterState, PlotBounds};
+use crate::plot_style::styled_line;
+use crate::scale::HistogramStyle;
+use crate::theme::ACCENT;
 
-use crate::dosimeter::format::format_session_duration;
-use crate::dosimeter::plot_bounds::{dose_points, plot_bounds, PlotBounds};
-use crate::dosimeter::state::DosimeterState;
-use crate::monitor::AlarmLevel;
-use crate::theme::{ACCENT, MUTED};
-
-pub fn draw_dosimeter_view(ui: &mut Ui, dosimeter: &DosimeterState) {
-    let Some(latest) = dosimeter.latest else {
-        ui.add_space(12.0);
-        ui.label(RichText::new(&dosimeter.status).color(MUTED));
-        return;
-    };
-    let unit = dose_accum_unit_label(latest.dose_unit_sv);
-    let level = dosimeter.dose_alarm_level();
-    ui.horizontal(|ui| {
-        ui.vertical(|ui| {
-            ui.label(RichText::new("Accumulated dose").small().color(MUTED));
-            ui.label(
-                RichText::new(format!("{:.2}", latest.dose.max(0.0)))
-                    .size(36.0)
-                    .color(alarm_color(level)),
-            );
-            ui.label(RichText::new(unit).small().color(MUTED));
-        });
-        ui.add_space(24.0);
-        ui.vertical(|ui| {
-            ui.label(RichText::new("Session").small().color(MUTED));
-            ui.label(
-                RichText::new(format_session_duration(latest.duration_secs))
-                    .size(24.0),
-            );
-        });
-    });
-    ui.add_space(16.0);
-    draw_dose_plot(ui, dosimeter, unit);
-}
-
-fn draw_dose_plot(ui: &mut Ui, dosimeter: &DosimeterState, unit: &str) {
+pub fn draw_cumulative_dose_plot(
+    ui: &mut Ui,
+    dosimeter: &DosimeterState,
+    unit: &str,
+    style: HistogramStyle,
+) {
     ui.label(RichText::new("Cumulative dose").strong());
-    ui.label(
-        RichText::new("Session accumulation since last reset")
-            .small()
-            .color(MUTED),
-    );
+    let plot_height = ui.available_height().max(1.0);
     let bounds = plot_bounds(dosimeter);
     let points = dose_points(dosimeter, bounds);
     let unit_label = unit.to_string();
-    Plot::new("dosimeter_dose_plot")
-        .height(280.0)
+    Plot::new("monitor_dose_accum_plot")
+        .height(plot_height)
         .allow_zoom(false)
         .allow_drag(false)
         .allow_scroll(false)
@@ -69,9 +36,7 @@ fn draw_dose_plot(ui: &mut Ui, dosimeter: &DosimeterState, unit: &str) {
             plot_ui.set_plot_bounds_x(bounds.x_min..=bounds.x_max);
             plot_ui.set_plot_bounds_y(bounds.y_min..=bounds.y_max);
             if points.len() >= 2 {
-                plot_ui.line(
-                    Line::new("dose", PlotPoints::from(points.clone())).color(ACCENT),
-                );
+                plot_ui.line(styled_line("dose", points.clone(), ACCENT, style));
             } else if points.len() == 1 {
                 plot_ui.points(
                     Points::new("dose", PlotPoints::from(points))
@@ -98,7 +63,7 @@ fn draw_alarm_lines(
 ) {
     plot_ui.line(
         Line::new(
-            "alarm_warning",
+            "accum_alarm_warning",
             PlotPoints::new(vec![
                 [bounds.x_min, f64::from(alarm_one)],
                 [bounds.x_max, f64::from(alarm_one)],
@@ -109,7 +74,7 @@ fn draw_alarm_lines(
     );
     plot_ui.line(
         Line::new(
-            "alarm_danger",
+            "accum_alarm_danger",
             PlotPoints::new(vec![
                 [bounds.x_min, f64::from(alarm_two)],
                 [bounds.x_max, f64::from(alarm_two)],
@@ -118,12 +83,4 @@ fn draw_alarm_lines(
         .color(egui::Color32::from_rgb(220, 80, 80))
         .allow_hover(false),
     );
-}
-
-fn alarm_color(level: AlarmLevel) -> egui::Color32 {
-    match level {
-        AlarmLevel::Normal => egui::Color32::from_rgb(230, 234, 240),
-        AlarmLevel::Warning => egui::Color32::from_rgb(240, 180, 64),
-        AlarmLevel::Danger => egui::Color32::from_rgb(220, 80, 80),
-    }
 }

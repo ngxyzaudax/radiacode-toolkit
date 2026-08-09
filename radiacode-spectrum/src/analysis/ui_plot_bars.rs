@@ -1,8 +1,8 @@
 use egui::{Color32, Ui, Vec2b};
-use egui_plot::{Bar, Line, Plot, PlotPoints};
+use egui_plot::{Bar, Plot};
 
-use crate::analysis::ui_plot_geometry::outline_points;
 use crate::energy::{bar_energy_width, clamp_energy_range, ENERGY_MAX_KEV, ENERGY_MIN_KEV};
+use crate::plot_style::styled_histogram_line;
 use crate::scale::{display_rate, rate_log_floor, y_axis_top, HistogramStyle, YScale};
 
 pub struct PlotSeries<'a> {
@@ -97,14 +97,12 @@ fn plot_series(
                 if item.bars.is_empty() {
                     continue;
                 }
-                let points = outline_points(item.bars);
-                let mut line = Line::new(item.id, PlotPoints::from(points))
-                    .color(item.color)
-                    .width(1.75);
-                if style == HistogramStyle::Filled {
-                    line = line.fill(0.0).fill_alpha(0.35);
-                }
-                plot_ui.line(line);
+                plot_ui.line(styled_histogram_line(
+                    item.id,
+                    item.bars,
+                    item.color,
+                    style,
+                ));
             }
         });
 }

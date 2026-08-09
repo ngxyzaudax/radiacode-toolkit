@@ -1,4 +1,5 @@
 mod action;
+mod alarm_skeleton;
 mod state;
 mod ui_alarm_card;
 mod ui_alarm_cells;

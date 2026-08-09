@@ -1,7 +1,7 @@
 use egui::{Color32, CornerRadius, Sense, Stroke, StrokeKind, Ui, Vec2};
 
 use crate::settings::state::{SettingsSection, SettingsState};
-use crate::theme::{ACCENT, MUTED};
+use crate::theme::{ACCENT, MUTED, SPACE_SM};
 
 const ITEM_HEIGHT: f32 = 48.0;
 const FONT_SIZE: f32 = 18.0;
@@ -9,8 +9,11 @@ const ACTIVE_BAR_WIDTH: f32 = 3.0;
 
 pub fn draw_settings_controls(ui: &mut Ui, state: &mut SettingsState) {
     draw_menu_item(ui, &mut state.section, SettingsSection::Device);
+    ui.add_space(SPACE_SM);
     ui.separator();
+    ui.add_space(SPACE_SM);
     draw_menu_item(ui, &mut state.section, SettingsSection::Application);
+    ui.add_space(SPACE_SM);
     ui.separator();
 }
 

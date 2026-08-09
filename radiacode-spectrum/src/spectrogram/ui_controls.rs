@@ -5,7 +5,8 @@ use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::ui_settings::draw_spectrogram_settings;
 use crate::spectrogram::ui_library::draw_library;
 use crate::spectrogram::ui_transport::draw_transport;
-use crate::theme::MUTED;
+use crate::theme::{MUTED, SPACE_SM, SPACE_XS};
+use crate::ui_chrome::{draw_sidebar_divider, draw_sidebar_header};
 
 pub use crate::spectrogram::controls_action::SpectrogramControlsAction;
 
@@ -15,17 +16,13 @@ pub fn draw_spectrogram_controls(
     connection: ConnectionState,
 ) -> Option<SpectrogramControlsAction> {
     let mut action = None;
-    ui.add_space(8.0);
-    ui.separator();
-    ui.add_space(8.0);
-    ui.label(RichText::new("Spectrogram").strong());
-    ui.add_space(6.0);
+    draw_sidebar_header(ui, "Spectrogram");
     action = draw_transport(ui, state, connection).or(action);
 
-    ui.add_space(6.0);
+    ui.add_space(SPACE_SM);
     let settings_changed = draw_spectrogram_settings(ui, state);
 
-    ui.add_space(4.0);
+    ui.add_space(SPACE_XS);
     ui.add_enabled_ui(!state.is_recording(), |ui| {
         if ui.button("Reset accumulation").clicked() {
             state.reset_accumulation();
@@ -37,17 +34,14 @@ pub fn draw_spectrogram_controls(
     }
 
     draw_status(ui, state);
-    ui.add_space(8.0);
-    ui.separator();
-    ui.add_space(6.0);
-    ui.label(RichText::new("Spectrogram Library").strong());
-    ui.add_space(4.0);
+    draw_sidebar_divider(ui);
+    draw_sidebar_header(ui, "Spectrogram Library");
     draw_library(ui, state, &mut action);
     action
 }
 
 fn draw_status(ui: &mut Ui, state: &SpectrogramState) {
-    ui.add_space(4.0);
+    ui.add_space(SPACE_XS);
     ui.label(
         RichText::new(format!(
             "History: {} rows ({:.0}s)",
@@ -72,7 +66,7 @@ fn draw_status(ui: &mut Ui, state: &SpectrogramState) {
         }
     }
     if !state.status.is_empty() {
-        ui.add_space(4.0);
+        ui.add_space(SPACE_XS);
         ui.label(RichText::new(&state.status).small().color(MUTED));
     }
 }

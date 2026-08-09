@@ -11,11 +11,13 @@ mod logging;
 mod model;
 mod monitor;
 mod pc_alarm;
+mod plot_style;
 mod scale;
 mod settings;
 mod smooth;
 mod spectrogram;
 mod theme;
+mod ui_chrome;
 mod ui_controls;
 mod ui_device_status;
 mod ui_disconnected;
@@ -24,6 +26,7 @@ mod ui_recording_library;
 mod ui_recording_search;
 mod usb_access;
 mod view_tab;
+mod window;
 mod worker;
 mod worker_ops;
 
@@ -32,16 +35,19 @@ use std::process::ExitCode;
 use app::SpectrumApp;
 use icon::{app_icon, APP_ID};
 use tracing::{error, info};
+use window::{startup_inner_size, startup_viewport_builder};
 
 fn main() -> ExitCode {
     logging::init();
     info!("radiacode-spectrum starting");
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1200.0, 760.0])
+        viewport: startup_viewport_builder()
             .with_title("Radiacode")
             .with_app_id(APP_ID)
             .with_icon(app_icon()),
+        centered: true,
+        persist_window: false,
+        window_builder: Some(Box::new(|builder| builder.with_inner_size(startup_inner_size()))),
         ..Default::default()
     };
     match eframe::run_native(

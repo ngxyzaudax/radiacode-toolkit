@@ -6,6 +6,7 @@ use crate::settings::state::{SettingsDeviceOp, SettingsSection, SettingsState};
 use crate::settings::ui_columns::{draw_application_column, draw_detector_column};
 use crate::settings::ui_confirm::draw_load_confirm_dialog;
 use crate::settings::ui_toolbar::draw_sticky_toolbar;
+use crate::theme::{SPACE_SM, SPACE_XS};
 
 pub fn draw_settings_view(
     ui: &mut Ui,
@@ -38,9 +39,9 @@ fn draw_device_settings(
     if let Some(next) = draw_sticky_toolbar(ui, state, connected) {
         action = Some(next);
     }
-    ui.add_space(2.0);
+    ui.add_space(SPACE_XS);
     ui.separator();
-    ui.add_space(4.0);
+    ui.add_space(SPACE_SM);
     ScrollArea::vertical()
         .id_salt("settings_device_scroll")
         .auto_shrink([false, false])
@@ -58,9 +59,9 @@ fn draw_application_settings(
 ) -> Option<SettingsAction> {
     let mut action = None;
     ui.label(RichText::new("Application").strong().size(15.0));
-    ui.add_space(2.0);
+    ui.add_space(SPACE_XS);
     ui.separator();
-    ui.add_space(4.0);
+    ui.add_space(SPACE_SM);
     ScrollArea::vertical()
         .id_salt("settings_application_scroll")
         .auto_shrink([false, false])

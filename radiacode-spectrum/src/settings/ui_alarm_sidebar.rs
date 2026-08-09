@@ -3,10 +3,12 @@ use radiacode_core::DeviceConfig;
 
 use crate::model::ConnectionState;
 use crate::settings::action::SettingsAction;
+use crate::settings::alarm_skeleton::alarm_skeleton_config;
 use crate::settings::state::{SettingsDeviceOp, SettingsState};
 use crate::settings::ui_confirm::draw_load_confirm_dialog;
 use crate::settings::ui_toolbar::draw_sticky_toolbar;
-use crate::theme::MUTED;
+use crate::theme::{MUTED, SPACE_SM};
+use crate::ui_chrome::draw_sidebar_header;
 
 pub fn draw_alarm_sidebar_shell(
     ui: &mut Ui,
@@ -21,13 +23,9 @@ pub fn draw_alarm_sidebar_shell(
             return Some(action);
         }
     }
-    ui.add_space(8.0);
-    ui.separator();
-    ui.add_space(8.0);
-    ui.label(RichText::new(title).strong());
-    ui.add_space(4.0);
+    draw_sidebar_header(ui, title);
     let action = draw_sticky_toolbar(ui, settings, connected);
-    ui.add_space(6.0);
+    ui.add_space(SPACE_SM);
     ScrollArea::vertical()
         .auto_shrink([false, false])
         .show(ui, |ui| {
@@ -43,21 +41,14 @@ fn draw_alarm_editor(
     connected: bool,
     draw_cards: impl FnOnce(&mut Ui, &mut DeviceConfig),
 ) {
-    match settings.device_op {
-        SettingsDeviceOp::Loading | SettingsDeviceOp::Saving => {}
-        SettingsDeviceOp::Idle if !connected => {
-            ui.label(RichText::new("Connect a device to edit alarm thresholds.").color(MUTED));
-        }
-        SettingsDeviceOp::Idle if settings.draft.is_none() => {
-            ui.label(
-                RichText::new("Load settings from the device to edit alarm thresholds.")
-                    .color(MUTED),
-            );
-        }
-        SettingsDeviceOp::Idle => {
-            if let Some(draft) = settings.draft.as_mut() {
-                draw_cards(ui, draft);
-            }
-        }
+    if !connected {
+        ui.label(RichText::new("Connect a device to edit alarm thresholds.").color(MUTED));
+        return;
     }
+    let editing = settings.device_op == SettingsDeviceOp::Idle && settings.draft.is_some();
+    let mut skeleton = alarm_skeleton_config();
+    let config = settings.draft.as_mut().unwrap_or(&mut skeleton);
+    ui.add_enabled_ui(editing, |ui| {
+        draw_cards(ui, config);
+    });
 }

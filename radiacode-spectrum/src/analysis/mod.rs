@@ -5,7 +5,6 @@ mod state;
 mod ui_controls;
 mod ui_plot;
 mod ui_plot_bars;
-mod ui_plot_geometry;
 mod ui_plot_legend;
 mod ui_plot_values;
 mod ui_role_cards;

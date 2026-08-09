@@ -96,23 +96,40 @@ pub fn list_recordings(configured: &str) -> std::io::Result<Vec<RecordingEntry>>
     Ok(entries)
 }
 
+pub struct RecordingIndex {
+    pub header: SpectrogramHeader,
+    pub row_count: u32,
+}
+
+pub fn load_recording_index(path: &Path) -> std::io::Result<RecordingIndex> {
+    let mut file = File::open(path)?;
+    let (version, header, _channel_count, row_count) = read_recording_prefix(&mut file)?;
+    if version != VERSION_V1 && version != VERSION_V2 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "unsupported spectrogram file version",
+        ));
+    }
+    Ok(RecordingIndex { header, row_count })
+}
+
 pub(crate) fn build_entry(path: PathBuf) -> Option<RecordingEntry> {
     let fallback = path
         .file_stem()
         .and_then(|name| name.to_str())
         .unwrap_or("recording")
         .to_string();
-    let series = load_recording(&path).ok()?;
+    let index = load_recording_index(&path).ok()?;
     let meta = load_meta(&path, &fallback);
     Some(RecordingEntry {
         path,
         name: meta.name,
         comment: meta.comment,
-        created_at: series.header.created_at.clone(),
-        device_serial: series.header.device_serial.clone(),
-        interval_secs: series.header.interval_secs,
-        row_count: series.rows.len() as u32,
-        channel_count: series.header.channel_count,
+        created_at: index.header.created_at.clone(),
+        device_serial: index.header.device_serial.clone(),
+        interval_secs: index.header.interval_secs,
+        row_count: index.row_count,
+        channel_count: index.header.channel_count,
     })
 }
 
@@ -200,27 +217,15 @@ pub fn write_recording(path: &Path, series: &SpectrogramSeries) -> std::io::Resu
 
 pub fn load_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
     let mut file = File::open(path)?;
-    let mut magic = [0_u8; 4];
-    file.read_exact(&mut magic)?;
-    if &magic != MAGIC {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "invalid spectrogram file magic",
-        ));
-    }
-    let version = read_u32(&mut file)?;
+    let (version, header, channel_count, row_count) = read_recording_prefix(&mut file)?;
     if version != VERSION_V1 && version != VERSION_V2 {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             "unsupported spectrogram file version",
         ));
     }
-    let header_len = read_u32(&mut file)? as usize;
-    let mut header_bytes = vec![0_u8; header_len];
-    file.read_exact(&mut header_bytes)?;
-    let header: SpectrogramHeader = serde_json::from_slice(&header_bytes)?;
-    let channel_count = read_u32(&mut file)? as usize;
-    let row_count = read_u32(&mut file)? as usize;
+    let channel_count = channel_count as usize;
+    let row_count = row_count as usize;
     let mut rows = Vec::with_capacity(row_count);
     if version == VERSION_V1 {
         let mut payload = vec![0_u8; row_count * channel_count * 4];
@@ -261,6 +266,27 @@ pub fn load_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
         energies_kev,
         rows,
     })
+}
+
+fn read_recording_prefix(
+    file: &mut File,
+) -> std::io::Result<(u32, SpectrogramHeader, u32, u32)> {
+    let mut magic = [0_u8; 4];
+    file.read_exact(&mut magic)?;
+    if &magic != MAGIC {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "invalid spectrogram file magic",
+        ));
+    }
+    let version = read_u32(file)?;
+    let header_len = read_u32(file)? as usize;
+    let mut header_bytes = vec![0_u8; header_len];
+    file.read_exact(&mut header_bytes)?;
+    let header: SpectrogramHeader = serde_json::from_slice(&header_bytes)?;
+    let channel_count = read_u32(file)?;
+    let row_count = read_u32(file)?;
+    Ok((version, header, channel_count, row_count))
 }
 
 fn assign_elapsed_secs(rows: &mut [SpectrogramRow]) {
@@ -328,7 +354,7 @@ fn read_f64(reader: &mut File) -> std::io::Result<f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{header_now, load_recording, RecordingWriter, VERSION_V1};
+    use super::{header_now, load_recording, load_recording_index, RecordingWriter, VERSION_V1};
     use crate::spectrogram::model::{RowKind, SpectrogramRow};
     use tempfile::tempdir;
 
@@ -367,6 +393,26 @@ mod tests {
         assert!(matches!(loaded.rows[1].kind, RowKind::GapRecovery { .. }));
         assert!((loaded.rows[1].interval_secs - 45.0).abs() < 0.001);
         assert!((loaded.duration_secs() - 50.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn recording_index_reads_header_without_row_payload() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("index.rcwf");
+        let header = header_now(0.0, 1.0, 0.0, 2, 5.0, None, vec![100.0, 200.0]);
+        let mut writer = RecordingWriter::create(path.clone(), &header).unwrap();
+        writer
+            .append_row(&SpectrogramRow {
+                elapsed_secs: 0.0,
+                interval_secs: 5.0,
+                kind: RowKind::Normal,
+                counts: vec![1, 2],
+            })
+            .unwrap();
+        writer.finalize().unwrap();
+        let index = load_recording_index(&path).unwrap();
+        assert_eq!(index.row_count, 1);
+        assert_eq!(index.header.channel_count, 2);
     }
 
     #[test]

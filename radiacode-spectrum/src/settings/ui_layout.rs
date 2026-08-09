@@ -1,6 +1,6 @@
 use egui::{CollapsingHeader, Color32, CornerRadius, RichText, Sense, Stroke, StrokeKind, Ui, Vec2};
 
-use crate::theme::{ACCENT, MUTED};
+use crate::theme::{ACCENT, MUTED, SPACE_SM, SPACE_XS};
 
 pub fn settings_section(
     ui: &mut Ui,
@@ -13,11 +13,11 @@ pub fn settings_section(
         .show(ui, |ui| {
             if !hint.is_empty() {
                 ui.label(RichText::new(hint).small().color(MUTED));
-                ui.add_space(2.0);
+                ui.add_space(SPACE_XS);
             }
             add_contents(ui);
         });
-    ui.add_space(2.0);
+    ui.add_space(SPACE_SM);
 }
 
 pub fn toggle_knob(ui: &mut Ui, on: &mut bool) -> bool {

@@ -1,4 +1,10 @@
-use egui::{Color32, CornerRadius, Stroke, Visuals};
+use egui::{Color32, CornerRadius, Stroke, Vec2, Visuals};
+
+pub const SPACE_XS: f32 = 4.0;
+pub const SPACE_SM: f32 = 8.0;
+pub const SPACE_MD: f32 = 12.0;
+pub const SPACE_LG: f32 = 16.0;
+pub const SPACE_XL: f32 = 24.0;
 
 pub fn apply(ctx: &egui::Context) {
     let mut visuals = Visuals::dark();
@@ -20,6 +26,9 @@ pub fn apply(ctx: &egui::Context) {
     visuals.window_corner_radius = CornerRadius::same(6);
     visuals.menu_corner_radius = CornerRadius::same(4);
     ctx.set_visuals(visuals);
+    ctx.all_styles_mut(|style| {
+        style.spacing.item_spacing = Vec2::splat(SPACE_SM);
+    });
 }
 
 pub const SPECTRUM_BAR: Color32 = Color32::from_rgb(245, 196, 0);

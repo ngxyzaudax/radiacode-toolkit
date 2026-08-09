@@ -3,7 +3,7 @@ use egui::{RichText, Ui};
 use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
 
 use crate::model::{ConnectionState, DeviceInfo};
-use crate::theme::{ACCENT, MUTED};
+use crate::theme::{ACCENT, MUTED, SPACE_XL, SPACE_XS};
 
 use super::ui_connected::draw_connected;
 use super::ui_connecting::draw_connecting;
@@ -27,15 +27,14 @@ pub enum DeviceAction {
 }
 
 pub fn draw_device_view(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<DeviceAction> {
-    ui.add_space(12.0);
     ui.label(RichText::new("Radiacode").size(28.0).color(ACCENT).strong());
-    ui.add_space(4.0);
+    ui.add_space(SPACE_XS);
     ui.label(
         RichText::new("Connect over USB or Bluetooth and inspect device status.")
             .small()
             .color(MUTED),
     );
-    ui.add_space(20.0);
+    ui.add_space(SPACE_XL);
     ui.set_max_width(640.0);
     let action = match props.connection {
         ConnectionState::Connected => props

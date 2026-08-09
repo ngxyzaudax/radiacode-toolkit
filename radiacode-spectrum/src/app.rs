@@ -8,14 +8,12 @@ use tracing::{debug, info, warn};
 
 use crate::about::draw_about_view;
 use crate::analysis::{draw_analysis_controls, draw_analysis_view, AnalysisAction, AnalysisState};
-use crate::dosimeter::{
-    draw_dosimeter_controls, draw_dosimeter_view, DosimeterControlsAction,
-};
 use crate::events::AppState;
 use crate::icon::app_icon;
 use crate::model::{ConnectionState, DeviceInfo};
-use crate::monitor::{draw_monitor_controls, draw_monitor_view, AlarmLevel};
+use crate::monitor::{draw_monitor_controls, draw_monitor_view, AlarmLevel, MonitorControlsAction};
 use crate::pc_alarm::maybe_beep_alarm;
+use crate::plot_style::histogram_style;
 use crate::scale::YScale;
 use crate::settings::{
     draw_settings_controls, draw_settings_view, SettingsAction, SettingsDeviceOp, SettingsState,
@@ -25,6 +23,9 @@ use crate::spectrogram::ui_controls::{draw_spectrogram_controls, SpectrogramCont
 use crate::spectrogram::ui_view::draw_spectrogram_view;
 use crate::spectrogram::SpectrogramState;
 use crate::theme;
+use crate::ui_chrome::{
+    sidebar_content_frame, tab_uses_page_inset, tab_uses_plot_pad, with_page_inset, with_plot_pad,
+};
 use crate::ui_controls::{draw_spectrum_controls, ControlsAction, ControlsProps};
 use crate::device::{draw_device_view, DeviceAction, DeviceViewProps};
 use crate::ui_disconnected::{draw_disconnected_view, shows_tab_content, tab_works_offline};
@@ -45,9 +46,11 @@ pub struct SpectrumApp {
     previous_tab: ViewTab,
     y_scale: YScale,
     smooth_window: usize,
+    plot_outline_only: bool,
     theme_ready: bool,
     startup_scan_sent: bool,
     icon_sent: bool,
+    window_size_frames: u8,
     session_blocked: bool,
     usb_access_prompt: Option<UsbAccessPrompt>,
     last_alarm_level: AlarmLevel,
@@ -74,9 +77,11 @@ impl SpectrumApp {
             previous_tab: ViewTab::Device,
             y_scale: YScale::Linear,
             smooth_window: 1,
+            plot_outline_only: false,
             theme_ready: false,
             startup_scan_sent: false,
             icon_sent: false,
+            window_size_frames: 0,
             session_blocked: false,
             usb_access_prompt: None,
             last_alarm_level: AlarmLevel::Normal,
@@ -93,6 +98,18 @@ impl SpectrumApp {
             ViewportCommand::Icon(Some(app_icon())),
         );
         self.icon_sent = true;
+    }
+
+    fn ensure_startup_window_size(&mut self, ctx: &Context) {
+        let frames = crate::window::startup_resize_frames();
+        if self.window_size_frames >= frames {
+            return;
+        }
+        ctx.send_viewport_cmd_to(
+            ViewportId::ROOT,
+            ViewportCommand::InnerSize(crate::window::startup_inner_vec()),
+        );
+        self.window_size_frames += 1;
     }
 
     fn send(&mut self, command: WorkerCommand) {
@@ -221,7 +238,7 @@ impl SpectrumApp {
                     self.remember_connected_device(info);
                     if matches!(
                         self.active_tab,
-                        ViewTab::Settings | ViewTab::Monitor | ViewTab::Dosimeter
+                        ViewTab::Settings | ViewTab::Monitor
                     ) && !self.settings.draft_dirty()
                     {
                         self.start_device_load();
@@ -354,12 +371,12 @@ impl SpectrumApp {
         }
     }
 
-    fn handle_dosimeter_action(&mut self, action: DosimeterControlsAction) {
+    fn handle_monitor_action(&mut self, action: MonitorControlsAction) {
         match action {
-            DosimeterControlsAction::ResetDose => {
+            MonitorControlsAction::ResetDose => {
                 self.send(WorkerCommand::ResetDose);
             }
-            DosimeterControlsAction::Settings(settings_action) => {
+            MonitorControlsAction::Settings(settings_action) => {
                 self.handle_settings_action(settings_action);
             }
         }
@@ -436,7 +453,7 @@ impl SpectrumApp {
     fn maybe_device_config_auto_load(&mut self) {
         if !matches!(
             self.active_tab,
-            ViewTab::Settings | ViewTab::Monitor | ViewTab::Dosimeter
+            ViewTab::Settings | ViewTab::Monitor
         ) {
             return;
         }
@@ -473,10 +490,6 @@ impl SpectrumApp {
     }
 
     fn enter_monitor_tab(&mut self) {
-        self.enter_device_config_tab();
-    }
-
-    fn enter_dosimeter_tab(&mut self) {
         self.enter_device_config_tab();
     }
 
@@ -610,11 +623,130 @@ impl SpectrumApp {
             self.schedule_spectrum();
         }
     }
+
+    fn draw_sidebar(&mut self, ui: &mut Ui) {
+        match self.active_tab {
+            ViewTab::Device | ViewTab::About => {}
+            ViewTab::Monitor => {
+                if let Some(action) = draw_monitor_controls(
+                    ui,
+                    &mut self.settings,
+                    self.state.connection,
+                    &self.state.monitor,
+                    &self.state.dosimeter,
+                    &mut self.plot_outline_only,
+                ) {
+                    self.handle_monitor_action(action);
+                }
+                self.sync_draft_alarm_limits();
+            }
+            ViewTab::Spectrum => {
+                if let Some(action) = draw_spectrum_controls(
+                    ui,
+                    ControlsProps {
+                        connection: self.state.connection,
+                        y_scale: &mut self.y_scale,
+                        smooth_window: &mut self.smooth_window,
+                        outline_only: &mut self.plot_outline_only,
+                    },
+                ) {
+                    self.handle_controls_action(action);
+                }
+            }
+            ViewTab::Spectrogram => {
+                if let Some(action) =
+                    draw_spectrogram_controls(ui, &mut self.spectrogram, self.state.connection)
+                {
+                    self.handle_spectrogram_action(action);
+                }
+            }
+            ViewTab::Analysis => {
+                if let Some(action) =
+                    draw_analysis_controls(ui, &mut self.analysis, &mut self.y_scale)
+                {
+                    self.handle_analysis_action(action);
+                }
+            }
+            ViewTab::Settings => {
+                draw_settings_controls(ui, &mut self.settings);
+            }
+        }
+    }
+
+    fn draw_central_content(&mut self, ui: &mut Ui, ctx: &Context) {
+        if self.active_tab == ViewTab::Device {
+            if let Some(action) = draw_device_view(
+                ui,
+                DeviceViewProps {
+                    devices: &self.state.devices,
+                    connection: self.state.connection,
+                    connecting_endpoint: self.state.connecting_endpoint.as_ref(),
+                    device_info: self.state.device_info.as_ref(),
+                    scanning: self.state.scanning,
+                    busy: self.state.busy,
+                    scanned_once: self.state.scanned_once,
+                    status: &self.state.status,
+                },
+            ) {
+                self.handle_device_action(action);
+            }
+            return;
+        }
+        if self.active_tab == ViewTab::Settings {
+            if let Some(action) = draw_settings_view(
+                ui,
+                &mut self.settings,
+                self.state.connection,
+                self.state.device_info.as_ref(),
+                self.spectrogram.is_recording(),
+            ) {
+                self.handle_settings_action(action);
+            }
+            return;
+        }
+        if self.active_tab == ViewTab::About {
+            draw_about_view(ui);
+            return;
+        }
+        if self.active_tab == ViewTab::Analysis {
+            draw_analysis_view(ui, &self.analysis, self.y_scale);
+            return;
+        }
+        if shows_tab_content(self.state.connection) {
+            let plot_style = histogram_style(self.plot_outline_only);
+            match self.active_tab {
+                ViewTab::Monitor => {
+                    draw_monitor_view(
+                        ui,
+                        &self.state.monitor,
+                        &self.state.dosimeter,
+                        plot_style,
+                    )
+                }
+                ViewTab::Spectrum => {
+                    draw_spectrum_plot(
+                        ui,
+                        self.state.spectrum.as_ref(),
+                        self.y_scale,
+                        self.smooth_window,
+                        plot_style,
+                    );
+                }
+                ViewTab::Spectrogram => {
+                    draw_spectrogram_view(ui, ctx, &mut self.spectrogram);
+                }
+                ViewTab::Device | ViewTab::Analysis | ViewTab::Settings | ViewTab::About => {}
+            }
+            return;
+        }
+        draw_disconnected_view(ui, self.state.connection);
+    }
 }
 
 impl App for SpectrumApp {
     fn logic(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         self.ensure_window_icon(ctx);
+        self.ensure_startup_window_size(ctx);
         if !self.theme_ready {
             theme::apply(ctx);
             self.theme_ready = true;
@@ -646,65 +778,12 @@ impl App for SpectrumApp {
             .resizable(true)
             .default_size(300.0)
             .show(ui, |ui| {
-                if shows_tab_content(self.state.connection) || tab_works_offline(self.active_tab) {
-                    match self.active_tab {
-                        ViewTab::Device => {}
-                        ViewTab::Monitor => {
-                            if let Some(action) = draw_monitor_controls(
-                                ui,
-                                &mut self.settings,
-                                self.state.connection,
-                            ) {
-                                self.handle_settings_action(action);
-                            }
-                            self.sync_draft_alarm_limits();
-                        }
-                        ViewTab::Spectrum => {
-                            if let Some(action) = draw_spectrum_controls(
-                                ui,
-                                ControlsProps {
-                                    connection: self.state.connection,
-                                    y_scale: &mut self.y_scale,
-                                    smooth_window: &mut self.smooth_window,
-                                },
-                            ) {
-                                self.handle_controls_action(action);
-                            }
-                        }
-                        ViewTab::Spectrogram => {
-                            if let Some(action) = draw_spectrogram_controls(
-                                ui,
-                                &mut self.spectrogram,
-                                self.state.connection,
-                            ) {
-                                self.handle_spectrogram_action(action);
-                            }
-                        }
-                        ViewTab::Dosimeter => {
-                            if let Some(action) = draw_dosimeter_controls(
-                                ui,
-                                &mut self.settings,
-                                self.state.connection,
-                            ) {
-                                self.handle_dosimeter_action(action);
-                            }
-                            self.sync_draft_alarm_limits();
-                        }
-                        ViewTab::Analysis => {
-                            if let Some(action) = draw_analysis_controls(
-                                ui,
-                                &mut self.analysis,
-                                &mut self.y_scale,
-                            ) {
-                                self.handle_analysis_action(action);
-                            }
-                        }
-                        ViewTab::Settings => {
-                            draw_settings_controls(ui, &mut self.settings);
-                        }
-                        ViewTab::About => {}
+                sidebar_content_frame().show(ui, |ui| {
+                    if shows_tab_content(self.state.connection) || tab_works_offline(self.active_tab)
+                    {
+                        self.draw_sidebar(ui);
                     }
-                }
+                });
             });
 
         CentralPanel::default().show(ui, |ui| {
@@ -729,11 +808,6 @@ impl App for SpectrumApp {
                     &mut self.active_tab,
                     ViewTab::Spectrogram,
                     ViewTab::Spectrogram.label(),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Dosimeter,
-                    ViewTab::Dosimeter.label(),
                 );
                 ui.selectable_value(
                     &mut self.active_tab,
@@ -763,86 +837,28 @@ impl App for SpectrumApp {
             if self.active_tab == ViewTab::Monitor && previous_tab != ViewTab::Monitor {
                 self.enter_monitor_tab();
             }
-            if self.active_tab == ViewTab::Dosimeter && previous_tab != ViewTab::Dosimeter {
-                self.enter_dosimeter_tab();
-            }
             if self.active_tab == ViewTab::Settings && previous_tab != ViewTab::Settings {
                 self.enter_settings_tab();
             }
             self.previous_tab = self.active_tab;
             ui.separator();
-            if self.active_tab == ViewTab::Device {
-                let content_rect = ui.available_rect_before_wrap();
-                ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
-                    ui.set_clip_rect(content_rect);
-                    if let Some(action) = draw_device_view(
-                        ui,
-                        DeviceViewProps {
-                            devices: &self.state.devices,
-                            connection: self.state.connection,
-                            connecting_endpoint: self.state.connecting_endpoint.as_ref(),
-                            device_info: self.state.device_info.as_ref(),
-                            scanning: self.state.scanning,
-                            busy: self.state.busy,
-                            scanned_once: self.state.scanned_once,
-                            status: &self.state.status,
-                        },
-                    ) {
-                        self.handle_device_action(action);
-                    }
-                });
-            } else if self.active_tab == ViewTab::Settings {
-                let content_rect = ui.available_rect_before_wrap();
-                ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
-                    ui.set_clip_rect(content_rect);
-                    if let Some(action) = draw_settings_view(
-                        ui,
-                        &mut self.settings,
-                        self.state.connection,
-                        self.state.device_info.as_ref(),
-                        self.spectrogram.is_recording(),
-                    ) {
-                        self.handle_settings_action(action);
-                    }
-                });
-            } else if self.active_tab == ViewTab::About {
-                let content_rect = ui.available_rect_before_wrap();
-                ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
-                    ui.set_clip_rect(content_rect);
-                    draw_about_view(ui);
-                });
-            } else if self.active_tab == ViewTab::Analysis {
-                let content_rect = ui.available_rect_before_wrap();
-                ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
-                    ui.set_clip_rect(content_rect);
-                    draw_analysis_view(ui, &self.analysis, self.y_scale);
-                });
-            } else if shows_tab_content(self.state.connection) {
-                let content_rect = ui.available_rect_before_wrap();
-                ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
-                    ui.set_clip_rect(content_rect);
-                    match self.active_tab {
-                        ViewTab::Monitor => draw_monitor_view(ui, &self.state.monitor),
-                        ViewTab::Spectrum => {
-                            draw_spectrum_plot(
-                                ui,
-                                self.state.spectrum.as_ref(),
-                                self.y_scale,
-                                self.smooth_window,
-                            );
-                        }
-                        ViewTab::Spectrogram => {
-                            draw_spectrogram_view(ui, &ctx, &mut self.spectrogram);
-                        }
-                        ViewTab::Dosimeter => {
-                            draw_dosimeter_view(ui, &self.state.dosimeter);
-                        }
-                        ViewTab::Device | ViewTab::Analysis | ViewTab::Settings | ViewTab::About => {}
-                    }
-                });
-            } else {
-                draw_disconnected_view(ui, self.state.connection);
-            }
+            let content_rect = ui.available_rect_before_wrap();
+            ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
+                ui.set_clip_rect(content_rect);
+                let connected = shows_tab_content(self.state.connection);
+                let page_inset = tab_uses_page_inset(self.active_tab)
+                    || (!connected && !tab_works_offline(self.active_tab));
+                let plot_pad = connected
+                    && tab_uses_plot_pad(self.active_tab)
+                    && self.active_tab != ViewTab::Monitor;
+                if page_inset {
+                    with_page_inset(ui, |ui| self.draw_central_content(ui, &ctx));
+                } else if plot_pad {
+                    with_plot_pad(ui, |ui| self.draw_central_content(ui, &ctx));
+                } else {
+                    self.draw_central_content(ui, &ctx);
+                }
+            });
         });
     }
 }
