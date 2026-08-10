@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/ngxyzaudax/radiacode-spectrum-rust">
+  <a href="https://github.com/ngxyzaudax/radiacode-toolkit">
     <img src="./docs/logo.png" width="120" alt="Radiacode logo" />
   </a>
 </p>
@@ -104,8 +104,8 @@ Device configuration: units, alarms, screen, and signal feedback.
 ### Build and run
 
 ```bash
-git clone git@github.com:ngxyzaudax/radiacode-spectrum-rust.git
-cd radiacode-spectrum-rust
+git clone git@github.com:ngxyzaudax/radiacode-toolkit.git
+cd radiacode-toolkit
 cargo build --release -p radiacode-spectrum
 ./target/release/radiacode-spectrum
 ```

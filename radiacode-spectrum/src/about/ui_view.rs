@@ -5,7 +5,7 @@ use crate::theme::{MUTED, SPACE_LG, SPACE_MD};
 const APP_NAME: &str = "Radiacode Spectrum";
 const AUTHOR: &str = "Nikola Galiot";
 const EMAIL: &str = "nikola.galiot@protonmail.com";
-const REPO_URL: &str = "https://github.com/ngxyzaudax/radiacode-spectrum-rust";
+const REPO_URL: &str = "https://github.com/ngxyzaudax/radiacode-toolkit";
 
 pub fn draw_about_view(ui: &mut Ui) {
     ui.label(RichText::new(APP_NAME).size(20.0).strong());
