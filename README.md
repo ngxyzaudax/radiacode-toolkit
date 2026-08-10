@@ -22,8 +22,6 @@
 <p align="center">
   <a href="#screenshots"><strong>Screenshots</strong></a>
   ·
-  <a href="#features"><strong>Features</strong></a>
-  ·
   <a href="#quick-start"><strong>Quick start</strong></a>
   ·
   <a href="#architecture"><strong>Architecture</strong></a>
@@ -33,72 +31,44 @@
 
 ---
 
-<p align="center">
-  <img src="./docs/spectrogram_tab.png" width="900" alt="Spectrogram view — time–energy waterfall with recording library" />
-</p>
-
-<p align="center"><em>Spectrogram — capture, browse, and replay time–energy recordings</em></p>
-
----
-
 ## Screenshots
 
 ### Spectrum
 
 <p align="center">
-  <img src="./docs/spectrum_tab.png" width="900" alt="Spectrum tab — energy histogram with log scale and smoothing" />
+  <img src="./docs/spectrum_tab.png" width="900" alt="Spectrum tab — live energy histogram" />
 </p>
 
-<p align="center"><sub>Energy histogram with log scale, smoothing, and filled or outline charts</sub></p>
+| | **Spectrum** |
+| --- | --- |
+| **Goal** | Inspect the live gamma spectrum from your detector — identify peaks, watch counts accumulate, and read calibrated energy on the fly. |
+| **Features** | 1024-channel energy histogram · linear or log Y scale · adjustable smoothing · filled or outline chart style · live time, total counts, and calibration formula · reset accumulation |
 
 ### Spectrogram
 
 <p align="center">
-  <img src="./docs/spectrogram_tab.png" width="900" alt="Spectrogram tab — waterfall view with recording library" />
+  <img src="./docs/spectrogram_tab.png" width="900" alt="Spectrogram tab — time–energy waterfall with recording library" />
 </p>
 
-<p align="center"><sub>Waterfall view, palette controls, and a searchable recording library</sub></p>
+| | **Spectrogram** |
+| --- | --- |
+| **Goal** | See how the spectrum evolves over minutes or hours, capture sessions for later review, and manage a library of recordings. |
+| **Features** | Time–energy waterfall · timed row capture with interval control · colormap palettes (Viridis, Inferno, Turbo) · grid, count-rate, and isotope-line overlays · searchable recording library · import, export, and replay `.rcspg` files |
 
 ### Analysis
 
 <p align="center">
-  <img src="./docs/analysis_tab.png" width="900" alt="Analysis tab — overlay saved spectra against background" />
+  <img src="./docs/analysis_tab.png" width="900" alt="Analysis tab — compare saved spectra" />
 </p>
 
-<p align="center"><sub>Overlay saved spectra, compare samples against background, subtract and smooth</sub></p>
+| | **Analysis** |
+| --- | --- |
+| **Goal** | Compare saved recordings side by side — pick a background, overlay samples, and spot differences that a single spectrum cannot show alone. |
+| **Features** | Recording library with background / sample roles · multi-spectrum overlay chart · optional background subtraction · linear or log Y scale · smoothing · filled or outline chart style · per-recording metadata (live time, counts, serial) |
 
 ---
 
-## Features
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-
-### Live monitoring
-
-Monitor dose rate, count rate, and accumulated dose with trend charts and alarm controls — all in one view alongside your session readouts.
-
-### Spectrum analysis
-
-Inspect the live energy histogram with linear or log scale, adjustable smoothing, and a filled or outline chart style.
-
-    </td>
-    <td width="50%" valign="top">
-
-### Recording & playback
-
-Capture spectrogram rows at a fixed interval, import `.rcspg` files, and browse your library with search and metadata at a glance.
-
-### Device settings
-
-Configure alarm thresholds, units, display options, and signal preferences from a dedicated settings workspace.
-
-    </td>
-  </tr>
-</table>
-
-Every tab shares a consistent dark UI, sidebar-driven controls, and transport layers for both USB and Bluetooth LE. Developed and tested on Linux.
+<p align="center"><sub>Other tabs — <strong>Monitor</strong> (live dose & count rates, trend charts, alarms) · <strong>Device</strong> (USB / Bluetooth connect) · <strong>Settings</strong> (thresholds, units, display, signals)</sub></p>
 
 ---
 
