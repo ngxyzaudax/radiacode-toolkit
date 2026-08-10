@@ -20,6 +20,8 @@
 </p>
 
 <p align="center">
+  <a href="#demo"><strong>Demo</strong></a>
+  ·
   <a href="#screenshots"><strong>Screenshots</strong></a>
   ·
   <a href="#quick-start"><strong>Quick start</strong></a>
@@ -31,74 +33,63 @@
 
 ---
 
+## Demo
+
+<p align="center">
+  <img src="./docs/demo/radiacode_demo.gif" width="900" alt="Radiacode Toolkit demo — live Monitor, Spectrum, Spectrogram, Analysis, and Settings" />
+</p>
+
+<p align="center">
+  <a href="./docs/demo/radiacode_demo.webm">Full demo video (WebM, ~3:40)</a>
+  ·
+  <a href="./docs/README.md">Documentation index</a>
+</p>
+
+---
+
 ## Screenshots
 
-### Monitor
+Detailed notes for each tab live under [`docs/`](./docs/README.md).
+
+### [Monitor](./docs/monitor/README.md)
 
 <p align="center">
-  <img src="./docs/monitor_tab.png" width="900" alt="Monitor tab — live dose and count rate trends" />
+  <a href="./docs/monitor/README.md"><img src="./docs/monitor/screenshot.png" width="900" alt="Monitor tab" /></a>
 </p>
 
-The Monitor view is the primary operational dashboard for continuous radiation surveillance. It streams dose rate, count rate, and session-accumulated dose from the detector and plots each quantity as a rolling time series with warn and danger thresholds overlaid as reference lines. Numeric readouts and alarm configuration live in the sidebar so you can observe trends and adjust limits without switching context.
+Live dose rate, count rate, and session dose trends with alarm thresholds.
 
-- Rolling **120 s** windows for dose rate and count rate; cumulative dose plotted over the full session
-- Live readouts: dose rate, count rate, accumulated dose, session elapsed time (device-reported units)
-- Alarm cards for dose rate, count rate, and accumulated dose — warn/danger thresholds, audible and visual toggles, load/save to device
-- Filled or outline chart rendering; confirmed reset of accumulated dose on the detector
-
-### Spectrum
+### [Spectrum](./docs/spectrum/README.md)
 
 <p align="center">
-  <img src="./docs/spectrum_tab.png" width="900" alt="Spectrum tab — live energy histogram" />
+  <a href="./docs/spectrum/README.md"><img src="./docs/spectrum/screenshot.png" width="900" alt="Spectrum tab" /></a>
 </p>
 
-The Spectrum view displays the live 1024-channel energy histogram from the detector. It is intended for peak identification, calibration verification, and monitoring how counts accumulate in each channel over time. The energy axis is derived from the on-device calibration polynomial; live time, total counts, and the active formula are shown above the plot.
+Live 1024-channel energy histogram with calibrated keV axis.
 
-- 1024-channel histogram with calibrated energy axis (keV)
-- Linear or logarithmic Y scale; adjustable smoothing window (channels)
-- Filled or outline chart style; reset accumulation
-- Header stats: live time, total counts, channel count, calibration coefficients
-
-### Spectrogram
+### [Spectrogram](./docs/spectrogram/README.md)
 
 <p align="center">
-  <img src="./docs/spectrogram_tab.png" width="900" alt="Spectrogram tab — time–energy waterfall with recording library" />
+  <a href="./docs/spectrogram/README.md"><img src="./docs/spectrogram/screenshot.png" width="900" alt="Spectrogram tab" /></a>
 </p>
 
-The Spectrogram view captures how the energy spectrum changes over time. Each row is a snapshot taken at a configurable interval; rows stack into a time–energy waterfall for spotting drift, transient peaks, or environmental changes across long runs. A built-in library stores sessions on disk, supports search, and handles import/export of `.rcspg` recordings for offline review.
+Time–energy waterfall, recording transport, and `.rcspg` library.
 
-- Time–energy waterfall with configurable capture interval and row limit
-- Colormap selection (Viridis, Inferno, Turbo); auto brightness, grid, count-rate, and isotope-line overlays
-- Recording transport: record, pause, play, stop; live row count and history statistics
-- Searchable recording library with metadata, comments, import, export, and replay
-
-### Analysis
+### [Analysis](./docs/analysis/README.md)
 
 <p align="center">
-  <img src="./docs/analysis_tab.png" width="900" alt="Analysis tab — compare saved spectra" />
+  <a href="./docs/analysis/README.md"><img src="./docs/analysis/screenshot.png" width="900" alt="Analysis tab" /></a>
 </p>
 
-The Analysis view compares saved spectrogram recordings offline. Assign one capture as background and one or more as samples, then overlay their spectra on a shared energy axis. Background subtraction highlights net peaks above ambient; smoothing and scale options match the live Spectrum view for consistent interpretation.
+Offline comparison of saved spectra with optional background subtraction.
 
-- Recording library with explicit **Background** / **Sample** role assignment
-- Multi-spectrum overlay on a shared keV axis; optional background subtraction
-- Linear or logarithmic Y scale (cps); adjustable smoothing; filled or outline charts
-- Per-recording metadata: serial, channel count, live time, total counts
-
-### Settings
+### [Settings](./docs/settings/README.md)
 
 <p align="center">
-  <img src="./docs/settings_tab.png" width="900" alt="Settings tab — device configuration" />
+  <a href="./docs/settings/README.md"><img src="./docs/settings/screenshot.png" width="900" alt="Settings tab" /></a>
 </p>
 
-Settings is the configuration workspace for the detector and the desktop application. The Device section reads and writes on-device parameters over the active USB or Bluetooth link — units, alarm thresholds, display behaviour, haptic/audio feedback, and clock sync. Changes can be loaded from hardware, edited locally, and saved back in one workflow.
-
-- **Device** — model, serial, firmware, link type, battery, temperature, RSSI
-- **Units** — dose rate (µSv/h ↔ µR/h), count rate (cps ↔ cpm)
-- **Alarms** — dose rate, count rate, and accumulated dose thresholds (warn / danger / OOS); per-level audible and vibration flags; once vs continuous signal mode
-- **Screen** — brightness, backlight timeout, rotation (auto / left / right)
-- **Signals** — master sound, vibration, and light toggles; clicks, button feedback, connection, and power alerts
-- Load from device / save to device toolbar; sync clock from PC
+Device configuration: units, alarms, screen, and signal feedback.
 
 ---
 
