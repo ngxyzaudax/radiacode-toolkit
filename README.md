@@ -40,8 +40,6 @@
 </p>
 
 <p align="center">
-  <a href="./docs/demo/radiacode_demo.webm">Full demo video (WebM, ~3:40)</a>
-  ·
   <a href="./docs/README.md">Documentation index</a>
 </p>
 

@@ -1,16 +1,14 @@
 # Documentation
 
-Screenshots and notes for each main application tab, plus a short demo of the desktop UI.
+Screenshots and notes for each main application tab, plus a demo of the desktop UI.
 
 ## Demo
-
-| Preview | Full recording |
-| --- | --- |
-| [radiacode_demo.gif](./demo/radiacode_demo.gif) | [radiacode_demo.webm](./demo/radiacode_demo.webm) (~3:40) |
 
 <p align="center">
   <img src="./demo/radiacode_demo.gif" width="900" alt="Radiacode Toolkit demo" />
 </p>
+
+Highlight reel sampled across a full session (5 s every 20 s from t=15 s).
 
 ## Tabs
 
