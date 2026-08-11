@@ -90,7 +90,15 @@ impl ResponseAssembler {
                     have: chunk.len(),
                 });
             }
-            let payload_len = i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
+            let payload_len_i32 =
+                i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            if payload_len_i32 < 0 {
+                return Err(Error::ProtocolMismatch {
+                    expected: "non-negative response length".into(),
+                    got: format!("length {payload_len_i32}"),
+                });
+            }
+            let payload_len = payload_len_i32 as usize;
             self.remaining = 4 + payload_len;
             self.payload.clear();
             self.payload.extend_from_slice(&chunk[4..]);

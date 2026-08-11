@@ -46,7 +46,10 @@ fn decode_counts_v1(buffer: &mut BytesBuffer) -> Result<Vec<u32>> {
         for _ in 0..repeat {
             let value = read_compressed_count(buffer, vlen, last)?;
             last = value;
-            counts.push(value as u32);
+            counts.push(u32::try_from(value).map_err(|_| Error::ProtocolMismatch {
+                expected: "non-negative spectrum count".into(),
+                got: format!("count {value}"),
+            })?);
         }
     }
     Ok(counts)

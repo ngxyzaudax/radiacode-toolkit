@@ -6,7 +6,7 @@ use std::time::Duration;
 use radiacode_bluetooth::{scan_radiacode_devices, BleError};
 use radiacode_core::{
     merge_discovered, merge_status, AlarmLimits, DeviceConfig, DeviceEndpoint, DeviceStatus,
-    DiscoveredDevice, Error, RadiaCode, SessionRestore, Spectrum,
+    DiscoveredDevice, Error, RadiaCode, SessionRestore, Spectrum, DataBufCursor,
 };
 use radiacode_usb::scan_usb_devices;
 use tracing::{debug, error, info, warn};
@@ -14,7 +14,7 @@ use tracing::{debug, error, info, warn};
 use crate::model::{DeviceInfo, SpectrumView};
 use crate::worker::WorkerEvent;
 
-const CONNECT_COOLDOWN: Duration = Duration::from_millis(1500);
+const CONNECT_COOLDOWN: Duration = Duration::from_millis(500);
 const TRANSIENT_RETRIES: usize = 2;
 const ALARM_REFRESH_POLLS: u64 = 120;
 
@@ -297,7 +297,7 @@ async fn fetch_spectrum_with_retries(device: &mut RadiaCode) -> radiacode_core::
             Err(error) => return Err(error),
         }
     }
-    Err(last_error.unwrap_or(Error::Timeout))
+    Err(last_error.unwrap_or(Error::timeout()))
 }
 
 async fn handle_device_error(
@@ -332,7 +332,7 @@ async fn handle_device_error(
 
 fn should_reconnect(error: &Error, session_endpoint: Option<&DeviceEndpoint>) -> bool {
     session_endpoint.is_some()
-        && (is_connection_lost(error) || matches!(error, Error::Timeout))
+        && (is_connection_lost(error) || error.is_timeout())
 }
 
 fn is_connection_lost(error: &Error) -> bool {
@@ -424,6 +424,7 @@ pub async fn handle_monitor(
     session_endpoint: Option<&DeviceEndpoint>,
     alarm_limits: &mut Option<AlarmLimits>,
     monitor_polls: &mut u64,
+    data_buf_cursor: &mut DataBufCursor,
     session: &SessionEpoch,
     link_status: &mut DeviceStatus,
     session_restore: &Option<SessionRestore>,
@@ -448,13 +449,13 @@ pub async fn handle_monitor(
         }
     };
     let refresh_rssi = false;
-    match device.poll_monitor(&limits, refresh_rssi).await {
+    match device.poll_monitor(&limits, data_buf_cursor, refresh_rssi).await {
         Ok((sample, fresh)) => {
             merge_status(link_status, fresh);
             if !session.active() {
                 return Some(device);
             }
-            let has_data = sample.rates.is_some() || sample.accumulated.is_some();
+            let has_data = !sample.rates.is_empty() || sample.accumulated.is_some();
             if has_data {
                 *monitor_polls = monitor_polls.saturating_add(1);
                 let _ = events.send(WorkerEvent::MonitorSample(sample));
@@ -659,7 +660,7 @@ async fn reconnect_endpoint(
     restore: &SessionRestore,
 ) -> radiacode_core::Result<RadiaCode> {
     if !session.active() {
-        return Err(Error::ConnectionClosed);
+        return Err(Error::connection_closed());
     }
     connect_endpoint(endpoint, Some(restore)).await
 }

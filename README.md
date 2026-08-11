@@ -24,6 +24,8 @@
   ·
   <a href="./docs/README.md"><strong>Docs</strong></a>
   ·
+  <a href="./docs/PROTOCOL.md"><strong>Protocol</strong></a>
+  ·
   <a href="#quick-start"><strong>Quick start</strong></a>
   ·
   <a href="#architecture"><strong>Architecture</strong></a>
@@ -47,7 +49,7 @@
 | [Analysis](./docs/analysis/README.md) | Offline comparison of saved spectra |
 | [Settings](./docs/settings/README.md) | Device and application configuration |
 
-Per-tab notes and screenshots: [`docs/`](./docs/README.md).
+Per-tab notes and screenshots: [`docs/`](./docs/README.md). Wire format reference: [`docs/PROTOCOL.md`](./docs/PROTOCOL.md).
 
 ---
 
@@ -89,7 +91,8 @@ Shared Rust crates sit behind the desktop app and handle protocol, transport, an
 | Crate | Role |
 | --- | --- |
 | `radiacode-spectrum` | Desktop application (egui) |
-| `radiacode-core` | Device protocol, spectra, alarms, configuration |
+| `radiacode-protocol` | Wire protocol — framing, opcodes, payload decoders, `Transport` trait ([reference](./docs/PROTOCOL.md)) |
+| `radiacode-core` | Device client (`RadiaCode`) and domain models |
 | `radiacode-usb` | USB transport |
 | `radiacode-bluetooth` | Bluetooth LE transport |
 

@@ -13,10 +13,19 @@ pub fn draw_sticky_toolbar(
     let op_busy = state.device_busy();
     draw_status(ui, state, connected, dirty);
     ui.add_space(4.0);
-    draw_actions(ui, connected, dirty, op_busy)
+    draw_alarm_actions(ui, connected, dirty, op_busy)
 }
 
-fn draw_actions(
+pub fn draw_alarm_toolbar(
+    ui: &mut Ui,
+    state: &SettingsState,
+    connected: bool,
+) -> Option<SettingsAction> {
+    let dirty = state.draft_dirty();
+    draw_alarm_actions(ui, connected, dirty, state.device_busy())
+}
+
+fn draw_alarm_actions(
     ui: &mut Ui,
     connected: bool,
     dirty: bool,

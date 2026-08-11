@@ -159,9 +159,12 @@ impl AppState {
             }
             WorkerEvent::DeviceStatus(_) => None,
             WorkerEvent::MonitorSample(sample) if accept_session => {
-                if let Some(rates) = sample.rates {
-                    self.monitor.push_sample(rates);
-                }
+                self.monitor.push_poll(
+                    &sample.rates,
+                    sample.decode_warnings,
+                    sample.rejected_records,
+                    &sample.seq_gaps,
+                );
                 if let Some(accumulated) = sample.accumulated {
                     self.dosimeter.push_sample(accumulated);
                 }

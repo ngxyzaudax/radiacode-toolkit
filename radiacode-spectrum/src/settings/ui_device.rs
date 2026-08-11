@@ -1,6 +1,6 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::{BacklightOffTime, DeviceConfig, DisplayDirection};
+use radiacode_core::{BacklightOffTime, CountDisplayUnit, DeviceConfig, DisplayDirection, DoseDisplayUnit};
 
 use crate::model::DeviceInfo;
 use crate::theme::MUTED;
@@ -33,12 +33,20 @@ pub fn draw_device_info(ui: &mut Ui, info: Option<&DeviceInfo>) {
 pub fn draw_units_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
     ui.horizontal(|ui| {
         ui.label("Dose rate");
-        ui.selectable_value(&mut draft.alarms.dose_unit_sv, true, "µSv/h");
-        ui.selectable_value(&mut draft.alarms.dose_unit_sv, false, "µR/h");
+        ui.selectable_value(
+            &mut draft.alarms.dose_unit,
+            DoseDisplayUnit::MicroSievertPerHour,
+            "µSv/h",
+        );
+        ui.selectable_value(
+            &mut draft.alarms.dose_unit,
+            DoseDisplayUnit::MicroRoentgenPerHour,
+            "µR/h",
+        );
         ui.add_space(16.0);
         ui.label("Count rate");
-        ui.selectable_value(&mut draft.alarms.count_unit_cpm, false, "cps");
-        ui.selectable_value(&mut draft.alarms.count_unit_cpm, true, "cpm");
+        ui.selectable_value(&mut draft.alarms.count_unit, CountDisplayUnit::Cps, "cps");
+        ui.selectable_value(&mut draft.alarms.count_unit, CountDisplayUnit::Cpm, "cpm");
     });
 }
 

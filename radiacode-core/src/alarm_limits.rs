@@ -1,6 +1,6 @@
 use tracing::debug;
 
-use crate::command::VirtSfr;
+use radiacode_protocol::VirtSfr;
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::rate_units::{
@@ -8,6 +8,7 @@ use crate::rate_units::{
     encode_dose_alarm,
 };
 use crate::types::{AlarmLimits, AlarmLimitsUpdate};
+use radiacode_protocol::{CountDisplayUnit, DoseDisplayUnit, RawCountsPer10s, RawMicroRoentgenPerHour};
 
 pub async fn alarm_limits(device: &mut RadiaCode) -> Result<AlarmLimits> {
     let ids = [
@@ -21,17 +22,17 @@ pub async fn alarm_limits(device: &mut RadiaCode) -> Result<AlarmLimits> {
         VirtSfr::CrUnits,
     ];
     let values = device.read_vsfr_batch(&ids).await?;
-    let dose_unit_sv = values[6] != 0;
-    let count_unit_cpm = values[7] != 0;
+    let dose_unit = DoseDisplayUnit::from_device_flag(values[6]);
+    let count_unit = CountDisplayUnit::from_device_flag(values[7]);
     let limits = AlarmLimits {
-        l1_count_rate: decode_count_alarm(values[0], count_unit_cpm),
-        l2_count_rate: decode_count_alarm(values[1], count_unit_cpm),
-        l1_dose_rate: decode_dose_alarm(values[2], dose_unit_sv),
-        l2_dose_rate: decode_dose_alarm(values[3], dose_unit_sv),
-        l1_dose: decode_dose_accum(values[4], dose_unit_sv),
-        l2_dose: decode_dose_accum(values[5], dose_unit_sv),
-        dose_unit_sv,
-        count_unit_cpm,
+        l1_count_rate: decode_count_alarm(RawCountsPer10s::new(values[0]), count_unit),
+        l2_count_rate: decode_count_alarm(RawCountsPer10s::new(values[1]), count_unit),
+        l1_dose_rate: decode_dose_alarm(RawMicroRoentgenPerHour::new(values[2]), dose_unit),
+        l2_dose_rate: decode_dose_alarm(RawMicroRoentgenPerHour::new(values[3]), dose_unit),
+        l1_dose: decode_dose_accum(values[4], dose_unit),
+        l2_dose: decode_dose_accum(values[5], dose_unit),
+        dose_unit,
+        count_unit,
     };
     debug!(?limits, "alarm limits loaded");
     Ok(limits)
@@ -39,32 +40,44 @@ pub async fn alarm_limits(device: &mut RadiaCode) -> Result<AlarmLimits> {
 
 pub async fn set_alarm_limits(device: &mut RadiaCode, update: &AlarmLimitsUpdate) -> Result<()> {
     let current = alarm_limits(device).await?;
-    let dose_unit_sv = update.dose_unit_sv.unwrap_or(current.dose_unit_sv);
-    let count_unit_cpm = update.count_unit_cpm.unwrap_or(current.count_unit_cpm);
+    let dose_unit = update.dose_unit.unwrap_or(current.dose_unit);
+    let count_unit = update.count_unit.unwrap_or(current.count_unit);
     let mut pairs = Vec::new();
     if let Some(value) = update.l1_count_rate {
-        pairs.push((VirtSfr::CrLev1Cp10s, encode_count_alarm(value, count_unit_cpm)));
+        pairs.push((
+            VirtSfr::CrLev1Cp10s,
+            encode_count_alarm(value, count_unit).as_u32(),
+        ));
     }
     if let Some(value) = update.l2_count_rate {
-        pairs.push((VirtSfr::CrLev2Cp10s, encode_count_alarm(value, count_unit_cpm)));
+        pairs.push((
+            VirtSfr::CrLev2Cp10s,
+            encode_count_alarm(value, count_unit).as_u32(),
+        ));
     }
     if let Some(value) = update.l1_dose_rate {
-        pairs.push((VirtSfr::DrLev1UrH, encode_dose_alarm(value, dose_unit_sv)));
+        pairs.push((
+            VirtSfr::DrLev1UrH,
+            encode_dose_alarm(value, dose_unit).as_u32(),
+        ));
     }
     if let Some(value) = update.l2_dose_rate {
-        pairs.push((VirtSfr::DrLev2UrH, encode_dose_alarm(value, dose_unit_sv)));
+        pairs.push((
+            VirtSfr::DrLev2UrH,
+            encode_dose_alarm(value, dose_unit).as_u32(),
+        ));
     }
     if let Some(value) = update.l1_dose {
-        pairs.push((VirtSfr::DsLev1Ur, encode_dose_accum(value, dose_unit_sv)));
+        pairs.push((VirtSfr::DsLev1Ur, encode_dose_accum(value, dose_unit)));
     }
     if let Some(value) = update.l2_dose {
-        pairs.push((VirtSfr::DsLev2Ur, encode_dose_accum(value, dose_unit_sv)));
+        pairs.push((VirtSfr::DsLev2Ur, encode_dose_accum(value, dose_unit)));
     }
-    if let Some(value) = update.dose_unit_sv {
-        pairs.push((VirtSfr::DsUnits, u32::from(value)));
+    if let Some(value) = update.dose_unit {
+        pairs.push((VirtSfr::DsUnits, value.to_device_flag()));
     }
-    if let Some(value) = update.count_unit_cpm {
-        pairs.push((VirtSfr::CrUnits, u32::from(value)));
+    if let Some(value) = update.count_unit {
+        pairs.push((VirtSfr::CrUnits, value.to_device_flag()));
     }
     if pairs.is_empty() {
         return Ok(());

@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct AppConfig {
     pub monitor_poll_secs: u64,
     pub spectrum_refresh_secs: u64,
+    pub monitor_smoothing_window: usize,
     pub remember_device: bool,
     pub last_endpoint: Option<DeviceEndpoint>,
     pub auto_connect: bool,
@@ -20,6 +21,7 @@ impl Default for AppConfig {
         Self {
             monitor_poll_secs: 1,
             spectrum_refresh_secs: 1,
+            monitor_smoothing_window: 1,
             remember_device: true,
             last_endpoint: None,
             auto_connect: false,
@@ -32,6 +34,7 @@ impl AppConfig {
     pub fn clamp(&mut self) {
         self.monitor_poll_secs = self.monitor_poll_secs.clamp(1, 60);
         self.spectrum_refresh_secs = self.spectrum_refresh_secs.clamp(1, 60);
+        self.monitor_smoothing_window = crate::smooth::normalize_window(self.monitor_smoothing_window);
     }
 }
 

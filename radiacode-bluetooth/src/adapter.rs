@@ -6,6 +6,8 @@ use tracing::debug;
 
 use crate::ble_error::BleError;
 
+pub const CONNECT_DISCOVERY: Duration = Duration::from_millis(800);
+
 pub async fn default_adapter() -> std::result::Result<Adapter, BleError> {
     let manager = Manager::new().await?;
     manager
@@ -41,7 +43,7 @@ pub async fn resolve_peripheral(
         }
     }
     debug!(%target, "peripheral not cached, scanning");
-    find_peripheral(adapter, mac, Duration::from_secs(3)).await
+    find_peripheral(adapter, mac, CONNECT_DISCOVERY).await
 }
 
 pub async fn find_peripheral(

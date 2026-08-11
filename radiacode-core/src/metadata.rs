@@ -1,7 +1,9 @@
+use radiacode_protocol::Error as ProtocolError;
+
 use crate::device::RadiaCode;
 use crate::device_info::{energy_calib, serial_number};
 use crate::device_model::model_from_serial;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::types::DeviceMetadata;
 
 pub async fn metadata(device: &mut RadiaCode) -> Result<DeviceMetadata> {
@@ -9,7 +11,7 @@ pub async fn metadata(device: &mut RadiaCode) -> Result<DeviceMetadata> {
     let energy_calib = energy_calib(device).await?;
     let versions = device
         .cached_versions()
-        .ok_or(Error::ProtocolMismatch {
+        .ok_or(ProtocolError::ProtocolMismatch {
             expected: "initialized device".into(),
             got: "missing cached firmware version".into(),
         })?

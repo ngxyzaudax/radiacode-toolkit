@@ -3,14 +3,16 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use radiacode_core::{
-    framed_request_header, response_matches_request, BytesBuffer, DeviceEndpoint, DiscoveredDevice,
-    Error, RadiaCode, SessionRestore, Transport, model_from_serial,
+    DeviceEndpoint, DiscoveredDevice, Error, RadiaCode, SessionRestore, model_from_serial,
+};
+use radiacode_protocol::{
+    framed_request_header, response_matches_request, BytesBuffer, Transport,
 };
 use rusb::{Context, DeviceHandle, UsbContext};
 use tracing::{debug, info, warn};
 
 use crate::constants::{DRAIN, EMPTY_READ_RETRIES, EP_IN, EP_OUT, INTERFACE, PID, READ_BUF, TIMEOUT, VID};
-use crate::usb_error::{map_usb_error, UsbError};
+use crate::usb_error::{map_usb_error, map_usb_protocol_error, UsbError};
 
 type LockedHandle = Arc<Mutex<DeviceHandle<Context>>>;
 
@@ -55,15 +57,15 @@ impl UsbTransport {
 
 #[async_trait(?Send)]
 impl Transport for UsbTransport {
-    async fn execute(&mut self, request: &[u8]) -> radiacode_core::Result<BytesBuffer> {
+    async fn execute(&mut self, request: &[u8]) -> radiacode_protocol::Result<BytesBuffer> {
         let handle = Arc::clone(&self.handle);
         let request = request.to_vec();
         tokio::task::spawn_blocking(move || {
             let mut handle = handle.lock().expect("usb handle lock");
-            UsbTransport::execute_sync(&mut handle, &request).map_err(map_usb_error)
+            UsbTransport::execute_sync(&mut handle, &request).map_err(map_usb_protocol_error)
         })
         .await
-        .map_err(|error| Error::TransportUnavailable(error.to_string()))?
+        .map_err(|error| radiacode_protocol::Error::TransportUnavailable(error.to_string()))?
     }
 
     async fn drain_link(&mut self) {
@@ -75,7 +77,7 @@ impl Transport for UsbTransport {
         .await;
     }
 
-    async fn disconnect(self: Box<Self>) -> radiacode_core::Result<()> {
+    async fn disconnect(self: Box<Self>) -> radiacode_protocol::Result<()> {
         info!("usb transport disconnect");
         Ok(())
     }
@@ -101,7 +103,7 @@ pub async fn connect(serial: &str) -> radiacode_core::Result<RadiaCode> {
         move || UsbTransport::connect(&serial).map_err(map_usb_error)
     })
     .await
-    .map_err(|error| Error::TransportUnavailable(error.to_string()))??;
+    .map_err(|error| Error::from(radiacode_protocol::Error::TransportUnavailable(error.to_string())))??;
     RadiaCode::open(Box::new(transport), false, None).await
 }
 
@@ -112,7 +114,7 @@ pub async fn reconnect_session(serial: &str, restore: &SessionRestore) -> radiac
         move || UsbTransport::reconnect(&serial).map_err(map_usb_error)
     })
     .await
-    .map_err(|error| Error::TransportUnavailable(error.to_string()))??;
+    .map_err(|error| Error::from(radiacode_protocol::Error::TransportUnavailable(error.to_string())))??;
     RadiaCode::open(Box::new(transport), false, Some(restore)).await
 }
 

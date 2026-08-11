@@ -721,6 +721,7 @@ impl SpectrumApp {
                         &self.state.monitor,
                         &self.state.dosimeter,
                         plot_style,
+                        self.settings.app.monitor_smoothing_window,
                     )
                 }
                 ViewTab::Spectrum => {

@@ -1,5 +1,4 @@
-use crate::command::VirtSfr;
-use crate::data_buf::DataBufSnapshot;
+use radiacode_protocol::{DataBufSnapshot, VirtSfr};
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::types::DeviceStatus;
@@ -17,6 +16,14 @@ pub fn merge_status(carry: &mut DeviceStatus, fresh: DeviceStatus) {
 }
 
 pub async fn status_from_snapshot(
+    device: &mut RadiaCode,
+    snapshot: &DataBufSnapshot,
+    refresh_rssi: bool,
+) -> Result<DeviceStatus> {
+    status_from_frame(device, snapshot, refresh_rssi).await
+}
+
+pub async fn status_from_frame(
     device: &mut RadiaCode,
     snapshot: &DataBufSnapshot,
     refresh_rssi: bool,

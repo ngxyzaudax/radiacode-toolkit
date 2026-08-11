@@ -1,6 +1,8 @@
-use crate::command::{Command, VirtSfr, VirtString};
+use radiacode_protocol::{Command, VirtSfr, VirtString};
+use radiacode_protocol::Error as ProtocolError;
+
 use crate::device::RadiaCode;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 impl RadiaCode {
     pub async fn spectrum_reset(&mut self) -> Result<()> {
@@ -10,7 +12,7 @@ impl RadiaCode {
         let mut response = self.execute_raw(Command::WrVirtString, &args).await?;
         let retcode = response.take_u32_le()?;
         if retcode != 1 {
-            return Err(Error::UnexpectedReturnCode(retcode));
+            return Err(ProtocolError::UnexpectedReturnCode(retcode).into());
         }
         Ok(())
     }
@@ -31,10 +33,11 @@ impl RadiaCode {
 
     pub async fn set_display_brightness(&mut self, brightness: u8) -> Result<()> {
         if brightness > 9 {
-            return Err(Error::ProtocolMismatch {
+            return Err(ProtocolError::ProtocolMismatch {
                 expected: "brightness 0..=9".into(),
                 got: brightness.to_string(),
-            });
+            }
+            .into());
         }
         self.write_vsfr(VirtSfr::DispBrt, &(brightness as u32).to_le_bytes())
             .await

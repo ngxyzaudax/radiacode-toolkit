@@ -4,22 +4,37 @@ use btleplug::api::{Characteristic, Peripheral as _, WriteType};
 use btleplug::platform::Peripheral;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use radiacode_core::{
+use radiacode_protocol::{
     framed_request_header, response_matches_request, BytesBuffer, Error, ResponseAssembler, Result,
 };
 use tokio::time::{timeout, Instant};
 use tracing::{debug, warn};
 
-use crate::ble_error::map_ble_error;
+use crate::ble_error::map_ble_protocol_error;
 use crate::uuids::{CHUNK_SIZE, RESPONSE_TIMEOUT_SECS};
 
 const QUIET_GAP: Duration = Duration::from_millis(120);
 const MAX_DRAIN: Duration = Duration::from_millis(2500);
+const COMMAND_DRAIN: Duration = Duration::from_millis(400);
+const SETTLE_DRAIN: Duration = Duration::from_millis(500);
 
 pub async fn drain_until_quiet(
     notifications: &mut BoxStream<'static, btleplug::api::ValueNotification>,
 ) {
-    let deadline = Instant::now() + MAX_DRAIN;
+    drain_for(notifications, MAX_DRAIN).await;
+}
+
+pub async fn drain_for_settle(
+    notifications: &mut BoxStream<'static, btleplug::api::ValueNotification>,
+) {
+    drain_for(notifications, SETTLE_DRAIN).await;
+}
+
+async fn drain_for(
+    notifications: &mut BoxStream<'static, btleplug::api::ValueNotification>,
+    max_drain: Duration,
+) {
+    let deadline = Instant::now() + max_drain;
     let mut last_received = Instant::now();
     let mut drained = 0usize;
     while Instant::now() < deadline {
@@ -51,13 +66,13 @@ pub async fn execute_request(
 ) -> Result<BytesBuffer> {
     let expected = framed_request_header(request)?;
     debug!(request_len = request.len(), "ble execute request");
-    drain_until_quiet(notifications).await;
+    drain_for(notifications, COMMAND_DRAIN).await;
 
     for chunk in request.chunks(CHUNK_SIZE) {
         peripheral
             .write(write_char, chunk, WriteType::WithoutResponse)
             .await
-            .map_err(|error| map_ble_error(error.into()))?;
+            .map_err(|error| map_ble_protocol_error(error.into()))?;
     }
 
     let mut assembler = ResponseAssembler::default();

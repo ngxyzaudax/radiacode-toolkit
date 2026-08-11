@@ -15,6 +15,7 @@ pub async fn scan_radiacode_devices(
 ) -> std::result::Result<Vec<DiscoveredDevice>, BleError> {
     info!(?duration, "starting ble scan");
     let adapter = default_adapter().await?;
+    crate::scan_session::remember_scan_adapter(&adapter).await;
     adapter.start_scan(ScanFilter::default()).await?;
     tokio::time::sleep(duration).await;
     let peripherals = adapter.peripherals().await?;

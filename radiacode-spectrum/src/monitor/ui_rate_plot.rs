@@ -15,8 +15,9 @@ pub fn draw_rate_plot(
     series: PlotSeries,
     unit: &str,
     style: HistogramStyle,
+    smoothing_window: usize,
 ) {
-    let bounds = plot_bounds(monitor, series);
+    let bounds = plot_bounds(monitor, series, smoothing_window);
     let window_secs = (bounds.x_max - bounds.x_min).max(0.0);
     ui.horizontal(|ui| {
         ui.label(RichText::new(title).strong());
@@ -27,7 +28,7 @@ pub fn draw_rate_plot(
         );
     });
     let plot_height = ui.available_height().max(1.0);
-    let points = series_points(monitor, series, bounds);
+    let points = series_points(monitor, series, bounds, smoothing_window);
     let unit_label = unit.to_string();
     let series_title = title.to_string();
     let hover_title = series_title.clone();

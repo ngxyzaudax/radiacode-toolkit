@@ -2,30 +2,30 @@ use egui::Ui;
 
 use radiacode_core::{count_unit_label, dose_unit_label, AlarmSignalMode, DeviceConfig};
 
-use crate::settings::ui_alarm_card::alarm_card;
+use crate::settings::ui_alarm_card::{alarm_card, compact_alarm_card};
 
 pub fn draw_alarms_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
-    let dose_unit = dose_unit_label(draft.alarms.dose_unit_sv);
-    let count_unit = count_unit_label(draft.alarms.count_unit_cpm);
+    let dose_unit = dose_unit_label(draft.alarms.dose_unit);
+    let count_unit = count_unit_label(draft.alarms.count_unit);
     ui.columns(3, |columns| {
-        dose_rate_card(&mut columns[0], draft, dose_unit);
-        count_rate_card(&mut columns[1], draft, count_unit);
-        accum_dose_card(&mut columns[2], draft, dose_unit);
+        dose_rate_card(&mut columns[0], draft, dose_unit, false);
+        count_rate_card(&mut columns[1], draft, count_unit, false);
+        accum_dose_card(&mut columns[2], draft, dose_unit, false);
     });
     draw_alarm_signal_mode(ui, draft);
 }
 
 pub fn draw_monitor_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
-    let dose_unit = dose_unit_label(draft.alarms.dose_unit_sv);
-    let count_unit = count_unit_label(draft.alarms.count_unit_cpm);
-    dose_rate_card(ui, draft, dose_unit);
-    ui.add_space(6.0);
-    count_rate_card(ui, draft, count_unit);
+    let dose_unit = dose_unit_label(draft.alarms.dose_unit);
+    let count_unit = count_unit_label(draft.alarms.count_unit);
+    dose_rate_card(ui, draft, dose_unit, true);
+    ui.add_space(4.0);
+    count_rate_card(ui, draft, count_unit, true);
 }
 
 pub fn draw_dosimeter_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
-    let dose_unit = dose_unit_label(draft.alarms.dose_unit_sv);
-    accum_dose_card(ui, draft, dose_unit);
+    let dose_unit = dose_unit_label(draft.alarms.dose_unit);
+    accum_dose_card(ui, draft, dose_unit, true);
 }
 
 fn draw_alarm_signal_mode(ui: &mut Ui, draft: &mut DeviceConfig) {
@@ -41,9 +41,10 @@ fn draw_alarm_signal_mode(ui: &mut Ui, draft: &mut DeviceConfig) {
     });
 }
 
-fn dose_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str) {
-    alarm_card(
+fn dose_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str, compact: bool) {
+    draw_card(
         ui,
+        compact,
         "Dose rate",
         &mut draft.alarms.l1_dose_rate,
         &mut draft.alarms.l2_dose_rate,
@@ -66,9 +67,10 @@ fn dose_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str) {
     );
 }
 
-fn count_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str) {
-    alarm_card(
+fn count_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str, compact: bool) {
+    draw_card(
         ui,
+        compact,
         "Count rate",
         &mut draft.alarms.l1_count_rate,
         &mut draft.alarms.l2_count_rate,
@@ -91,9 +93,10 @@ fn count_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str) {
     );
 }
 
-fn accum_dose_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str) {
-    alarm_card(
+fn accum_dose_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str, compact: bool) {
+    draw_card(
         ui,
+        compact,
         "Accum. dose",
         &mut draft.alarms.l1_dose,
         &mut draft.alarms.l2_dose,
@@ -114,4 +117,21 @@ fn accum_dose_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str) {
             ),
         ],
     );
+}
+
+fn draw_card(
+    ui: &mut Ui,
+    compact: bool,
+    title: &str,
+    warning: &mut f32,
+    danger: &mut f32,
+    unit: &str,
+    speed: f64,
+    signals: [(&mut bool, &mut bool); 3],
+) {
+    if compact {
+        compact_alarm_card(ui, title, warning, danger, unit, speed, signals);
+    } else {
+        alarm_card(ui, title, warning, danger, unit, speed, signals);
+    }
 }

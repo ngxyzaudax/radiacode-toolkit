@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use radiacode_core::AccumulatedDose;
+use radiacode_core::{AccumulatedDose, DoseDisplayUnit};
 
 use crate::dosimeter::point::DoseHistoryPoint;
 
@@ -17,9 +17,9 @@ pub fn session_restarted(history: &VecDeque<DoseHistoryPoint>, sample: &Accumula
 pub fn unit_mismatch(
     latest: Option<AccumulatedDose>,
     history_empty: bool,
-    dose_unit_sv: bool,
+    dose_unit: DoseDisplayUnit,
 ) -> bool {
-    latest.is_some_and(|sample| sample.dose_unit_sv != dose_unit_sv) && !history_empty
+    latest.is_some_and(|sample| sample.dose_unit != dose_unit) && !history_empty
 }
 
 pub fn should_append(history: &VecDeque<DoseHistoryPoint>, duration_secs: u32) -> bool {

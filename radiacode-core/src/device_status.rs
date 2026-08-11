@@ -1,7 +1,7 @@
 use tracing::debug;
 
-use crate::command::VirtString;
-use crate::data_buf::latest_snapshot;
+use radiacode_protocol::VirtString;
+use radiacode_protocol::latest_snapshot;
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::status_read::status_from_snapshot;

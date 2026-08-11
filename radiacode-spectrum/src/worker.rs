@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use radiacode_core::{
-    AlarmLimits, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample,
-    RadiaCode, SessionRestore,
+    AlarmLimits, DataBufCursor, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice,
+    MonitorPollSample, RadiaCode, SessionRestore,
 };
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::time::{self, MissedTickBehavior};
@@ -138,12 +138,14 @@ fn reset_session(
     session_endpoint: &mut Option<DeviceEndpoint>,
     alarm_limits: &mut Option<AlarmLimits>,
     monitor_polls: &mut u64,
+    data_buf_cursor: &mut DataBufCursor,
     link_status: &mut DeviceStatus,
     session_restore: &mut Option<SessionRestore>,
 ) {
     *session_endpoint = None;
     *alarm_limits = None;
     *monitor_polls = 0;
+    data_buf_cursor.reset();
     *link_status = DeviceStatus::default();
     *session_restore = None;
     *device = None;
@@ -157,6 +159,7 @@ async fn run_fetch_batch(
     session_endpoint: &mut Option<DeviceEndpoint>,
     alarm_limits: &mut Option<AlarmLimits>,
     monitor_polls: &mut u64,
+    data_buf_cursor: &mut DataBufCursor,
     link_status: &mut DeviceStatus,
     session_restore: &mut Option<SessionRestore>,
 ) {
@@ -180,6 +183,7 @@ async fn run_fetch_batch(
             session_endpoint.as_ref(),
             alarm_limits,
             monitor_polls,
+            data_buf_cursor,
             &session,
             link_status,
             session_restore,
@@ -191,6 +195,7 @@ async fn run_fetch_batch(
                 session_endpoint,
                 alarm_limits,
                 monitor_polls,
+                data_buf_cursor,
                 link_status,
                 session_restore,
             );
@@ -212,6 +217,7 @@ async fn run_fetch_batch(
                 session_endpoint,
                 alarm_limits,
                 monitor_polls,
+                data_buf_cursor,
                 link_status,
                 session_restore,
             );
@@ -229,6 +235,7 @@ async fn worker_loop(
     let mut session_endpoint: Option<DeviceEndpoint> = None;
     let mut alarm_limits: Option<AlarmLimits> = None;
     let mut monitor_polls: u64 = 0;
+    let mut data_buf_cursor = DataBufCursor::default();
     let mut link_status = DeviceStatus::default();
     let mut session_restore: Option<SessionRestore> = None;
     let mut capture_interval_secs = 5.0;
@@ -270,6 +277,7 @@ async fn worker_loop(
                                 &mut session_endpoint,
                                 &mut alarm_limits,
                                 &mut monitor_polls,
+                                &mut data_buf_cursor,
                                 &mut link_status,
                                 &mut session_restore,
                             )
@@ -290,6 +298,7 @@ async fn worker_loop(
                     &mut session_endpoint,
                     &mut alarm_limits,
                     &mut monitor_polls,
+                    &mut data_buf_cursor,
                     &mut link_status,
                     &mut session_restore,
                 )
@@ -309,6 +318,7 @@ async fn worker_loop(
                     &mut session_endpoint,
                     &mut alarm_limits,
                     &mut monitor_polls,
+                    &mut data_buf_cursor,
                     &mut link_status,
                     &mut session_restore,
                 )
@@ -328,6 +338,7 @@ async fn worker_loop(
                     &mut session_endpoint,
                     &mut alarm_limits,
                     &mut monitor_polls,
+                    &mut data_buf_cursor,
                     &mut link_status,
                     &mut session_restore,
                 )
@@ -346,6 +357,7 @@ async fn run_command(
     session_endpoint: &mut Option<DeviceEndpoint>,
     alarm_limits: &mut Option<AlarmLimits>,
     monitor_polls: &mut u64,
+    data_buf_cursor: &mut DataBufCursor,
     link_status: &mut DeviceStatus,
     session_restore: &mut Option<SessionRestore>,
 ) {
@@ -359,6 +371,7 @@ async fn run_command(
         WorkerCommand::Connect { endpoint, hint_rssi } => {
             *alarm_limits = None;
             *monitor_polls = 0;
+            data_buf_cursor.reset();
             *link_status = DeviceStatus::default();
             *session_restore = None;
             *device = handle_connect(
@@ -378,6 +391,7 @@ async fn run_command(
             *session_endpoint = None;
             *alarm_limits = None;
             *monitor_polls = 0;
+            data_buf_cursor.reset();
             *link_status = DeviceStatus::default();
             *session_restore = None;
             handle_disconnect(events, device.take()).await;
@@ -443,6 +457,7 @@ async fn run_command(
                 session_endpoint.as_ref(),
                 alarm_limits,
                 monitor_polls,
+                data_buf_cursor,
                 &session,
                 link_status,
                 session_restore,
@@ -472,6 +487,7 @@ async fn run_command(
                     session_endpoint,
                     alarm_limits,
                     monitor_polls,
+                    data_buf_cursor,
                     link_status,
                     session_restore,
                 );
@@ -495,6 +511,7 @@ async fn run_command(
                     session_endpoint,
                     alarm_limits,
                     monitor_polls,
+                    data_buf_cursor,
                     link_status,
                     session_restore,
                 );
@@ -516,6 +533,7 @@ async fn run_command(
                     session_endpoint,
                     alarm_limits,
                     monitor_polls,
+                    data_buf_cursor,
                     link_status,
                     session_restore,
                 );

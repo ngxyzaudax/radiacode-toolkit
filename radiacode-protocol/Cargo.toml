@@ -1,0 +1,13 @@
+[package]
+name = "radiacode-protocol"
+version = "0.1.0"
+edition = "2024"
+description = "RadiaCode wire protocol — framing, opcodes, and payload decoders"
+license = "AGPL-3.0-only"
+
+[dependencies]
+async-trait = "0.1"
+thiserror = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

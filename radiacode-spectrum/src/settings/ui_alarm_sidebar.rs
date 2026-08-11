@@ -1,14 +1,14 @@
-use egui::{RichText, ScrollArea, Ui};
-use radiacode_core::DeviceConfig;
+use egui::{RichText, Ui};
 
 use crate::model::ConnectionState;
 use crate::settings::action::SettingsAction;
 use crate::settings::alarm_skeleton::alarm_skeleton_config;
 use crate::settings::state::{SettingsDeviceOp, SettingsState};
 use crate::settings::ui_confirm::draw_load_confirm_dialog;
-use crate::settings::ui_toolbar::draw_sticky_toolbar;
-use crate::theme::{MUTED, SPACE_SM};
-use crate::ui_chrome::draw_sidebar_header;
+use crate::settings::ui_toolbar::draw_alarm_toolbar;
+use crate::settings::ui_status_led::draw_sidebar_title_with_led;
+use crate::theme::{MUTED, SPACE_XS};
+use radiacode_core::DeviceConfig;
 
 pub fn draw_alarm_sidebar_shell(
     ui: &mut Ui,
@@ -23,15 +23,11 @@ pub fn draw_alarm_sidebar_shell(
             return Some(action);
         }
     }
-    draw_sidebar_header(ui, title);
-    let action = draw_sticky_toolbar(ui, settings, connected);
-    ui.add_space(SPACE_SM);
-    ScrollArea::vertical()
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.set_min_width(ui.available_width());
-            draw_alarm_editor(ui, settings, connected, draw_cards);
-        });
+    let dirty = settings.draft_dirty();
+    draw_sidebar_title_with_led(ui, title, settings, connected, dirty);
+    let action = draw_alarm_toolbar(ui, settings, connected);
+    ui.add_space(SPACE_XS);
+    draw_alarm_editor(ui, settings, connected, draw_cards);
     action
 }
 

@@ -18,13 +18,14 @@ pub fn draw_monitor_view(
     monitor: &MonitorState,
     dosimeter: &DosimeterState,
     style: HistogramStyle,
+    smoothing_window: usize,
 ) {
     let Some(latest) = monitor.latest else {
         ui.label(RichText::new(&monitor.status).color(MUTED));
         return;
     };
-    let dose_unit = dose_unit_label(latest.dose_unit_sv);
-    let count_unit = count_unit_label(latest.count_unit_cpm);
+    let dose_unit = dose_unit_label(latest.dose_unit);
+    let count_unit = count_unit_label(latest.count_unit);
     let row_height = ((ui.available_height() - BOTTOM_AXIS_PAD) / PLOT_ROWS).max(1.0);
     let row_width = ui.available_width();
     draw_plot_row(ui, row_width, row_height, |ui| {
@@ -36,6 +37,7 @@ pub fn draw_monitor_view(
             PlotSeries::Dose,
             dose_unit,
             style,
+            smoothing_window,
         );
     });
     draw_plot_row(ui, row_width, row_height, |ui| {
@@ -47,6 +49,7 @@ pub fn draw_monitor_view(
             PlotSeries::Count,
             count_unit,
             style,
+            smoothing_window,
         );
     });
     draw_plot_row(ui, row_width, row_height, |ui| {
@@ -74,6 +77,6 @@ fn draw_accum_section(ui: &mut Ui, dosimeter: &DosimeterState, style: HistogramS
         ui.label(RichText::new(&dosimeter.status).color(MUTED));
         return;
     };
-    let unit = dose_accum_unit_label(latest.dose_unit_sv);
+    let unit = dose_accum_unit_label(latest.dose_unit);
     draw_cumulative_dose_plot(ui, dosimeter, unit, style);
 }

@@ -1,4 +1,4 @@
-use crate::command::Command;
+use radiacode_protocol::Command;
 use crate::device::RadiaCode;
 use crate::error::Result;
 

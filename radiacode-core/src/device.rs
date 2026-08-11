@@ -2,19 +2,21 @@ use std::time::Duration;
 
 use tracing::{debug, info, warn};
 
-use crate::buffer::BytesBuffer;
-use crate::command::{Command, VirtSfr, VirtString};
+use radiacode_protocol::{
+    build_request, request_header, strip_echoed_header, BytesBuffer, Command, Sequence, Transport,
+    VirtSfr, VirtString,
+};
+use radiacode_protocol::Error as ProtocolError;
+
 use crate::error::{Error, Result};
-use crate::protocol::{build_request, request_header, strip_echoed_header, Sequence};
 use crate::session_restore::SessionRestore;
-use crate::transport::Transport;
-use crate::types::DeviceVersions;
+use radiacode_protocol::DeviceVersions;
 
 const CONNECT_ATTEMPTS: usize = 3;
 const RECONNECT_ATTEMPTS: usize = 2;
 const CONNECT_RETRY_DELAY: Duration = Duration::from_millis(1500);
 const RECONNECT_RETRY_DELAY: Duration = Duration::from_millis(3000);
-const INIT_SETTLE: Duration = Duration::from_millis(500);
+const INIT_SETTLE: Duration = Duration::from_millis(250);
 
 struct OpenFailure {
     error: Error,
@@ -66,7 +68,7 @@ impl RadiaCode {
             }
         }
         let _ = transport.disconnect().await;
-        Err(last_error.unwrap_or(Error::ConnectionClosed))
+        Err(last_error.unwrap_or(ProtocolError::ConnectionClosed.into()))
     }
 
     async fn try_open_once(
@@ -136,7 +138,21 @@ impl RadiaCode {
         }
 
         let configuration = crate::device_info::configuration(self).await?;
-        self.spectrum_format_version = parse_spectrum_format_version(&configuration);
+        self.spectrum_format_version =
+            radiacode_protocol::parse_configuration_ini(&configuration).spec_format_version;
+        if self.spectrum_format_version == 0 {
+            self.spectrum_format_version = parse_spectrum_format_version(&configuration);
+        }
+        if let Ok(sfr_file) = self.read_virt_string(VirtString::SfrFile).await {
+            let sfr_text = String::from_utf8_lossy(sfr_file.data());
+            for drift in radiacode_protocol::validate_catalog(&sfr_text) {
+                warn!(
+                    register = ?drift.register,
+                    message = %drift.message,
+                    "protocol catalog drift from device SFR_FILE"
+                );
+            }
+        }
         info!(
             spectrum_format_version = self.spectrum_format_version,
             "device initialized"
@@ -149,7 +165,7 @@ impl RadiaCode {
         debug!(?command, seq, args_len = args.len(), "execute command");
         let request = build_request(command, seq, args);
         let response = self.transport.execute(&request).await?;
-        strip_echoed_header(response, request_header(command, seq))
+        strip_echoed_header(response, request_header(command, seq)).map_err(Into::into)
     }
 
     pub async fn read_virt_string(&mut self, id: VirtString) -> Result<BytesBuffer> {
@@ -159,14 +175,15 @@ impl RadiaCode {
         let retcode = response.take_u32_le()?;
         let flen = response.take_u32_le()? as usize;
         if retcode != 1 {
-            return Err(Error::UnexpectedReturnCode(retcode));
+            return Err(ProtocolError::UnexpectedReturnCode(retcode).into());
         }
         trim_trailing_nul_if_needed(&mut response, flen);
         if response.size() != flen {
-            return Err(Error::BufferUnderrun {
+            return Err(ProtocolError::BufferUnderrun {
                 need: flen,
                 have: response.size(),
-            });
+            }
+            .into());
         }
         Ok(response)
     }
@@ -177,9 +194,9 @@ impl RadiaCode {
             .await?;
         let retcode = response.take_u32_le()?;
         if retcode != 1 {
-            return Err(Error::UnexpectedReturnCode(retcode));
+            return Err(ProtocolError::UnexpectedReturnCode(retcode).into());
         }
-        response.take_u32_le()
+        Ok(response.take_u32_le()?)
     }
 
     pub async fn read_vsfr_optional(&mut self, id: VirtSfr) -> Result<Option<u32>> {
@@ -192,13 +209,13 @@ impl RadiaCode {
         } else if retcode == 0 {
             Ok(None)
         } else {
-            Err(Error::UnexpectedReturnCode(retcode))
+            Err(ProtocolError::UnexpectedReturnCode(retcode).into())
         }
     }
 
     pub async fn write_vsfr(&mut self, id: VirtSfr, data: &[u8]) -> Result<()> {
         if !self.write_vsfr_optional(id, data).await? {
-            return Err(Error::UnexpectedReturnCode(0));
+            return Err(ProtocolError::UnexpectedReturnCode(0).into());
         }
         Ok(())
     }
@@ -210,16 +227,17 @@ impl RadiaCode {
         let retcode = response.take_u32_le()?;
         if retcode == 1 {
             if response.size() != 0 {
-                return Err(Error::ProtocolMismatch {
+                return Err(ProtocolError::ProtocolMismatch {
                     expected: "empty payload".into(),
                     got: format!("{} trailing bytes", response.size()),
-                });
+                }
+                .into());
             }
             Ok(true)
         } else if retcode == 0 {
             Ok(false)
         } else {
-            Err(Error::UnexpectedReturnCode(retcode))
+            Err(ProtocolError::UnexpectedReturnCode(retcode).into())
         }
     }
 
@@ -237,7 +255,7 @@ impl RadiaCode {
     }
 
     pub async fn disconnect(self) -> Result<()> {
-        self.transport.disconnect().await
+        self.transport.disconnect().await.map_err(Into::into)
     }
 
     pub async fn rssi_dbm(&self) -> Option<i16> {

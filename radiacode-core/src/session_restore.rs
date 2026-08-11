@@ -1,4 +1,4 @@
-use crate::types::DeviceVersions;
+use radiacode_protocol::DeviceVersions;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionRestore {

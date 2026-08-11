@@ -4,20 +4,20 @@ use async_trait::async_trait;
 use btleplug::api::{Characteristic, Peripheral as _};
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use radiacode_core::{
-    BytesBuffer, RadiaCode, Result, SessionRestore, Transport,
-};
+use radiacode_core::{RadiaCode, Result, SessionRestore};
+use radiacode_protocol::{BytesBuffer, Transport};
 use tracing::{debug, info};
 
-use crate::adapter::{default_adapter, find_peripheral, resolve_peripheral};
-use crate::ble_error::{map_ble_error, BleError};
-use crate::execute::{drain_until_quiet, execute_request};
+use crate::adapter::{find_peripheral, resolve_peripheral};
+use crate::ble_error::{map_ble_error, map_ble_protocol_error, BleError};
+use crate::execute::{drain_for_settle, drain_until_quiet, execute_request};
 use crate::link::{disconnect_cached_peripheral, disconnect_stale};
+use crate::scan_session::adapter_for_connect;
 use crate::uuids;
 
-const LINK_SETTLE: Duration = Duration::from_millis(800);
-const RECONNECT_COOLDOWN: Duration = Duration::from_millis(2500);
-const FRESH_SCAN: Duration = Duration::from_secs(4);
+const LINK_SETTLE: Duration = Duration::from_millis(250);
+const RECONNECT_COOLDOWN: Duration = Duration::from_millis(500);
+const FRESH_SCAN: Duration = Duration::from_secs(2);
 
 pub struct BluetoothTransport {
     peripheral: Peripheral,
@@ -29,14 +29,14 @@ pub struct BluetoothTransport {
 impl BluetoothTransport {
     pub async fn connect(mac: &str) -> Result<Self> {
         info!(%mac, "ble transport connect");
-        let adapter = default_adapter().await.map_err(map_ble_error)?;
+        let adapter = adapter_for_connect().await.map_err(map_ble_error)?;
         let peripheral = resolve_peripheral(&adapter, mac).await.map_err(map_ble_error)?;
         Self::connect_peripheral(peripheral).await.map_err(map_ble_error)
     }
 
     pub async fn connect_fresh(mac: &str) -> Result<Self> {
         info!(%mac, "ble transport fresh connect");
-        let adapter = default_adapter().await.map_err(map_ble_error)?;
+        let adapter = adapter_for_connect().await.map_err(map_ble_error)?;
         disconnect_cached_peripheral(&adapter, mac).await;
         tokio::time::sleep(RECONNECT_COOLDOWN).await;
         let peripheral = find_peripheral(&adapter, mac, FRESH_SCAN)
@@ -71,13 +71,13 @@ impl BluetoothTransport {
 
     async fn settle_link(&mut self) {
         tokio::time::sleep(LINK_SETTLE).await;
-        drain_until_quiet(&mut self.notifications).await;
+        drain_for_settle(&mut self.notifications).await;
     }
 }
 
 #[async_trait(?Send)]
 impl Transport for BluetoothTransport {
-    async fn execute(&mut self, request: &[u8]) -> Result<BytesBuffer> {
+    async fn execute(&mut self, request: &[u8]) -> radiacode_protocol::Result<BytesBuffer> {
         execute_request(
             &self.peripheral,
             &self.write_char,
@@ -91,13 +91,13 @@ impl Transport for BluetoothTransport {
         drain_until_quiet(&mut self.notifications).await;
     }
 
-    async fn disconnect(self: Box<Self>) -> Result<()> {
+    async fn disconnect(self: Box<Self>) -> radiacode_protocol::Result<()> {
         info!("ble transport disconnect");
         let _ = self.peripheral.unsubscribe(&self.notify_char).await;
         self.peripheral
             .disconnect()
             .await
-            .map_err(|error| map_ble_error(error.into()))?;
+            .map_err(|error| map_ble_protocol_error(error.into()))?;
         Ok(())
     }
 

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "radiacode-protocol",
     "radiacode-core",
     "radiacode-bluetooth",
     "radiacode-usb",

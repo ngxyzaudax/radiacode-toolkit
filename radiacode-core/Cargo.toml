@@ -2,11 +2,12 @@
 name = "radiacode-core"
 version = "0.1.0"
 edition = "2024"
-description = "Shared protocol and device client for RadiaCode radiation detectors"
+description = "RadiaCode device client and domain models"
 license = "AGPL-3.0-only"
 
 [dependencies]
 async-trait = "0.1"
+radiacode-protocol = { path = "../radiacode-protocol" }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 time = { version = "0.3", features = ["local-offset"] }

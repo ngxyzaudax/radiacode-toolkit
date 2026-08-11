@@ -1,5 +1,6 @@
 use radiacode_core::{
-    AlarmLimits, AlarmSignalMode, BacklightOffTime, DeviceConfig, DisplayDirection, SignalFlags,
+    AlarmLimits, AlarmSignalMode, BacklightOffTime, CountDisplayUnit, DeviceConfig,
+    DisplayDirection, DoseDisplayUnit, SignalFlags,
 };
 
 pub fn alarm_skeleton_config() -> DeviceConfig {
@@ -11,8 +12,8 @@ pub fn alarm_skeleton_config() -> DeviceConfig {
             l2_dose_rate: 0.0,
             l1_dose: 0.0,
             l2_dose: 0.0,
-            dose_unit_sv: true,
-            count_unit_cpm: false,
+            dose_unit: DoseDisplayUnit::MicroSievertPerHour,
+            count_unit: CountDisplayUnit::Cps,
         },
         alarm_mode: AlarmSignalMode::Once,
         brightness: 5,

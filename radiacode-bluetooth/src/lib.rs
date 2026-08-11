@@ -5,6 +5,7 @@ mod execute;
 mod link;
 mod rssi;
 mod scan;
+mod scan_session;
 mod transport;
 mod uuids;
 

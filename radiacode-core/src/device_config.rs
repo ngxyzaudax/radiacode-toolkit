@@ -1,14 +1,15 @@
 use tracing::debug;
 
-use crate::command::{VirtSfr, VirtString};
+use radiacode_protocol::{sfr_supports_leds_on, VirtSfr, VirtString};
+
 use crate::device::RadiaCode;
-use crate::sfr_catalog::sfr_supports_leds_on;
 use crate::device_time::set_local_time_now;
 use crate::error::Result;
 use crate::rate_units::{
     decode_count_alarm, decode_dose_accum, decode_dose_alarm, encode_count_alarm, encode_dose_accum,
-    encode_dose_alarm,
+    encode_dose_alarm, CountDisplayUnit, DoseDisplayUnit,
 };
+use radiacode_protocol::{RawCountsPer10s, RawMicroRoentgenPerHour};
 use crate::types::AlarmLimits;
 
 const CTRL_BUTTONS: u32 = 1 << 0;
@@ -277,19 +278,19 @@ pub async fn load_device_config(device: &mut RadiaCode) -> Result<DeviceConfig> 
         VirtSfr::VibroCtrl,
     ];
     let values = device.read_vsfr_batch(&ids).await?;
-    let dose_unit_sv = values[6] != 0;
-    let count_unit_cpm = values[7] != 0;
+    let dose_unit = DoseDisplayUnit::from_device_flag(values[6]);
+    let count_unit = CountDisplayUnit::from_device_flag(values[7]);
     let (leds_on, leds_supported, leds_uses_device_ctrl) = load_light_state(device).await?;
     let config = DeviceConfig {
         alarms: AlarmLimits {
-            l1_count_rate: decode_count_alarm(values[0], count_unit_cpm),
-            l2_count_rate: decode_count_alarm(values[1], count_unit_cpm),
-            l1_dose_rate: decode_dose_alarm(values[2], dose_unit_sv),
-            l2_dose_rate: decode_dose_alarm(values[3], dose_unit_sv),
-            l1_dose: decode_dose_accum(values[4], dose_unit_sv),
-            l2_dose: decode_dose_accum(values[5], dose_unit_sv),
-            dose_unit_sv,
-            count_unit_cpm,
+            l1_count_rate: decode_count_alarm(RawCountsPer10s::new(values[0]), count_unit),
+            l2_count_rate: decode_count_alarm(RawCountsPer10s::new(values[1]), count_unit),
+            l1_dose_rate: decode_dose_alarm(RawMicroRoentgenPerHour::new(values[2]), dose_unit),
+            l2_dose_rate: decode_dose_alarm(RawMicroRoentgenPerHour::new(values[3]), dose_unit),
+            l1_dose: decode_dose_accum(values[4], dose_unit),
+            l2_dose: decode_dose_accum(values[5], dose_unit),
+            dose_unit,
+            count_unit,
         },
         alarm_mode: AlarmSignalMode::from_raw(values[8]),
         brightness: values[9].min(9) as u8,
@@ -324,35 +325,35 @@ async fn load_light_state(device: &mut RadiaCode) -> Result<(bool, bool, bool)> 
 }
 
 pub async fn apply_device_config(device: &mut RadiaCode, config: &DeviceConfig) -> Result<()> {
-    let dose_unit_sv = config.alarms.dose_unit_sv;
-    let count_unit_cpm = config.alarms.count_unit_cpm;
+    let dose_unit = config.alarms.dose_unit;
+    let count_unit = config.alarms.count_unit;
     let mut pairs = vec![
         (
             VirtSfr::CrLev1Cp10s,
-            encode_count_alarm(config.alarms.l1_count_rate, count_unit_cpm),
+            encode_count_alarm(config.alarms.l1_count_rate, count_unit).as_u32(),
         ),
         (
             VirtSfr::CrLev2Cp10s,
-            encode_count_alarm(config.alarms.l2_count_rate, count_unit_cpm),
+            encode_count_alarm(config.alarms.l2_count_rate, count_unit).as_u32(),
         ),
         (
             VirtSfr::DrLev1UrH,
-            encode_dose_alarm(config.alarms.l1_dose_rate, dose_unit_sv),
+            encode_dose_alarm(config.alarms.l1_dose_rate, dose_unit).as_u32(),
         ),
         (
             VirtSfr::DrLev2UrH,
-            encode_dose_alarm(config.alarms.l2_dose_rate, dose_unit_sv),
+            encode_dose_alarm(config.alarms.l2_dose_rate, dose_unit).as_u32(),
         ),
         (
             VirtSfr::DsLev1Ur,
-            encode_dose_accum(config.alarms.l1_dose, dose_unit_sv),
+            encode_dose_accum(config.alarms.l1_dose, dose_unit),
         ),
         (
             VirtSfr::DsLev2Ur,
-            encode_dose_accum(config.alarms.l2_dose, dose_unit_sv),
+            encode_dose_accum(config.alarms.l2_dose, dose_unit),
         ),
-        (VirtSfr::DsUnits, u32::from(dose_unit_sv)),
-        (VirtSfr::CrUnits, u32::from(count_unit_cpm)),
+        (VirtSfr::DsUnits, dose_unit.to_device_flag()),
+        (VirtSfr::CrUnits, count_unit.to_device_flag()),
         (VirtSfr::AlarmMode, config.alarm_mode.as_raw()),
         (VirtSfr::DispBrt, u32::from(config.brightness.min(9))),
         (VirtSfr::DispOffTime, config.backlight_off.as_raw()),

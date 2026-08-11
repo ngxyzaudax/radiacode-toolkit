@@ -1,17 +1,17 @@
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use radiacode_core::{AlarmLimits, LiveRates};
+use radiacode_core::{AlarmLimits, LiveRates, TimedRates};
 
 const HISTORY_MINUTES: f64 = 10.0;
 const MAX_SAMPLES: usize = 600;
-const MIN_SAMPLE_SPACING: Duration = Duration::from_secs(1);
-const OUTLIER_FACTOR: f32 = 3.5;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MonitorSample {
     pub dose_rate: f32,
     pub count_rate: f32,
+    pub dose_rate_err_pct: f32,
+    pub count_rate_err_pct: f32,
     pub elapsed: Duration,
 }
 
@@ -20,8 +20,12 @@ pub struct MonitorState {
     pub history: VecDeque<MonitorSample>,
     pub latest: Option<LiveRates>,
     pub limits: Option<AlarmLimits>,
-    pub started_at: Option<Instant>,
+    pub device_epoch_ticks: Option<i32>,
     pub status: String,
+    pub decode_warnings: u64,
+    pub rejected_records: u64,
+    pub seq_gaps: u64,
+    pub lost_records: u64,
 }
 
 impl MonitorState {
@@ -30,15 +34,23 @@ impl MonitorState {
             history: VecDeque::new(),
             latest: None,
             limits: None,
-            started_at: None,
+            device_epoch_ticks: None,
             status: "Connect a device to start monitoring.".into(),
+            decode_warnings: 0,
+            rejected_records: 0,
+            seq_gaps: 0,
+            lost_records: 0,
         }
     }
 
     pub fn on_connect(&mut self) {
         self.history.clear();
         self.latest = None;
-        self.started_at = Some(Instant::now());
+        self.device_epoch_ticks = None;
+        self.decode_warnings = 0;
+        self.rejected_records = 0;
+        self.seq_gaps = 0;
+        self.lost_records = 0;
         self.status = "Loading monitor data…".into();
     }
 
@@ -46,7 +58,11 @@ impl MonitorState {
         self.history.clear();
         self.latest = None;
         self.limits = None;
-        self.started_at = None;
+        self.device_epoch_ticks = None;
+        self.decode_warnings = 0;
+        self.rejected_records = 0;
+        self.seq_gaps = 0;
+        self.lost_records = 0;
         self.status = "Connect a device to start monitoring.".into();
     }
 
@@ -54,34 +70,58 @@ impl MonitorState {
         self.limits = Some(limits);
     }
 
-    pub fn push_sample(&mut self, rates: LiveRates) {
-        let started_at = self.started_at.get_or_insert_with(Instant::now);
-        let elapsed = started_at.elapsed();
-        if self
-            .history
-            .back()
-            .is_some_and(|sample| elapsed.saturating_sub(sample.elapsed) < MIN_SAMPLE_SPACING)
-        {
-            return;
+    pub fn push_poll(
+        &mut self,
+        rates: &[TimedRates],
+        decode_warnings: usize,
+        rejected_records: usize,
+        seq_gaps: &[radiacode_core::SeqGap],
+    ) {
+        self.decode_warnings = self
+            .decode_warnings
+            .saturating_add(decode_warnings as u64);
+        self.rejected_records = self
+            .rejected_records
+            .saturating_add(rejected_records as u64);
+        self.seq_gaps = self.seq_gaps.saturating_add(seq_gaps.len() as u64);
+        for gap in seq_gaps {
+            self.lost_records = self.lost_records.saturating_add(u64::from(gap.lost));
         }
-        let dose_rate = rates.dose_rate.max(0.0);
-        let count_rate = rates.count_rate.max(0.0);
-        if self.is_rate_outlier(dose_rate, count_rate) {
-            return;
+        for rate in rates {
+            self.push_timed_sample(*rate);
         }
+    }
+
+    fn push_timed_sample(&mut self, rate: TimedRates) {
+        let elapsed = self.device_elapsed(rate.device_ts);
+        let dose_rate = rate.dose_rate.max(0.0);
+        let count_rate = rate.count_rate.max(0.0);
         self.history.push_back(MonitorSample {
             dose_rate,
             count_rate,
+            dose_rate_err_pct: rate.dose_rate_err_pct,
+            count_rate_err_pct: rate.count_rate_err_pct,
             elapsed,
         });
         trim_history(&mut self.history, elapsed);
         self.latest = Some(LiveRates {
             dose_rate,
             count_rate,
-            dose_unit_sv: rates.dose_unit_sv,
-            count_unit_cpm: rates.count_unit_cpm,
+            dose_unit: rate.dose_unit,
+            count_unit: rate.count_unit,
+            dose_rate_err_pct: rate.dose_rate_err_pct,
+            count_rate_err_pct: rate.count_rate_err_pct,
         });
         self.status = "Live monitor".into();
+    }
+
+    fn device_elapsed(&mut self, device_ts: radiacode_core::DeviceTicks) -> Duration {
+        let ticks = device_ts.raw();
+        let epoch = self.device_epoch_ticks.get_or_insert(ticks);
+        if ticks < *epoch {
+            *epoch = ticks;
+        }
+        device_ts.duration_since(radiacode_core::DeviceTicks::new(*epoch))
     }
 
     pub fn dose_alarm_level(&self) -> AlarmLevel {
@@ -98,30 +138,38 @@ impl MonitorState {
         )
     }
 
-    fn is_rate_outlier(&self, dose_rate: f32, count_rate: f32) -> bool {
-        if self.history.len() < 3 {
-            return false;
-        }
-        let recent_dose: Vec<f32> = self
-            .history
-            .iter()
-            .rev()
-            .take(8)
-            .map(|sample| sample.dose_rate)
-            .collect();
-        let recent_count: Vec<f32> = self
-            .history
-            .iter()
-            .rev()
-            .take(8)
-            .map(|sample| sample.count_rate)
-            .collect();
-        dose_outlier(dose_rate, &recent_dose) || count_outlier(count_rate, &recent_count)
-    }
-
     #[cfg(test)]
     pub fn default_for_tests() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use radiacode_core::{CountDisplayUnit, DeviceTicks, DoseDisplayUnit, TimedRates};
+
+    use super::MonitorState;
+
+    fn timed(ticks: i32, dose: f32, count: f32) -> TimedRates {
+        TimedRates {
+            device_ts: DeviceTicks::new(ticks),
+            dose_rate: dose,
+            count_rate: count,
+            dose_rate_err_pct: 0.0,
+            count_rate_err_pct: 0.0,
+            dose_unit: DoseDisplayUnit::MicroSievertPerHour,
+            count_unit: CountDisplayUnit::Cps,
+        }
+    }
+
+    #[test]
+    fn negative_device_ticks_advance_elapsed() {
+        let mut monitor = MonitorState::default_for_tests();
+        monitor.push_poll(&[timed(-3387, 0.08, 15.0)], 0, 0, &[]);
+        monitor.push_poll(&[timed(-3287, 0.09, 16.0)], 0, 0, &[]);
+        assert_eq!(monitor.history.len(), 2);
+        assert_eq!(monitor.history[0].elapsed.as_secs(), 0);
+        assert_eq!(monitor.history[1].elapsed.as_secs(), 1);
     }
 }
 
@@ -159,22 +207,4 @@ fn alarm_level(value: Option<f32>, limits: Option<(f32, f32)>) -> AlarmLevel {
     } else {
         AlarmLevel::Normal
     }
-}
-
-fn dose_outlier(value: f32, recent: &[f32]) -> bool {
-    rate_outlier(value, recent)
-}
-
-fn count_outlier(value: f32, recent: &[f32]) -> bool {
-    rate_outlier(value, recent)
-}
-
-fn rate_outlier(value: f32, recent: &[f32]) -> bool {
-    if recent.len() < 3 {
-        return false;
-    }
-    let mut sorted = recent.to_vec();
-    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
-    let median = sorted[sorted.len() / 2].max(0.001);
-    value > median * OUTLIER_FACTOR || value < median / OUTLIER_FACTOR
 }

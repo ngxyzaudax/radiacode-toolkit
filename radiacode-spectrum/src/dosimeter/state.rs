@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use radiacode_core::{AccumulatedDose, AlarmLimits};
+use radiacode_core::{AccumulatedDose, AlarmLimits, DoseDisplayUnit};
 use tracing::info;
 
 use crate::dosimeter::append::{session_restarted, should_append, unit_mismatch, MAX_SAMPLES};
@@ -41,7 +41,7 @@ impl DosimeterState {
                 self.latest = Some(AccumulatedDose {
                     dose: last.dose,
                     duration_secs: last.duration_secs,
-                    dose_unit_sv: stored.dose_unit_sv,
+                    dose_unit: DoseDisplayUnit::from_device_flag(u32::from(stored.dose_unit_sv)),
                 });
                 self.status = format!(
                     "Restored {} dosimeter point(s). Waiting for live data…",
@@ -84,7 +84,7 @@ impl DosimeterState {
         let sample = AccumulatedDose {
             dose,
             duration_secs: sample.duration_secs,
-            dose_unit_sv: sample.dose_unit_sv,
+            dose_unit: sample.dose_unit,
         };
         if session_restarted(&self.history, &sample) {
             info!(
@@ -95,7 +95,7 @@ impl DosimeterState {
             if let Some(serial) = self.device_serial.as_deref() {
                 clear_history(serial);
             }
-        } else if unit_mismatch(self.latest, self.history.is_empty(), sample.dose_unit_sv) {
+        } else if unit_mismatch(self.latest, self.history.is_empty(), sample.dose_unit) {
             self.history.clear();
         }
         self.latest = Some(sample);
@@ -125,7 +125,10 @@ impl DosimeterState {
         let Some(serial) = self.device_serial.as_deref() else {
             return;
         };
-        let dose_unit_sv = self.latest.map(|sample| sample.dose_unit_sv).unwrap_or(true);
+        let dose_unit_sv = self
+            .latest
+            .map(|sample| sample.dose_unit.is_sv())
+            .unwrap_or(true);
         let stored = history_from_points(serial, dose_unit_sv, &self.history);
         if let Err(error) = save_history(&stored) {
             tracing::warn!(%error, "failed to save dosimeter history");

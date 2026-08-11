@@ -7,8 +7,8 @@ use tracing::{debug, warn};
 
 use crate::adapter::normalize_mac;
 
-const RECONNECT_COOLDOWN: Duration = Duration::from_millis(2500);
-const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+const STALE_DISCONNECT_COOLDOWN: Duration = Duration::from_millis(500);
+const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub async fn disconnect_stale(peripheral: &Peripheral) {
     if !peripheral.is_connected().await.unwrap_or(false) {
@@ -21,7 +21,7 @@ pub async fn disconnect_stale(peripheral: &Peripheral) {
         Ok(Err(error)) => warn!(%address, %error, "stale disconnect failed"),
         Err(_) => warn!(%address, "stale disconnect timed out"),
     }
-    tokio::time::sleep(RECONNECT_COOLDOWN).await;
+    tokio::time::sleep(STALE_DISCONNECT_COOLDOWN).await;
 }
 
 pub async fn disconnect_cached_peripheral(adapter: &Adapter, mac: &str) {

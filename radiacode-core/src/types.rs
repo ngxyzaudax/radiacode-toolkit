@@ -1,23 +1,10 @@
-use std::time::Duration;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct FirmwareVersion {
-    pub major: u16,
-    pub minor: u16,
-    pub date: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct DeviceVersions {
-    pub boot: FirmwareVersion,
-    pub target: FirmwareVersion,
-}
+use radiacode_protocol::{CountDisplayUnit, DoseDisplayUnit, DeviceTicks};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeviceMetadata {
     pub serial: String,
     pub model: String,
-    pub versions: DeviceVersions,
+    pub versions: radiacode_protocol::DeviceVersions,
     pub energy_calib: [f32; 3],
 }
 
@@ -36,8 +23,8 @@ pub struct AlarmLimits {
     pub l2_dose_rate: f32,
     pub l1_dose: f32,
     pub l2_dose: f32,
-    pub dose_unit_sv: bool,
-    pub count_unit_cpm: bool,
+    pub dose_unit: DoseDisplayUnit,
+    pub count_unit: CountDisplayUnit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -48,41 +35,43 @@ pub struct AlarmLimitsUpdate {
     pub l2_dose_rate: Option<f32>,
     pub l1_dose: Option<f32>,
     pub l2_dose: Option<f32>,
-    pub dose_unit_sv: Option<bool>,
-    pub count_unit_cpm: Option<bool>,
+    pub dose_unit: Option<DoseDisplayUnit>,
+    pub count_unit: Option<CountDisplayUnit>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LiveRates {
     pub dose_rate: f32,
     pub count_rate: f32,
-    pub dose_unit_sv: bool,
-    pub count_unit_cpm: bool,
+    pub dose_unit: DoseDisplayUnit,
+    pub count_unit: CountDisplayUnit,
+    pub dose_rate_err_pct: f32,
+    pub count_rate_err_pct: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TimedRates {
+    pub device_ts: DeviceTicks,
+    pub dose_rate: f32,
+    pub count_rate: f32,
+    pub dose_rate_err_pct: f32,
+    pub count_rate_err_pct: f32,
+    pub dose_unit: DoseDisplayUnit,
+    pub count_unit: CountDisplayUnit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AccumulatedDose {
     pub dose: f32,
     pub duration_secs: u32,
-    pub dose_unit_sv: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MonitorPollSample {
-    pub rates: Option<LiveRates>,
-    pub accumulated: Option<AccumulatedDose>,
+    pub dose_unit: DoseDisplayUnit,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Spectrum {
-    pub duration: Duration,
-    pub a0: f32,
-    pub a1: f32,
-    pub a2: f32,
-    pub counts: Vec<u32>,
-}
-
-pub fn channel_to_energy(channel: u32, a0: f32, a1: f32, a2: f32) -> f32 {
-    let x = channel as f32;
-    a0 + a1 * x + a2 * x * x
+pub struct MonitorPollSample {
+    pub rates: Vec<TimedRates>,
+    pub accumulated: Option<AccumulatedDose>,
+    pub decode_warnings: usize,
+    pub rejected_records: usize,
+    pub seq_gaps: Vec<crate::data_buf_cursor::SeqGap>,
 }

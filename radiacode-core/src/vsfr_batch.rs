@@ -1,7 +1,8 @@
 use tracing::warn;
 
-use crate::buffer::BytesBuffer;
-use crate::command::{Command, VirtSfr};
+use radiacode_protocol::{BytesBuffer, Command, VirtSfr};
+use radiacode_protocol::Error as ProtocolError;
+
 use crate::device::RadiaCode;
 use crate::error::{Error, Result};
 
@@ -10,10 +11,11 @@ const VSFR_BATCH_RETRY_DELAY: std::time::Duration = std::time::Duration::from_mi
 
 pub async fn read_vsfr_batch(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<Vec<u32>> {
     if ids.is_empty() {
-        return Err(Error::ProtocolMismatch {
+        return Err(ProtocolError::ProtocolMismatch {
             expected: "at least one VSFR".into(),
             got: "empty batch".into(),
-        });
+        }
+        .into());
     }
     let mut last_error: Option<Error> = None;
     for attempt in 0..=VSFR_BATCH_RETRIES {
@@ -22,7 +24,9 @@ pub async fn read_vsfr_batch(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<
         }
         match read_vsfr_batch_once(device, ids).await {
             Ok(values) => return Ok(values),
-            Err(error @ Error::VsfrBatchEmpty) => return Err(error),
+            Err(Error::Protocol(ProtocolError::VsfrBatchEmpty)) => return Err(Error::Protocol(
+                ProtocolError::VsfrBatchEmpty,
+            )),
             Err(error) if error.is_transient() && attempt < VSFR_BATCH_RETRIES => {
                 warn!(attempt, ?error, count = ids.len(), "vsfr batch read failed, retrying");
                 last_error = Some(error);
@@ -30,15 +34,21 @@ pub async fn read_vsfr_batch(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<
             Err(error) => return fill_missing_vsfrs(device, ids, error).await,
         }
     }
-    fill_missing_vsfrs(device, ids, last_error.unwrap_or(Error::Timeout)).await
+    fill_missing_vsfrs(
+        device,
+        ids,
+        last_error.unwrap_or(ProtocolError::Timeout.into()),
+    )
+    .await
 }
 
 pub async fn write_vsfr_batch(device: &mut RadiaCode, pairs: &[(VirtSfr, u32)]) -> Result<()> {
     if pairs.is_empty() {
-        return Err(Error::ProtocolMismatch {
+        return Err(ProtocolError::ProtocolMismatch {
             expected: "at least one VSFR".into(),
             got: "empty batch".into(),
-        });
+        }
+        .into());
     }
     let mut last_error: Option<Error> = None;
     for attempt in 0..=VSFR_BATCH_RETRIES {
@@ -54,7 +64,7 @@ pub async fn write_vsfr_batch(device: &mut RadiaCode, pairs: &[(VirtSfr, u32)]) 
             Err(error) => return Err(error),
         }
     }
-    Err(last_error.unwrap_or(Error::Timeout))
+    Err(last_error.unwrap_or(ProtocolError::Timeout.into()))
 }
 
 async fn read_vsfr_batch_once(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<Vec<u32>> {
@@ -65,7 +75,7 @@ async fn read_vsfr_batch_once(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result
     let mut response = device.execute_raw(Command::RdVirtSfrBatch, &args).await?;
     let valid_flags = response.take_u32_le()?;
     if valid_flags == 0 {
-        return Err(Error::VsfrBatchEmpty);
+        return Err(ProtocolError::VsfrBatchEmpty.into());
     }
     let expected = (1u32 << ids.len()) - 1;
     if valid_flags == expected {
@@ -126,28 +136,31 @@ async fn write_vsfr_batch_once(device: &mut RadiaCode, pairs: &[(VirtSfr, u32)])
     let valid_flags = response.take_u32_le()?;
     let expected = (1u32 << pairs.len()) - 1;
     if valid_flags != expected {
-        return Err(Error::ProtocolMismatch {
+        return Err(ProtocolError::ProtocolMismatch {
             expected: format!("valid_flags {expected:#x}"),
             got: format!("valid_flags {valid_flags:#x}"),
-        });
+        }
+        .into());
     }
     ensure_empty_payload(&mut response)
 }
 
 fn ensure_empty_payload(response: &mut BytesBuffer) -> Result<()> {
     if response.size() != 0 {
-        return Err(Error::ProtocolMismatch {
+        return Err(ProtocolError::ProtocolMismatch {
             expected: "empty payload".into(),
             got: format!("{} trailing bytes", response.size()),
-        });
+        }
+        .into());
     }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use radiacode_protocol::BytesBuffer;
+
     use super::take_vsfr_values;
-    use crate::buffer::BytesBuffer;
 
     #[test]
     fn take_vsfr_values_reads_count_values() {

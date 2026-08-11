@@ -13,6 +13,7 @@ mod ui_icons;
 mod ui_layout;
 mod ui_nav;
 mod ui_signals;
+mod ui_status_led;
 mod ui_toolbar;
 mod ui_view;
 
