@@ -8,7 +8,7 @@ Screenshots and notes for each main application tab, plus a demo of the desktop 
   <img src="./demo/radiacode_demo.gif" width="900" alt="Radiacode Toolkit demo" />
 </p>
 
-Highlight reel sampled across a full session (5 s every 20 s from t=15 s).
+Full ~3:40 session as a sped-up GIF (~3×, reduced resolution).
 
 ## Tabs
 
