@@ -1,7 +1,7 @@
 use egui::{RichText, Ui, Vec2b};
 use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
 
-use crate::dosimeter::{dose_points, plot_bounds, DosimeterState, PlotBounds};
+use crate::dosimeter::{DosimeterState, PlotBounds, dose_points, plot_bounds};
 use crate::plot_style::styled_line;
 use crate::scale::HistogramStyle;
 use crate::theme::ACCENT;

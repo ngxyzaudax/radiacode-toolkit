@@ -2,8 +2,8 @@ use egui::{CollapsingHeader, Response, RichText, Ui};
 
 use crate::spectrogram::color_scheme::ColorScheme;
 use crate::spectrogram::settings::{
-    SpectrogramSettings, MAX_CAPTURE_INTERVAL_SECS, MAX_MAX_SAMPLES, MIN_CAPTURE_INTERVAL_SECS,
-    MIN_MAX_SAMPLES,
+    MAX_CAPTURE_INTERVAL_SECS, MAX_MAX_SAMPLES, MIN_CAPTURE_INTERVAL_SECS, MIN_MAX_SAMPLES,
+    SpectrogramSettings,
 };
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
@@ -95,8 +95,12 @@ fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool {
     ui.label(RichText::new("Overlays").small().color(MUTED));
     let mut changed = false;
     changed |= ui.checkbox(&mut state.show_grid, "Grid").changed();
-    changed |= ui.checkbox(&mut state.show_count_rate, "Count rate").changed();
-    changed |= ui.checkbox(&mut state.show_isotopes, "Isotope lines").changed();
+    changed |= ui
+        .checkbox(&mut state.show_count_rate, "Count rate")
+        .changed();
+    changed |= ui
+        .checkbox(&mut state.show_isotopes, "Isotope lines")
+        .changed();
     changed
 }
 

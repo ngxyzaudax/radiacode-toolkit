@@ -20,7 +20,10 @@ pub async fn scan_radiacode_devices(
     tokio::time::sleep(duration).await;
     let peripherals = adapter.peripherals().await?;
     adapter.stop_scan().await?;
-    debug!(peripheral_count = peripherals.len(), "scan collected peripherals");
+    debug!(
+        peripheral_count = peripherals.len(),
+        "scan collected peripherals"
+    );
 
     let mut found = Vec::new();
     for peripheral in peripherals {
@@ -31,7 +34,11 @@ pub async fn scan_radiacode_devices(
             found.push(device);
         }
     }
-    found.sort_by(|left, right| left.endpoint.address_label().cmp(right.endpoint.address_label()));
+    found.sort_by(|left, right| {
+        left.endpoint
+            .address_label()
+            .cmp(right.endpoint.address_label())
+    });
     found.dedup_by(|left, right| left.endpoint == right.endpoint);
     info!(count = found.len(), "ble scan complete");
     Ok(found)

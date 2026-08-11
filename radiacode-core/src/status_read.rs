@@ -1,7 +1,7 @@
-use radiacode_protocol::{DataBufSnapshot, VirtSfr};
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::types::DeviceStatus;
+use radiacode_protocol::{DataBufSnapshot, VirtSfr};
 
 pub fn merge_status(carry: &mut DeviceStatus, fresh: DeviceStatus) {
     if let Some(value) = fresh.battery_percent {
@@ -36,7 +36,10 @@ pub async fn status_from_frame(
         .rare
         .map(|status| status.temperature_c)
         .filter(valid_temperature)
-        .or(read_temperature_c(device).await.ok().filter(valid_temperature));
+        .or(read_temperature_c(device)
+            .await
+            .ok()
+            .filter(valid_temperature));
     let rssi_dbm = if refresh_rssi {
         device.sample_rssi_dbm().await
     } else {

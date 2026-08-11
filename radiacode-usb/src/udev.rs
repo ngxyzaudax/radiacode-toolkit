@@ -31,13 +31,9 @@ pub fn access_status() -> UsbAccessStatus {
 }
 
 pub fn rule_installed() -> bool {
-    fs::read_to_string(RULE_DEST)
-        .ok()
-        .is_some_and(|content| {
-            content.contains("0483")
-                && content.contains("f123")
-                && content.contains("0666")
-        })
+    fs::read_to_string(RULE_DEST).ok().is_some_and(|content| {
+        content.contains("0483") && content.contains("f123") && content.contains("0666")
+    })
 }
 
 pub fn install_access_rule() -> Result<(), String> {
@@ -57,10 +53,9 @@ fn device_present() -> bool {
         return false;
     };
     devices.iter().any(|device| {
-        device
-            .device_descriptor()
-            .ok()
-            .is_some_and(|descriptor| descriptor.vendor_id() == VID && descriptor.product_id() == PID)
+        device.device_descriptor().ok().is_some_and(|descriptor| {
+            descriptor.vendor_id() == VID && descriptor.product_id() == PID
+        })
     })
 }
 

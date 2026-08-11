@@ -1,11 +1,11 @@
 use tracing::debug;
 
-use radiacode_protocol::VirtString;
-use radiacode_protocol::latest_snapshot;
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::status_read::status_from_snapshot;
 use crate::types::DeviceStatus;
+use radiacode_protocol::VirtString;
+use radiacode_protocol::latest_snapshot;
 
 pub async fn device_status(device: &mut RadiaCode, refresh_rssi: bool) -> Result<DeviceStatus> {
     let response = device.read_virt_string(VirtString::DataBuf).await?;

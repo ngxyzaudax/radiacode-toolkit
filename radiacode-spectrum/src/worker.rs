@@ -2,21 +2,21 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use radiacode_core::{
     AlarmLimits, DataBufCursor, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice,
     MonitorPollSample, RadiaCode, SessionRestore,
 };
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::time::{self, MissedTickBehavior};
 use tracing::{debug, info};
 
 use crate::model::{DeviceInfo, SpectrumView};
-use crate::spectrogram::capture::{spawn_capture_router, SpectrogramCapture};
+use crate::spectrogram::capture::{SpectrogramCapture, spawn_capture_router};
 use crate::worker_ops::{
-    handle_apply_device_config, handle_connect, handle_disconnect, handle_fetch_device_config,
-    handle_monitor, handle_reset, handle_scan, handle_spectrum, handle_dose_reset,
-    handle_sync_device_clock, SessionEpoch,
+    SessionEpoch, handle_apply_device_config, handle_connect, handle_disconnect, handle_dose_reset,
+    handle_fetch_device_config, handle_monitor, handle_reset, handle_scan, handle_spectrum,
+    handle_sync_device_clock,
 };
 
 #[derive(Debug, Clone)]
@@ -368,7 +368,10 @@ async fn run_command(
     };
     match command {
         WorkerCommand::Scan => handle_scan(events).await,
-        WorkerCommand::Connect { endpoint, hint_rssi } => {
+        WorkerCommand::Connect {
+            endpoint,
+            hint_rssi,
+        } => {
             *alarm_limits = None;
             *monitor_polls = 0;
             data_buf_cursor.reset();

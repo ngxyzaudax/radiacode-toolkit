@@ -23,9 +23,7 @@ pub fn export_recording(
 pub fn import_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
     let content = fs::read_to_string(path)?;
     let mut lines = content.lines();
-    let header_line = lines
-        .next()
-        .ok_or_else(|| invalid("missing header"))?;
+    let header_line = lines.next().ok_or_else(|| invalid("missing header"))?;
     if !header_line.starts_with("Spectrogram:") {
         return Err(invalid("not an rcspg file"));
     }

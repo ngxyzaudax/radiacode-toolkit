@@ -1,6 +1,6 @@
 use super::decode::DataBufFrame;
 use super::group::RecordKind;
-use super::records::{DataBufRecord, RareStatus, RealTimeRates, RealTimeData, RareData};
+use super::records::{DataBufRecord, RareData, RareStatus, RealTimeData, RealTimeRates};
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct DataBufSnapshot {
@@ -76,8 +76,16 @@ pub fn latest_rare_record(frame: &DataBufFrame) -> Option<&RareData> {
     })
 }
 
-fn maybe_replace_rates(best: &mut Option<(super::seq::Seq, RecordKind, RealTimeRates)>, record: &RealTimeData) {
-    maybe_replace_legacy_rates(best, record.header.seq, record.header.kind, RealTimeRates::from(*record));
+fn maybe_replace_rates(
+    best: &mut Option<(super::seq::Seq, RecordKind, RealTimeRates)>,
+    record: &RealTimeData,
+) {
+    maybe_replace_legacy_rates(
+        best,
+        record.header.seq,
+        record.header.kind,
+        RealTimeRates::from(*record),
+    );
 }
 
 fn maybe_replace_legacy_rates(

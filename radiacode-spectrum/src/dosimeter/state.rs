@@ -3,11 +3,9 @@ use std::collections::VecDeque;
 use radiacode_core::{AccumulatedDose, AlarmLimits, DoseDisplayUnit};
 use tracing::info;
 
-use crate::dosimeter::append::{session_restarted, should_append, unit_mismatch, MAX_SAMPLES};
+use crate::dosimeter::append::{MAX_SAMPLES, session_restarted, should_append, unit_mismatch};
 use crate::dosimeter::format::alarm_level;
-use crate::dosimeter::persist::{
-    clear_history, history_from_points, load_history, save_history,
-};
+use crate::dosimeter::persist::{clear_history, history_from_points, load_history, save_history};
 use crate::dosimeter::point::DoseHistoryPoint;
 use crate::monitor::AlarmLevel;
 
@@ -47,7 +45,11 @@ impl DosimeterState {
                     "Restored {} dosimeter point(s). Waiting for live data…",
                     self.history.len()
                 );
-                info!(serial, points = self.history.len(), "dosimeter history restored");
+                info!(
+                    serial,
+                    points = self.history.len(),
+                    "dosimeter history restored"
+                );
             }
             _ => {
                 self.history.clear();

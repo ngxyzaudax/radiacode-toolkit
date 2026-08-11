@@ -2,10 +2,14 @@ use egui::{RichText, Ui};
 
 use crate::analysis::spectrum::CollapsedSpectrum;
 use crate::analysis::state::AnalysisState;
-use crate::theme::{analysis_sample_color, ANALYSIS_BACKGROUND, MUTED};
+use crate::theme::{ANALYSIS_BACKGROUND, MUTED, analysis_sample_color};
 
 pub fn draw_background_card(ui: &mut Ui, spectrum: Option<&CollapsedSpectrum>) {
-    ui.label(RichText::new("Background").strong().color(ANALYSIS_BACKGROUND));
+    ui.label(
+        RichText::new("Background")
+            .strong()
+            .color(ANALYSIS_BACKGROUND),
+    );
     draw_spectrum_summary(ui, spectrum);
 }
 
@@ -24,7 +28,11 @@ pub fn draw_samples_card(ui: &mut Ui, state: &mut AnalysisState) {
                 ui.label(RichText::new(&sample.spectrum.name).small().color(color));
                 draw_spectrum_meta(ui, &sample.spectrum);
             });
-            if ui.small_button("×").on_hover_text("Remove sample").clicked() {
+            if ui
+                .small_button("×")
+                .on_hover_text("Remove sample")
+                .clicked()
+            {
                 remove_index = Some(index);
             }
         });
@@ -57,7 +65,11 @@ fn draw_spectrum_summary(ui: &mut Ui, spectrum: Option<&CollapsedSpectrum>) {
         ui.label(RichText::new("Not selected").small().color(MUTED));
         return;
     };
-    ui.label(RichText::new(&spectrum.name).small().color(ANALYSIS_BACKGROUND));
+    ui.label(
+        RichText::new(&spectrum.name)
+            .small()
+            .color(ANALYSIS_BACKGROUND),
+    );
     draw_spectrum_meta(ui, spectrum);
 }
 

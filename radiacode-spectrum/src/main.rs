@@ -1,9 +1,9 @@
 mod about;
 mod analysis;
-mod device;
-mod dosimeter;
 mod app;
 mod app_config;
+mod device;
+mod dosimeter;
 mod energy;
 mod events;
 mod icon;
@@ -33,7 +33,7 @@ mod worker_ops;
 use std::process::ExitCode;
 
 use app::SpectrumApp;
-use icon::{app_icon, APP_ID};
+use icon::{APP_ID, app_icon};
 use tracing::{error, info};
 use window::{startup_inner_size, startup_viewport_builder};
 
@@ -47,7 +47,9 @@ fn main() -> ExitCode {
             .with_icon(app_icon()),
         centered: true,
         persist_window: false,
-        window_builder: Some(Box::new(|builder| builder.with_inner_size(startup_inner_size()))),
+        window_builder: Some(Box::new(|builder| {
+            builder.with_inner_size(startup_inner_size())
+        })),
         ..Default::default()
     };
     match eframe::run_native(

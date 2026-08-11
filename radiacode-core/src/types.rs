@@ -1,4 +1,4 @@
-use radiacode_protocol::{CountDisplayUnit, DoseDisplayUnit, DeviceTicks};
+use radiacode_protocol::{CountDisplayUnit, DeviceTicks, DoseDisplayUnit};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeviceMetadata {

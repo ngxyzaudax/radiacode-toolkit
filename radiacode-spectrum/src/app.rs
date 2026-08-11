@@ -3,38 +3,38 @@ use std::time::Duration;
 
 use eframe::App;
 use egui::{CentralPanel, Context, Panel, Ui, ViewportCommand, ViewportId};
-use radiacode_core::{merge_discovered, resolve_usb_endpoint, DeviceEndpoint, TransportKind};
+use radiacode_core::{DeviceEndpoint, TransportKind, merge_discovered, resolve_usb_endpoint};
 use tracing::{debug, info, warn};
 
 use crate::about::draw_about_view;
-use crate::analysis::{draw_analysis_controls, draw_analysis_view, AnalysisAction, AnalysisState};
+use crate::analysis::{AnalysisAction, AnalysisState, draw_analysis_controls, draw_analysis_view};
+use crate::device::{DeviceAction, DeviceViewProps, draw_device_view};
 use crate::events::AppState;
 use crate::icon::app_icon;
 use crate::model::{ConnectionState, DeviceInfo};
-use crate::monitor::{draw_monitor_controls, draw_monitor_view, AlarmLevel, MonitorControlsAction};
+use crate::monitor::{AlarmLevel, MonitorControlsAction, draw_monitor_controls, draw_monitor_view};
 use crate::pc_alarm::maybe_beep_alarm;
 use crate::plot_style::histogram_style;
 use crate::scale::YScale;
 use crate::settings::{
-    draw_settings_controls, draw_settings_view, SettingsAction, SettingsDeviceOp, SettingsState,
+    SettingsAction, SettingsDeviceOp, SettingsState, draw_settings_controls, draw_settings_view,
 };
-use crate::spectrogram::capture::SpectrogramCapture;
-use crate::spectrogram::ui_controls::{draw_spectrogram_controls, SpectrogramControlsAction};
-use crate::spectrogram::ui_view::draw_spectrogram_view;
 use crate::spectrogram::SpectrogramState;
+use crate::spectrogram::capture::SpectrogramCapture;
+use crate::spectrogram::ui_controls::{SpectrogramControlsAction, draw_spectrogram_controls};
+use crate::spectrogram::ui_view::draw_spectrogram_view;
 use crate::theme;
 use crate::ui_chrome::{
     sidebar_content_frame, tab_uses_page_inset, tab_uses_plot_pad, with_page_inset, with_plot_pad,
 };
-use crate::ui_controls::{draw_spectrum_controls, ControlsAction, ControlsProps};
-use crate::device::{draw_device_view, DeviceAction, DeviceViewProps};
+use crate::ui_controls::{ControlsAction, ControlsProps, draw_spectrum_controls};
 use crate::ui_disconnected::{draw_disconnected_view, shows_tab_content, tab_works_offline};
 use crate::ui_plot::draw_spectrum_plot;
 use crate::usb_access::{
-    draw_usb_access_dialog, usb_access_required, UsbAccessAction, UsbAccessOutcome, UsbAccessPrompt,
+    UsbAccessAction, UsbAccessOutcome, UsbAccessPrompt, draw_usb_access_dialog, usb_access_required,
 };
 use crate::view_tab::ViewTab;
-use crate::worker::{spawn_worker, WorkerCommand, WorkerEvent, WorkerHandle};
+use crate::worker::{WorkerCommand, WorkerEvent, WorkerHandle, spawn_worker};
 
 pub struct SpectrumApp {
     worker: WorkerHandle,
@@ -93,10 +93,7 @@ impl SpectrumApp {
         if self.icon_sent {
             return;
         }
-        ctx.send_viewport_cmd_to(
-            ViewportId::ROOT,
-            ViewportCommand::Icon(Some(app_icon())),
-        );
+        ctx.send_viewport_cmd_to(ViewportId::ROOT, ViewportCommand::Icon(Some(app_icon())));
         self.icon_sent = true;
     }
 
@@ -197,8 +194,7 @@ impl SpectrumApp {
         while let Ok(event) = self.worker.events.try_recv() {
             if let WorkerEvent::UsbPermissionRequired { endpoint } = &event {
                 if let Some(status) = usb_access_required(endpoint) {
-                    self.usb_access_prompt =
-                        Some(UsbAccessPrompt::new(endpoint.clone(), status));
+                    self.usb_access_prompt = Some(UsbAccessPrompt::new(endpoint.clone(), status));
                 }
             }
             if let WorkerEvent::DeviceConfig(config) = &event {
@@ -236,10 +232,8 @@ impl SpectrumApp {
                     self.sync_monitor_poll_interval();
                     self.spectrogram.sync_from_capture();
                     self.remember_connected_device(info);
-                    if matches!(
-                        self.active_tab,
-                        ViewTab::Settings | ViewTab::Monitor
-                    ) && !self.settings.draft_dirty()
+                    if matches!(self.active_tab, ViewTab::Settings | ViewTab::Monitor)
+                        && !self.settings.draft_dirty()
                     {
                         self.start_device_load();
                     }
@@ -451,10 +445,7 @@ impl SpectrumApp {
     }
 
     fn maybe_device_config_auto_load(&mut self) {
-        if !matches!(
-            self.active_tab,
-            ViewTab::Settings | ViewTab::Monitor
-        ) {
+        if !matches!(self.active_tab, ViewTab::Settings | ViewTab::Monitor) {
             return;
         }
         if self.state.connection != ConnectionState::Connected {
@@ -570,7 +561,10 @@ impl SpectrumApp {
         };
         if let Some(outcome) = prompt.poll_install() {
             match outcome {
-                UsbAccessOutcome::Installed { endpoint, need_replug } => {
+                UsbAccessOutcome::Installed {
+                    endpoint,
+                    need_replug,
+                } => {
                     let message = prompt.message.clone();
                     self.start_scan();
                     if need_replug {
@@ -715,15 +709,13 @@ impl SpectrumApp {
         if shows_tab_content(self.state.connection) {
             let plot_style = histogram_style(self.plot_outline_only);
             match self.active_tab {
-                ViewTab::Monitor => {
-                    draw_monitor_view(
-                        ui,
-                        &self.state.monitor,
-                        &self.state.dosimeter,
-                        plot_style,
-                        self.settings.app.monitor_smoothing_window,
-                    )
-                }
+                ViewTab::Monitor => draw_monitor_view(
+                    ui,
+                    &self.state.monitor,
+                    &self.state.dosimeter,
+                    plot_style,
+                    self.settings.app.monitor_smoothing_window,
+                ),
                 ViewTab::Spectrum => {
                     draw_spectrum_plot(
                         ui,
@@ -780,7 +772,8 @@ impl App for SpectrumApp {
             .default_size(300.0)
             .show(ui, |ui| {
                 sidebar_content_frame().show(ui, |ui| {
-                    if shows_tab_content(self.state.connection) || tab_works_offline(self.active_tab)
+                    if shows_tab_content(self.state.connection)
+                        || tab_works_offline(self.active_tab)
                     {
                         self.draw_sidebar(ui);
                     }
@@ -820,11 +813,7 @@ impl App for SpectrumApp {
                     ViewTab::Settings,
                     ViewTab::Settings.label(),
                 );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::About,
-                    ViewTab::About.label(),
-                );
+                ui.selectable_value(&mut self.active_tab, ViewTab::About, ViewTab::About.label());
             });
             if self.active_tab == ViewTab::Spectrum && previous_tab != ViewTab::Spectrum {
                 self.enter_spectrum_tab();

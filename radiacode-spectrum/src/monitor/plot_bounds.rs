@@ -33,18 +33,18 @@ pub fn series_points(
     apply_smoothing(visible, smoothing_window)
 }
 
-pub fn plot_bounds(monitor: &MonitorState, series: PlotSeries, smoothing_window: usize) -> PlotBounds {
+pub fn plot_bounds(
+    monitor: &MonitorState,
+    series: PlotSeries,
+    smoothing_window: usize,
+) -> PlotBounds {
     let x_max = monitor
         .history
         .back()
         .map(elapsed_secs)
         .unwrap_or(0.0)
         .max(1.0);
-    let oldest = monitor
-        .history
-        .front()
-        .map(elapsed_secs)
-        .unwrap_or(0.0);
+    let oldest = monitor.history.front().map(elapsed_secs).unwrap_or(0.0);
     let x_min = window_x_min(oldest, x_max);
     let bounds = PlotBounds {
         x_min,
@@ -76,19 +76,12 @@ fn apply_smoothing(points: Vec<[f64; 2]>, smoothing_window: usize) -> Vec<[f64; 
     let xs: Vec<f64> = points.iter().map(|point| point[0]).collect();
     let ys: Vec<f64> = points.iter().map(|point| point[1]).collect();
     let smoothed = moving_average_f64(&ys, window);
-    xs.into_iter()
-        .zip(smoothed)
-        .map(|(x, y)| [x, y])
-        .collect()
+    xs.into_iter().zip(smoothed).map(|(x, y)| [x, y]).collect()
 }
 
 fn window_x_min(oldest: f64, x_max: f64) -> f64 {
     let scrolled = (x_max - WINDOW_SECS).max(0.0);
-    if oldest > scrolled {
-        oldest
-    } else {
-        scrolled
-    }
+    if oldest > scrolled { oldest } else { scrolled }
 }
 
 fn alarm_ceiling(limits: radiacode_core::AlarmLimits, series: PlotSeries) -> f64 {
@@ -128,9 +121,9 @@ fn series_value(sample: &MonitorSample, series: PlotSeries) -> f64 {
 mod tests {
     use std::time::Duration;
 
-    use radiacode_core::{CountDisplayUnit, DoseDisplayUnit, DeviceTicks};
+    use radiacode_core::{CountDisplayUnit, DeviceTicks, DoseDisplayUnit};
 
-    use super::{plot_bounds, PlotSeries};
+    use super::{PlotSeries, plot_bounds};
     use crate::monitor::state::{MonitorSample, MonitorState};
 
     fn sample(seconds: f64, dose: f32, count: f32) -> MonitorSample {

@@ -6,7 +6,7 @@ use crate::energy::{energy_grid, sample_indices};
 use crate::model::SpectrumView;
 use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::capture::SpectrogramCapture;
-use crate::spectrogram::gap::{self, classify_row, ClassifiedRow};
+use crate::spectrogram::gap::{self, ClassifiedRow, classify_row};
 use crate::spectrogram::library;
 use crate::spectrogram::model::SpectrogramSeries;
 
@@ -54,8 +54,7 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
     if gap::device_timeline_regressed(device_duration_delta, &baseline.counts, &cumulative) {
         debug!(
             sequence,
-            device_duration_delta,
-            "spectrogram device timeline regressed, re-baselining"
+            device_duration_delta, "spectrogram device timeline regressed, re-baselining"
         );
         store_baseline_capture(capture, sequence, cumulative, device_duration_secs);
         capture.status =
@@ -155,7 +154,11 @@ fn append_classified_row_capture(
         );
     }
     if let Some(writer) = capture.recording.as_mut() {
-        if let Some(row) = capture.live_series.as_ref().and_then(|series| series.rows.last()) {
+        if let Some(row) = capture
+            .live_series
+            .as_ref()
+            .and_then(|series| series.rows.last())
+        {
             if let Err(error) = writer.append_row(row) {
                 warn!(%error, "spectrogram recording write failed");
                 capture.status = format!("Recording write failed: {error}");
@@ -166,11 +169,7 @@ fn append_classified_row_capture(
     capture.last_ingested_sequence = sequence;
     capture.last_ingest_at = Some(Instant::now());
     capture.status = if let Some(series) = capture.live_series.as_ref() {
-        format!(
-            "{} ({} row(s))",
-            classified.status,
-            series.row_count()
-        )
+        format!("{} ({} row(s))", classified.status, series.row_count())
     } else {
         classified.status
     };

@@ -1,6 +1,5 @@
 use crate::dosimeter::state::DosimeterState;
 
-
 const Y_HEADROOM: f64 = 0.2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,9 +30,9 @@ pub fn plot_bounds(dosimeter: &DosimeterState) -> PlotBounds {
         .iter()
         .map(|point| f64::from(point.dose))
         .fold(0.0_f64, f64::max);
-    let alarm_peak = dosimeter.limits.map(|limits| {
-        f64::from(limits.l1_dose.max(limits.l2_dose).max(0.0))
-    });
+    let alarm_peak = dosimeter
+        .limits
+        .map(|limits| f64::from(limits.l1_dose.max(limits.l2_dose).max(0.0)));
     let y_max = upper_y(peak, alarm_peak);
     PlotBounds {
         x_min: 0.0,

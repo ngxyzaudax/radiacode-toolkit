@@ -20,18 +20,22 @@ pub fn map_ble_error(error: BleError) -> radiacode_core::Error {
             radiacode_protocol::Error::TransportUnavailable("bluetooth adapter not found".into()),
         ),
         BleError::DeviceNotFound => radiacode_core::Error::DeviceNotFound,
-        BleError::CharacteristicMissing => radiacode_core::Error::from(
-            radiacode_protocol::Error::TransportUnavailable("required BLE characteristic missing".into()),
-        ),
-        BleError::InvalidAddress(value) => radiacode_core::Error::from(
-            radiacode_protocol::Error::TransportUnavailable(format!("invalid bluetooth address: {value}")),
-        ),
+        BleError::CharacteristicMissing => {
+            radiacode_core::Error::from(radiacode_protocol::Error::TransportUnavailable(
+                "required BLE characteristic missing".into(),
+            ))
+        }
+        BleError::InvalidAddress(value) => {
+            radiacode_core::Error::from(radiacode_protocol::Error::TransportUnavailable(format!(
+                "invalid bluetooth address: {value}"
+            )))
+        }
         BleError::Bluetooth(error) if is_bluetooth_connection_lost(&error) => {
             radiacode_core::Error::from(radiacode_protocol::Error::ConnectionClosed)
         }
-        BleError::Bluetooth(error) => {
-            radiacode_core::Error::from(radiacode_protocol::Error::TransportUnavailable(error.to_string()))
-        }
+        BleError::Bluetooth(error) => radiacode_core::Error::from(
+            radiacode_protocol::Error::TransportUnavailable(error.to_string()),
+        ),
     }
 }
 
@@ -46,13 +50,15 @@ pub fn map_ble_protocol_error(error: BleError) -> radiacode_protocol::Error {
         BleError::AdapterNotFound => {
             radiacode_protocol::Error::TransportUnavailable("bluetooth adapter not found".into())
         }
-        BleError::CharacteristicMissing => {
-            radiacode_protocol::Error::TransportUnavailable("required BLE characteristic missing".into())
+        BleError::CharacteristicMissing => radiacode_protocol::Error::TransportUnavailable(
+            "required BLE characteristic missing".into(),
+        ),
+        BleError::InvalidAddress(value) => radiacode_protocol::Error::TransportUnavailable(
+            format!("invalid bluetooth address: {value}"),
+        ),
+        BleError::Bluetooth(error) => {
+            radiacode_protocol::Error::TransportUnavailable(error.to_string())
         }
-        BleError::InvalidAddress(value) => {
-            radiacode_protocol::Error::TransportUnavailable(format!("invalid bluetooth address: {value}"))
-        }
-        BleError::Bluetooth(error) => radiacode_protocol::Error::TransportUnavailable(error.to_string()),
     }
 }
 

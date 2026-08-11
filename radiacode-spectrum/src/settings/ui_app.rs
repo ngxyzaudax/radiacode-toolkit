@@ -34,7 +34,10 @@ fn draw_recordings_dir(ui: &mut Ui, state: &mut SettingsState) -> bool {
             }
         }
         if !state.spectrogram.recordings_dir.is_empty()
-            && ui.button("Default").on_hover_text("Use the app data folder").clicked()
+            && ui
+                .button("Default")
+                .on_hover_text("Use the app data folder")
+                .clicked()
         {
             state.spectrogram.recordings_dir.clear();
             changed = true;

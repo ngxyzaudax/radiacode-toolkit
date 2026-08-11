@@ -35,9 +35,9 @@ pub fn map_usb_error(error: UsbError) -> radiacode_core::Error {
         UsbError::Usb(error) if matches!(error, rusb::Error::Access) => {
             radiacode_core::Error::UsbPermissionDenied
         }
-        UsbError::Usb(error) => radiacode_core::Error::from(radiacode_protocol::Error::TransportUnavailable(
-            error.to_string(),
-        )),
+        UsbError::Usb(error) => radiacode_core::Error::from(
+            radiacode_protocol::Error::TransportUnavailable(error.to_string()),
+        ),
     }
 }
 
@@ -62,6 +62,5 @@ pub fn map_usb_protocol_error(error: UsbError) -> radiacode_protocol::Error {
 }
 
 pub fn is_connection_lost(error: &radiacode_core::Error) -> bool {
-    error.is_connection_lost()
-        || matches!(error, radiacode_core::Error::UsbPermissionDenied)
+    error.is_connection_lost() || matches!(error, radiacode_core::Error::UsbPermissionDenied)
 }

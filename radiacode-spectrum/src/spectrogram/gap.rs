@@ -27,14 +27,15 @@ pub fn classify_row(
 ) -> ClassifiedRow {
     let row_counts = interval_row_counts(&baseline.counts, cumulative);
     let row_total = row_counts.iter().map(|&value| value as u64).sum();
-    let device_duration_delta =
-        spectrum.duration.as_secs_f64() - baseline.device_duration_secs;
+    let device_duration_delta = spectrum.duration.as_secs_f64() - baseline.device_duration_secs;
     let wall_gap = baseline.ingested_at.elapsed().as_secs_f64();
     let wall_threshold = GAP_WALL_MIN_SECS.max(capture_interval_secs * GAP_WALL_FACTOR);
     if device_duration_delta > capture_interval_secs * GAP_DEVICE_FACTOR
         || wall_gap > wall_threshold
     {
-        let offline_secs = device_duration_delta.max(wall_gap).max(capture_interval_secs);
+        let offline_secs = device_duration_delta
+            .max(wall_gap)
+            .max(capture_interval_secs);
         return ClassifiedRow {
             kind: RowKind::GapRecovery {
                 offline_secs,
@@ -102,10 +103,7 @@ fn channel_total(values: &[u32]) -> u64 {
     values.iter().map(|&value| value as u64).sum()
 }
 
-pub fn row_interval_ready(
-    device_duration_delta: f64,
-    capture_interval_secs: f64,
-) -> bool {
+pub fn row_interval_ready(device_duration_delta: f64, capture_interval_secs: f64) -> bool {
     device_duration_delta >= capture_interval_secs * MIN_ROW_DEVICE_FACTOR
 }
 
@@ -214,19 +212,15 @@ mod tests {
         };
         let cumulative = vec![5000; 512];
         let recent: Vec<u64> = (0..5).map(|_| 22 * 512).collect();
-        let classified = classify_row(
-            &spectrum(5000, 15),
-            &baseline,
-            &cumulative,
-            5.0,
-            &recent,
-        );
+        let classified = classify_row(&spectrum(5000, 15), &baseline, &cumulative, 5.0, &recent);
         assert!(matches!(classified.kind, RowKind::LiveSpike { .. }));
     }
 
     #[test]
     fn device_timeline_regressed_on_duration_drop() {
-        assert!(super::device_timeline_regressed(-10.0, &[100; 4], &[120; 4]));
+        assert!(super::device_timeline_regressed(
+            -10.0, &[100; 4], &[120; 4]
+        ));
     }
 
     #[test]

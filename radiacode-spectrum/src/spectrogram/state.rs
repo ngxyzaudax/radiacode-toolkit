@@ -1,19 +1,19 @@
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use crate::model::SpectrumView;
 use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::capture::SpectrogramCapture;
-use crate::spectrogram::model::{RecordingEntry, SpectrogramDisplay, SpectrogramSeries};
 use crate::spectrogram::library_meta::load_meta;
+use crate::spectrogram::model::{RecordingEntry, SpectrogramDisplay, SpectrogramSeries};
 use crate::spectrogram::recording;
-use crate::spectrogram::settings::{load_settings, save_settings, SpectrogramSettings};
+use crate::spectrogram::settings::{SpectrogramSettings, load_settings, save_settings};
 use crate::spectrogram::storage::list_recordings;
 use crate::spectrogram::texture::SpectrogramTexture;
 use crate::spectrogram::view_range::SpectrogramViewRange;
-use crate::spectrogram::zscale::{compute_series_z_range, ZScaleRange};
+use crate::spectrogram::zscale::{ZScaleRange, compute_series_z_range};
 
 pub struct SpectrogramState {
     pub capture: Arc<Mutex<SpectrogramCapture>>,
@@ -161,7 +161,10 @@ impl SpectrogramState {
     }
 
     pub fn live_row_count(&self) -> usize {
-        self.live_series.as_ref().map(|series| series.row_count()).unwrap_or(0)
+        self.live_series
+            .as_ref()
+            .map(|series| series.row_count())
+            .unwrap_or(0)
     }
 
     pub fn refresh_history(&mut self) {
@@ -346,9 +349,12 @@ impl SpectrogramState {
     }
 
     pub fn refresh_z_range(&mut self) {
-        let snapshot = self
-            .active_series()
-            .map(|series| (compute_series_z_range(series, &self.settings), series.row_count()));
+        let snapshot = self.active_series().map(|series| {
+            (
+                compute_series_z_range(series, &self.settings),
+                series.row_count(),
+            )
+        });
         match snapshot {
             Some((range, rows)) => {
                 self.z_range = Some(range);
@@ -362,7 +368,10 @@ impl SpectrogramState {
     }
 
     pub fn ensure_z_range(&mut self) {
-        let rows = self.active_series().map(|series| series.row_count()).unwrap_or(0);
+        let rows = self
+            .active_series()
+            .map(|series| series.row_count())
+            .unwrap_or(0);
         if self.z_range.is_none() || self.z_range_rows != rows {
             self.refresh_z_range();
         }

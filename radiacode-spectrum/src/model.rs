@@ -1,4 +1,6 @@
-use radiacode_core::{DeviceEndpoint, DeviceMetadata, DeviceStatus, merge_status, Spectrum, TransportKind};
+use radiacode_core::{
+    DeviceEndpoint, DeviceMetadata, DeviceStatus, Spectrum, TransportKind, merge_status,
+};
 
 #[derive(Debug, Clone)]
 pub struct DeviceInfo {

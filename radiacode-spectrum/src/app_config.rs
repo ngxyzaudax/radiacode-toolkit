@@ -34,7 +34,8 @@ impl AppConfig {
     pub fn clamp(&mut self) {
         self.monitor_poll_secs = self.monitor_poll_secs.clamp(1, 60);
         self.spectrum_refresh_secs = self.spectrum_refresh_secs.clamp(1, 60);
-        self.monitor_smoothing_window = crate::smooth::normalize_window(self.monitor_smoothing_window);
+        self.monitor_smoothing_window =
+            crate::smooth::normalize_window(self.monitor_smoothing_window);
     }
 }
 

@@ -7,12 +7,20 @@ use crate::theme::MUTED;
 use super::DeviceAction;
 use super::DeviceViewProps;
 
-pub fn draw_discovery(ui: &mut Ui, props: &DeviceViewProps<'_>, max_list_height: f32) -> Option<DeviceAction> {
+pub fn draw_discovery(
+    ui: &mut Ui,
+    props: &DeviceViewProps<'_>,
+    max_list_height: f32,
+) -> Option<DeviceAction> {
     let mut action = None;
     ui.horizontal(|ui| {
         ui.label(RichText::new("Nearby devices").size(18.0).strong());
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let label = if props.scanning { "Scanning…" } else { "Scan" };
+            let label = if props.scanning {
+                "Scanning…"
+            } else {
+                "Scan"
+            };
             if ui
                 .add_enabled(!props.busy && !props.scanning, egui::Button::new(label))
                 .clicked()
@@ -49,9 +57,7 @@ pub fn draw_discovery(ui: &mut Ui, props: &DeviceViewProps<'_>, max_list_height:
                             ui.horizontal(|ui| {
                                 ui.label(RichText::new(device.display_label()).strong().size(16.0));
                                 ui.label(
-                                    RichText::new(device.transport_tag())
-                                        .small()
-                                        .color(MUTED),
+                                    RichText::new(device.transport_tag()).small().color(MUTED),
                                 );
                             });
                             if let Some(serial) = &device.serial {

@@ -1,7 +1,7 @@
 use radiacode_core::DeviceConfig;
 
-use crate::app_config::{load_app_config, save_app_config, AppConfig};
-use crate::spectrogram::settings::{load_settings, save_settings, SpectrogramSettings};
+use crate::app_config::{AppConfig, load_app_config, save_app_config};
+use crate::spectrogram::settings::{SpectrogramSettings, load_settings, save_settings};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsDeviceOp {
@@ -91,9 +91,7 @@ impl SettingsState {
     }
 
     pub fn needs_auto_load(&self) -> bool {
-        self.draft.is_none()
-            && self.device_op == SettingsDeviceOp::Idle
-            && !self.show_load_confirm
+        self.draft.is_none() && self.device_op == SettingsDeviceOp::Idle && !self.show_load_confirm
     }
 
     pub fn begin_load(&mut self) {

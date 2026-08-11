@@ -7,7 +7,7 @@ use crate::analysis::ui_plot_bars::{owned_series, shared_log_floor, show_owned_s
 use crate::analysis::ui_plot_legend::draw_legend;
 use crate::analysis::ui_plot_values::{smoothed_background, smoothed_net, smoothed_sample};
 use crate::scale::{HistogramStyle, YScale};
-use crate::theme::{analysis_sample_color, ANALYSIS_BACKGROUND, MUTED};
+use crate::theme::{ANALYSIS_BACKGROUND, MUTED, analysis_sample_color};
 
 pub fn draw_analysis_plots(
     ui: &mut Ui,
@@ -34,9 +34,27 @@ pub fn draw_analysis_plots(
         "Overlay"
     });
     if show_net {
-        draw_net_plot(ui, energies, width, samples, background, y_scale, smooth_window, style);
+        draw_net_plot(
+            ui,
+            energies,
+            width,
+            samples,
+            background,
+            y_scale,
+            smooth_window,
+            style,
+        );
     } else {
-        draw_overlay_plot(ui, energies, width, samples, background, y_scale, smooth_window, style);
+        draw_overlay_plot(
+            ui,
+            energies,
+            width,
+            samples,
+            background,
+            y_scale,
+            smooth_window,
+            style,
+        );
     }
 }
 
@@ -98,7 +116,9 @@ fn draw_net_plot(
     style: HistogramStyle,
 ) {
     let Some(background) = background else {
-        ui.label(RichText::new("Select a background recording to compute net spectra.").color(MUTED));
+        ui.label(
+            RichText::new("Select a background recording to compute net spectra.").color(MUTED),
+        );
         return;
     };
     if samples.is_empty() {

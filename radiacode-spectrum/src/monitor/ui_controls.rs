@@ -7,8 +7,8 @@ use crate::monitor::state::MonitorState;
 use crate::monitor::ui_readouts::draw_monitor_readouts;
 use crate::plot_style::draw_plot_style_toggle;
 use crate::settings::{
-    draw_alarm_sidebar_shell, draw_dosimeter_alarms_sidebar, draw_monitor_alarms_sidebar,
-    SettingsAction, SettingsState,
+    SettingsAction, SettingsState, draw_alarm_sidebar_shell, draw_dosimeter_alarms_sidebar,
+    draw_monitor_alarms_sidebar,
 };
 use crate::smooth::normalize_window;
 use crate::theme::{ACCENT, MUTED};

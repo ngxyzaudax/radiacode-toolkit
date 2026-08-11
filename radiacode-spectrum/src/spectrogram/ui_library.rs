@@ -1,7 +1,7 @@
 use egui::{RichText, Ui};
 
-use crate::spectrogram::library;
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
+use crate::spectrogram::library;
 use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
@@ -125,11 +125,11 @@ fn draw_library_entry(
     });
 }
 
-fn import_rcspg(
-    state: &mut SpectrogramState,
-    action: &mut Option<SpectrogramControlsAction>,
-) {
-    if let Some(path) = rfd::FileDialog::new().add_filter("rcspg", &["rcspg"]).pick_file() {
+fn import_rcspg(state: &mut SpectrogramState, action: &mut Option<SpectrogramControlsAction>) {
+    if let Some(path) = rfd::FileDialog::new()
+        .add_filter("rcspg", &["rcspg"])
+        .pick_file()
+    {
         match library::import_rcspg(&path, &state.settings.recordings_dir) {
             Ok(saved) => {
                 state.status = format!("Imported {}", saved.display());

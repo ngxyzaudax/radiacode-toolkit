@@ -1,16 +1,16 @@
 use tracing::debug;
 
-use radiacode_protocol::{sfr_supports_leds_on, VirtSfr, VirtString};
+use radiacode_protocol::{VirtSfr, VirtString, sfr_supports_leds_on};
 
 use crate::device::RadiaCode;
 use crate::device_time::set_local_time_now;
 use crate::error::Result;
 use crate::rate_units::{
-    decode_count_alarm, decode_dose_accum, decode_dose_alarm, encode_count_alarm, encode_dose_accum,
-    encode_dose_alarm, CountDisplayUnit, DoseDisplayUnit,
+    CountDisplayUnit, DoseDisplayUnit, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
+    encode_count_alarm, encode_dose_accum, encode_dose_alarm,
 };
-use radiacode_protocol::{RawCountsPer10s, RawMicroRoentgenPerHour};
 use crate::types::AlarmLimits;
+use radiacode_protocol::{RawCountsPer10s, RawMicroRoentgenPerHour};
 
 const CTRL_BUTTONS: u32 = 1 << 0;
 const CTRL_CLICKS: u32 = 1 << 1;
@@ -416,7 +416,7 @@ impl RadiaCode {
 
 #[cfg(test)]
 mod tests {
-    use super::{BacklightOffTime, SignalFlags, DEVICE_CTRL_LIGHT};
+    use super::{BacklightOffTime, DEVICE_CTRL_LIGHT, SignalFlags};
 
     #[test]
     fn backlight_round_trip() {

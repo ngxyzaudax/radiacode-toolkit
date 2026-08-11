@@ -1,7 +1,7 @@
 use tracing::warn;
 
-use radiacode_protocol::{BytesBuffer, Command, VirtSfr};
 use radiacode_protocol::Error as ProtocolError;
+use radiacode_protocol::{BytesBuffer, Command, VirtSfr};
 
 use crate::device::RadiaCode;
 use crate::error::{Error, Result};
@@ -24,11 +24,16 @@ pub async fn read_vsfr_batch(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<
         }
         match read_vsfr_batch_once(device, ids).await {
             Ok(values) => return Ok(values),
-            Err(Error::Protocol(ProtocolError::VsfrBatchEmpty)) => return Err(Error::Protocol(
-                ProtocolError::VsfrBatchEmpty,
-            )),
+            Err(Error::Protocol(ProtocolError::VsfrBatchEmpty)) => {
+                return Err(Error::Protocol(ProtocolError::VsfrBatchEmpty));
+            }
             Err(error) if error.is_transient() && attempt < VSFR_BATCH_RETRIES => {
-                warn!(attempt, ?error, count = ids.len(), "vsfr batch read failed, retrying");
+                warn!(
+                    attempt,
+                    ?error,
+                    count = ids.len(),
+                    "vsfr batch read failed, retrying"
+                );
                 last_error = Some(error);
             }
             Err(error) => return fill_missing_vsfrs(device, ids, error).await,
@@ -58,7 +63,12 @@ pub async fn write_vsfr_batch(device: &mut RadiaCode, pairs: &[(VirtSfr, u32)]) 
         match write_vsfr_batch_once(device, pairs).await {
             Ok(()) => return Ok(()),
             Err(error) if error.is_transient() && attempt < VSFR_BATCH_RETRIES => {
-                warn!(attempt, ?error, count = pairs.len(), "vsfr batch write failed, retrying");
+                warn!(
+                    attempt,
+                    ?error,
+                    count = pairs.len(),
+                    "vsfr batch write failed, retrying"
+                );
                 last_error = Some(error);
             }
             Err(error) => return Err(error),
@@ -107,7 +117,11 @@ async fn fill_missing_vsfrs(
     ids: &[VirtSfr],
     batch_error: Error,
 ) -> Result<Vec<u32>> {
-    warn!(count = ids.len(), ?batch_error, "vsfr batch read failed, falling back to sequential reads");
+    warn!(
+        count = ids.len(),
+        ?batch_error,
+        "vsfr batch read failed, falling back to sequential reads"
+    );
     let mut values = Vec::with_capacity(ids.len());
     for id in ids {
         values.push(device.read_vsfr_u32(*id).await?);

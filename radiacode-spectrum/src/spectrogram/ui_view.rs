@@ -1,27 +1,26 @@
 use egui::{Color32, Context, Image, RichText, Sense, Ui};
 
-use crate::theme::MUTED;
 use crate::spectrogram::axes::{draw_header_line, draw_x_axis, x_axis_label, y_axis_label};
-use crate::spectrogram::time_axis::draw_time_axis;
+use crate::spectrogram::count_rate::draw_count_rate_overlay;
 use crate::spectrogram::layout::{
-    channels_in_energy_range, compute_layout, DEFAULT_EMPTY_CHANNELS,
+    DEFAULT_EMPTY_CHANNELS, channels_in_energy_range, compute_layout,
 };
 use crate::spectrogram::model::SpectrogramDisplay;
-use crate::spectrogram::count_rate::draw_count_rate_overlay;
 use crate::spectrogram::overlays::{draw_crosshair, draw_grid, draw_isotope_lines};
 use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::texture::source_columns;
 use crate::spectrogram::texture_sync::sync_texture;
+use crate::spectrogram::time_axis::draw_time_axis;
 use crate::spectrogram::view_interact::{handle_view_interaction, hover_details};
+use crate::theme::MUTED;
 
 pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut SpectrogramState) {
-    let total_rows = state.active_series().map(|series| series.row_count()).unwrap_or(0);
+    let total_rows = state
+        .active_series()
+        .map(|series| series.row_count())
+        .unwrap_or(0);
     if let Some(series) = state.active_series() {
-        draw_header_line(
-            ui,
-            series,
-            state.display == SpectrogramDisplay::Loaded,
-        );
+        draw_header_line(ui, series, state.display == SpectrogramDisplay::Loaded);
     } else {
         ui.label(
             RichText::new("Empty spectrogram grid. Connect a device to start capturing.")
@@ -66,11 +65,8 @@ pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut Spectrogram
         let (rect, response) = ui.allocate_exact_size(plot_size, Sense::click_and_drag());
 
         let channels_before = channels_for_view(state);
-        let layout_before = compute_layout(
-            rect,
-            channels_before,
-            state.view_range.fit_full_spectrum,
-        );
+        let layout_before =
+            compute_layout(rect, channels_before, state.view_range.fit_full_spectrum);
         handle_view_interaction(
             ui,
             &response,
@@ -83,11 +79,7 @@ pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut Spectrogram
         let energy_min = state.view_range.energy_min_kev;
         let energy_max = state.view_range.energy_max_kev;
         let channels = channels_for_view(state);
-        let layout = compute_layout(
-            rect,
-            channels,
-            state.view_range.fit_full_spectrum,
-        );
+        let layout = compute_layout(rect, channels, state.view_range.fit_full_spectrum);
         state
             .view_range
             .clamp_to_history(total_rows, layout.display_rows);
@@ -138,13 +130,7 @@ pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut Spectrogram
                 draw_crosshair(&axis_painter, hover, layout.image_rect);
             }
             draw_time_axis(&axis_painter, layout.image_rect, layout, visible);
-            draw_x_axis(
-                &axis_painter,
-                ui,
-                layout.image_rect,
-                series,
-                &source_cols,
-            );
+            draw_x_axis(&axis_painter, ui, layout.image_rect, series, &source_cols);
             let details = hover_details(
                 &response,
                 layout.image_rect,

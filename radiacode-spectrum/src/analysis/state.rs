@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::analysis::compare::Comparison;
 use crate::analysis::selection::{rebuild_samples, selection_status};
-use crate::analysis::spectrum::{collapse_series, CollapsedSpectrum};
+use crate::analysis::spectrum::{CollapsedSpectrum, collapse_series};
 use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::storage::{list_recordings, load_recording};
 
@@ -60,7 +60,9 @@ impl AnalysisState {
     }
 
     pub fn is_background(&self, path: &Path) -> bool {
-        self.background_path.as_ref().is_some_and(|item| item == path)
+        self.background_path
+            .as_ref()
+            .is_some_and(|item| item == path)
     }
 
     pub fn sample_index(&self, path: &Path) -> Option<usize> {

@@ -79,7 +79,9 @@ mod tests {
         let display = 1.25;
         let raw = encode_dose_alarm(display, DoseDisplayUnit::MicroSievertPerHour);
         assert_eq!(raw.as_u32(), 125);
-        assert!((decode_dose_alarm(raw, DoseDisplayUnit::MicroSievertPerHour) - display).abs() < 0.01);
+        assert!(
+            (decode_dose_alarm(raw, DoseDisplayUnit::MicroSievertPerHour) - display).abs() < 0.01
+        );
     }
 
     #[test]
@@ -111,7 +113,9 @@ mod tests {
     #[test]
     fn realtime_dose_conversions() {
         let rh = 0.000_125;
-        assert!((dose_display_from_rh(rh, DoseDisplayUnit::MicroSievertPerHour) - 1.25).abs() < 0.001);
+        assert!(
+            (dose_display_from_rh(rh, DoseDisplayUnit::MicroSievertPerHour) - 1.25).abs() < 0.001
+        );
         assert!(
             (dose_display_from_rh(rh, DoseDisplayUnit::MicroRoentgenPerHour) - 125.0).abs() < 0.1
         );

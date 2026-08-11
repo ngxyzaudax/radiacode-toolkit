@@ -1,14 +1,16 @@
 use tracing::debug;
 
-use radiacode_protocol::VirtSfr;
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::rate_units::{
-    decode_count_alarm, decode_dose_accum, decode_dose_alarm, encode_count_alarm, encode_dose_accum,
-    encode_dose_alarm,
+    decode_count_alarm, decode_dose_accum, decode_dose_alarm, encode_count_alarm,
+    encode_dose_accum, encode_dose_alarm,
 };
 use crate::types::{AlarmLimits, AlarmLimitsUpdate};
-use radiacode_protocol::{CountDisplayUnit, DoseDisplayUnit, RawCountsPer10s, RawMicroRoentgenPerHour};
+use radiacode_protocol::VirtSfr;
+use radiacode_protocol::{
+    CountDisplayUnit, DoseDisplayUnit, RawCountsPer10s, RawMicroRoentgenPerHour,
+};
 
 pub async fn alarm_limits(device: &mut RadiaCode) -> Result<AlarmLimits> {
     let ids = [

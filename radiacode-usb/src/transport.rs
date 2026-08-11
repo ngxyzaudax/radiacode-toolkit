@@ -5,14 +5,14 @@ use async_trait::async_trait;
 use radiacode_core::{
     DeviceEndpoint, DiscoveredDevice, Error, RadiaCode, SessionRestore, model_from_serial,
 };
-use radiacode_protocol::{
-    framed_request_header, response_matches_request, BytesBuffer, Transport,
-};
+use radiacode_protocol::{BytesBuffer, Transport, framed_request_header, response_matches_request};
 use rusb::{Context, DeviceHandle, UsbContext};
 use tracing::{debug, info, warn};
 
-use crate::constants::{DRAIN, EMPTY_READ_RETRIES, EP_IN, EP_OUT, INTERFACE, PID, READ_BUF, TIMEOUT, VID};
-use crate::usb_error::{map_usb_error, map_usb_protocol_error, UsbError};
+use crate::constants::{
+    DRAIN, EMPTY_READ_RETRIES, EP_IN, EP_OUT, INTERFACE, PID, READ_BUF, TIMEOUT, VID,
+};
+use crate::usb_error::{UsbError, map_usb_error, map_usb_protocol_error};
 
 type LockedHandle = Arc<Mutex<DeviceHandle<Context>>>;
 
@@ -40,7 +40,8 @@ impl UsbTransport {
         handle: &mut DeviceHandle<Context>,
         request: &[u8],
     ) -> std::result::Result<BytesBuffer, UsbError> {
-        let expected = framed_request_header(request).map_err(|error| UsbError::Transport(error.to_string()))?;
+        let expected = framed_request_header(request)
+            .map_err(|error| UsbError::Transport(error.to_string()))?;
         debug!(request_len = request.len(), "usb execute request");
         drain_handle(handle)?;
         let written = handle.write_bulk(EP_OUT, request, TIMEOUT)?;
@@ -103,18 +104,29 @@ pub async fn connect(serial: &str) -> radiacode_core::Result<RadiaCode> {
         move || UsbTransport::connect(&serial).map_err(map_usb_error)
     })
     .await
-    .map_err(|error| Error::from(radiacode_protocol::Error::TransportUnavailable(error.to_string())))??;
+    .map_err(|error| {
+        Error::from(radiacode_protocol::Error::TransportUnavailable(
+            error.to_string(),
+        ))
+    })??;
     RadiaCode::open(Box::new(transport), false, None).await
 }
 
-pub async fn reconnect_session(serial: &str, restore: &SessionRestore) -> radiacode_core::Result<RadiaCode> {
+pub async fn reconnect_session(
+    serial: &str,
+    restore: &SessionRestore,
+) -> radiacode_core::Result<RadiaCode> {
     info!(%serial, "radiacode usb reconnect with cached session");
     let transport = tokio::task::spawn_blocking({
         let serial = serial.to_string();
         move || UsbTransport::reconnect(&serial).map_err(map_usb_error)
     })
     .await
-    .map_err(|error| Error::from(radiacode_protocol::Error::TransportUnavailable(error.to_string())))??;
+    .map_err(|error| {
+        Error::from(radiacode_protocol::Error::TransportUnavailable(
+            error.to_string(),
+        ))
+    })??;
     RadiaCode::open(Box::new(transport), false, Some(restore)).await
 }
 
@@ -129,7 +141,11 @@ fn collect_devices(context: &Context) -> std::result::Result<Vec<DiscoveredDevic
             continue;
         }
         let handle = device.open().ok();
-        let serial = read_string(handle.as_ref(), &device, descriptor.serial_number_string_index());
+        let serial = read_string(
+            handle.as_ref(),
+            &device,
+            descriptor.serial_number_string_index(),
+        );
         let product = read_string(handle.as_ref(), &device, descriptor.product_string_index());
         let serial = serial.filter(|value| !value.is_empty());
         let product = product.filter(|value| !value.is_empty());
@@ -139,8 +155,15 @@ fn collect_devices(context: &Context) -> std::result::Result<Vec<DiscoveredDevic
             .or_else(|| serial.clone())
             .or(product.clone())
             .unwrap_or_else(|| "RadiaCode".into());
-        let endpoint_serial = serial.clone().unwrap_or_else(|| format!("usb-{}", device.address()));
-        debug!(?serial, ?product, address = device.address(), "matched usb radiacode");
+        let endpoint_serial = serial
+            .clone()
+            .unwrap_or_else(|| format!("usb-{}", device.address()));
+        debug!(
+            ?serial,
+            ?product,
+            address = device.address(),
+            "matched usb radiacode"
+        );
         found.push(DiscoveredDevice {
             endpoint: DeviceEndpoint::Usb {
                 serial: endpoint_serial,
@@ -151,7 +174,11 @@ fn collect_devices(context: &Context) -> std::result::Result<Vec<DiscoveredDevic
             rssi: None,
         });
     }
-    found.sort_by(|left, right| left.endpoint.address_label().cmp(right.endpoint.address_label()));
+    found.sort_by(|left, right| {
+        left.endpoint
+            .address_label()
+            .cmp(right.endpoint.address_label())
+    });
     found.dedup_by(|left, right| left.endpoint == right.endpoint);
     info!(count = found.len(), "usb scan complete");
     Ok(found)
@@ -164,15 +191,17 @@ pub(crate) fn usb_permission_denied() -> bool {
     matches!(open_handle(&context, None), Err(UsbError::PermissionDenied))
 }
 
-fn open_handle(context: &Context, serial: Option<&str>) -> std::result::Result<DeviceHandle<Context>, UsbError> {
+fn open_handle(
+    context: &Context,
+    serial: Option<&str>,
+) -> std::result::Result<DeviceHandle<Context>, UsbError> {
     let candidates: Vec<_> = context
         .devices()?
         .iter()
         .filter(|device| {
-            device
-                .device_descriptor()
-                .ok()
-                .is_some_and(|descriptor| descriptor.vendor_id() == VID && descriptor.product_id() == PID)
+            device.device_descriptor().ok().is_some_and(|descriptor| {
+                descriptor.vendor_id() == VID && descriptor.product_id() == PID
+            })
         })
         .collect();
     if candidates.is_empty() {
@@ -210,7 +239,9 @@ fn pick_device<'a>(
         device
             .device_descriptor()
             .ok()
-            .and_then(|descriptor| read_string(None, device, descriptor.serial_number_string_index()))
+            .and_then(|descriptor| {
+                read_string(None, device, descriptor.serial_number_string_index())
+            })
             .is_some_and(|value| value == target)
     }) {
         return Ok(device);
@@ -221,7 +252,9 @@ fn pick_device<'a>(
     Err(UsbError::DeviceNotFound)
 }
 
-fn read_response_sync(handle: &mut DeviceHandle<Context>) -> std::result::Result<BytesBuffer, UsbError> {
+fn read_response_sync(
+    handle: &mut DeviceHandle<Context>,
+) -> std::result::Result<BytesBuffer, UsbError> {
     let mut buffer = vec![0u8; READ_BUF];
     let mut payload = Vec::new();
     let mut expected_len: Option<usize> = None;

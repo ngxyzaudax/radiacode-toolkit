@@ -2,8 +2,8 @@
 mod tests {
     use crate::command::Command;
     use crate::protocol::{
-        build_request, framed_request_header, request_header, response_matches_request,
-        ResponseAssembler, Sequence,
+        ResponseAssembler, Sequence, build_request, framed_request_header, request_header,
+        response_matches_request,
     };
 
     #[test]

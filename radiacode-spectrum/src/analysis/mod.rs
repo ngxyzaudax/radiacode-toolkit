@@ -11,5 +11,5 @@ mod ui_role_cards;
 mod ui_view;
 
 pub use state::AnalysisState;
-pub use ui_controls::{draw_analysis_controls, AnalysisAction};
+pub use ui_controls::{AnalysisAction, draw_analysis_controls};
 pub use ui_view::draw_analysis_view;

@@ -28,7 +28,10 @@ pub fn parse_sfr_file(text: &str) -> Vec<SfrCatalogEntry> {
                 entries.push(entry);
             }
             current = Some(SfrCatalogEntry {
-                name: line.trim_start_matches('[').trim_end_matches(']').to_string(),
+                name: line
+                    .trim_start_matches('[')
+                    .trim_end_matches(']')
+                    .to_string(),
                 address: 0,
                 size: 0,
                 value_kind: SfrValueKind::Unknown,
@@ -62,13 +65,16 @@ pub fn parse_sfr_file(text: &str) -> Vec<SfrCatalogEntry> {
 }
 
 fn parse_hex_address(value: &str) -> u32 {
-    let trimmed = value.trim().trim_start_matches("0x").trim_start_matches("0X");
+    let trimmed = value
+        .trim()
+        .trim_start_matches("0x")
+        .trim_start_matches("0X");
     u32::from_str_radix(trimmed, 16).unwrap_or(0)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_sfr_file, SfrValueKind};
+    use super::{SfrValueKind, parse_sfr_file};
 
     #[test]
     fn parses_sfr_entry() {

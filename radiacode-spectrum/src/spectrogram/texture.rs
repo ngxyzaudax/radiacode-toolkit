@@ -5,7 +5,7 @@ use crate::spectrogram::colormap::normalized_to_color;
 use crate::spectrogram::gap::display_count;
 use crate::spectrogram::model::{SpectrogramRow, SpectrogramSeries};
 use crate::spectrogram::settings::SpectrogramSettings;
-use crate::spectrogram::zscale::{map_count, ZScaleRange};
+use crate::spectrogram::zscale::{ZScaleRange, map_count};
 
 pub struct SpectrogramTexture {
     pub image: ColorImage,
@@ -35,8 +35,7 @@ impl SpectrogramTexture {
         let width = source_cols.len().max(1);
         let height = display_rows.max(1);
         if self.image.width() != width || self.image.height() != height {
-            self.image =
-                ColorImage::filled([width, height], egui::Color32::from_rgb(8, 10, 16));
+            self.image = ColorImage::filled([width, height], egui::Color32::from_rgb(8, 10, 16));
         } else {
             for pixel in &mut self.image.pixels {
                 *pixel = egui::Color32::from_rgb(8, 10, 16);
@@ -90,12 +89,7 @@ fn native_rows(
                 .iter()
                 .map(|&index| {
                     let raw = row.counts.get(index).copied().unwrap_or(0);
-                    display_count(
-                        raw,
-                        row.kind,
-                        capture_interval_secs,
-                        row.interval_secs,
-                    )
+                    display_count(raw, row.kind, capture_interval_secs, row.interval_secs)
                 })
                 .collect()
         })
@@ -126,10 +120,12 @@ pub fn source_columns(
 
 #[cfg(test)]
 mod tests {
-    use super::{native_rows, source_columns, SpectrogramTexture};
+    use super::{SpectrogramTexture, native_rows, source_columns};
     use crate::spectrogram::color_scheme::ColorScheme;
     use crate::spectrogram::gap::display_count;
-    use crate::spectrogram::model::{RowKind, SpectrogramHeader, SpectrogramRow, SpectrogramSeries};
+    use crate::spectrogram::model::{
+        RowKind, SpectrogramHeader, SpectrogramRow, SpectrogramSeries,
+    };
     use crate::spectrogram::settings::SpectrogramSettings;
     use crate::spectrogram::zscale::compute_series_z_range;
 

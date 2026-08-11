@@ -224,12 +224,7 @@ fn paint_signal_icon(ui: &mut Ui, rssi_dbm: i16) {
         if fill {
             painter.rect_filled(bar, 1.0, color);
         } else {
-            painter.rect_stroke(
-                bar,
-                1.0,
-                Stroke::new(1.0, MUTED),
-                egui::StrokeKind::Outside,
-            );
+            painter.rect_stroke(bar, 1.0, Stroke::new(1.0, MUTED), egui::StrokeKind::Outside);
         }
     }
 }

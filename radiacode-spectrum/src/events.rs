@@ -3,8 +3,8 @@ use std::time::{Duration, Instant};
 use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
 use tracing::{debug, info, warn};
 
-use crate::model::{ConnectionState, DeviceInfo, SpectrumView};
 use crate::dosimeter::DosimeterState;
+use crate::model::{ConnectionState, DeviceInfo, SpectrumView};
 use crate::monitor::MonitorState;
 use crate::worker::{WorkerCommand, WorkerEvent};
 
@@ -68,7 +68,11 @@ impl AppState {
         };
     }
 
-    pub fn apply_event(&mut self, event: WorkerEvent, accept_session: bool) -> Option<WorkerCommand> {
+    pub fn apply_event(
+        &mut self,
+        event: WorkerEvent,
+        accept_session: bool,
+    ) -> Option<WorkerCommand> {
         match event {
             WorkerEvent::Busy(busy) => {
                 debug!(busy, "worker busy state");

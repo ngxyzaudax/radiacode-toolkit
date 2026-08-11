@@ -1,5 +1,5 @@
 use super::{
-    decode_data_buf, latest_real_time_rates, latest_snapshot, DecodeWarningKind, RecordKind, Seq,
+    DecodeWarningKind, RecordKind, Seq, decode_data_buf, latest_real_time_rates, latest_snapshot,
 };
 
 #[test]
@@ -44,7 +44,10 @@ fn decode_reports_seq_jump() {
     let frame = decode_data_buf(&bytes);
     assert!(frame.warnings.iter().any(|warning| matches!(
         warning.kind,
-        DecodeWarningKind::SeqJump { expected: 2, got: 3 }
+        DecodeWarningKind::SeqJump {
+            expected: 2,
+            got: 3
+        }
     )));
 }
 
@@ -58,10 +61,12 @@ fn rejects_non_finite_rates() {
     bytes.extend_from_slice(&[0u8; 7]);
     let frame = decode_data_buf(&bytes);
     assert!(frame.records.is_empty());
-    assert!(frame.warnings.iter().any(|warning| matches!(
-        warning.kind,
-        DecodeWarningKind::SanityRejected(_)
-    )));
+    assert!(
+        frame
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning.kind, DecodeWarningKind::SanityRejected(_)))
+    );
 }
 
 #[test]

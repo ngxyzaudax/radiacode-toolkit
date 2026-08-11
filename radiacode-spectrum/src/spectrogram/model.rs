@@ -112,17 +112,17 @@ impl SpectrogramSeries {
     }
 
     pub fn duration_secs(&self) -> f64 {
-        self.rows
-            .iter()
-            .map(|row| row.interval_secs)
-            .sum()
+        self.rows.iter().map(|row| row.interval_secs).sum()
     }
 
     pub fn gap_summary(&self) -> (usize, f64) {
         let mut count = 0usize;
         let mut offline_secs = 0.0;
         for row in &self.rows {
-            if let RowKind::GapRecovery { offline_secs: gap, .. } = row.kind {
+            if let RowKind::GapRecovery {
+                offline_secs: gap, ..
+            } = row.kind
+            {
                 count += 1;
                 offline_secs += gap;
             }
@@ -197,7 +197,15 @@ mod tests {
     fn duration_secs_sums_variable_intervals() {
         let mut series = SpectrogramSeries::new(sample_header(), vec![100.0, 200.0]);
         series.push_row(vec![1, 2], 5.0, RowKind::Normal, 100);
-        series.push_row(vec![3, 4], 45.0, RowKind::GapRecovery { offline_secs: 45.0, raw_total: 7 }, 100);
+        series.push_row(
+            vec![3, 4],
+            45.0,
+            RowKind::GapRecovery {
+                offline_secs: 45.0,
+                raw_total: 7,
+            },
+            100,
+        );
         series.push_row(vec![5, 6], 5.0, RowKind::Normal, 100);
         assert!((series.duration_secs() - 55.0).abs() < 0.001);
     }
@@ -206,7 +214,15 @@ mod tests {
     fn age_secs_before_uses_row_intervals() {
         let mut series = SpectrogramSeries::new(sample_header(), vec![100.0, 200.0]);
         series.push_row(vec![1, 2], 5.0, RowKind::Normal, 100);
-        series.push_row(vec![3, 4], 45.0, RowKind::GapRecovery { offline_secs: 45.0, raw_total: 7 }, 100);
+        series.push_row(
+            vec![3, 4],
+            45.0,
+            RowKind::GapRecovery {
+                offline_secs: 45.0,
+                raw_total: 7,
+            },
+            100,
+        );
         series.push_row(vec![5, 6], 5.0, RowKind::Normal, 100);
         assert!((series.age_secs_before(0) - 50.0).abs() < 0.001);
     }

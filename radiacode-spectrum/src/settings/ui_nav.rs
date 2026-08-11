@@ -49,10 +49,8 @@ fn paint_menu_item(ui: &Ui, rect: egui::Rect, label: &str, active: bool, hovered
         );
     }
     if active {
-        let bar = egui::Rect::from_min_size(
-            rect.left_top(),
-            Vec2::new(ACTIVE_BAR_WIDTH, rect.height()),
-        );
+        let bar =
+            egui::Rect::from_min_size(rect.left_top(), Vec2::new(ACTIVE_BAR_WIDTH, rect.height()));
         ui.painter().rect(
             bar,
             CornerRadius::ZERO,

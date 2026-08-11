@@ -5,8 +5,8 @@ use crate::settings::action::SettingsAction;
 use crate::settings::alarm_skeleton::alarm_skeleton_config;
 use crate::settings::state::{SettingsDeviceOp, SettingsState};
 use crate::settings::ui_confirm::draw_load_confirm_dialog;
-use crate::settings::ui_toolbar::draw_alarm_toolbar;
 use crate::settings::ui_status_led::draw_sidebar_title_with_led;
+use crate::settings::ui_toolbar::draw_alarm_toolbar;
 use crate::theme::{MUTED, SPACE_XS};
 use radiacode_core::DeviceConfig;
 

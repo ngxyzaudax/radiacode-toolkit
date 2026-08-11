@@ -1,6 +1,6 @@
 use crate::command::{SfrValueKind as StaticValueKind, VirtSfr};
 
-use super::sfr_file::{parse_sfr_file, SfrValueKind};
+use super::sfr_file::{SfrValueKind, parse_sfr_file};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogDrift {
@@ -12,7 +12,10 @@ pub fn validate_catalog(sfr_text: &str) -> Vec<CatalogDrift> {
     let entries = parse_sfr_file(sfr_text);
     let mut drifts = Vec::new();
     for register in catalog_registers() {
-        let Some(entry) = entries.iter().find(|entry| entry.address == u32::from(register)) else {
+        let Some(entry) = entries
+            .iter()
+            .find(|entry| entry.address == u32::from(register))
+        else {
             drifts.push(CatalogDrift {
                 register,
                 message: "missing from device SFR_FILE".into(),

@@ -33,11 +33,7 @@ pub enum CountDisplayUnit {
 
 impl CountDisplayUnit {
     pub fn from_device_flag(flag: u32) -> Self {
-        if flag != 0 {
-            Self::Cpm
-        } else {
-            Self::Cps
-        }
+        if flag != 0 { Self::Cpm } else { Self::Cps }
     }
 
     pub fn to_device_flag(self) -> u32 {

@@ -1,6 +1,6 @@
 use egui::Ui;
 
-use radiacode_core::{count_unit_label, dose_unit_label, AlarmSignalMode, DeviceConfig};
+use radiacode_core::{AlarmSignalMode, DeviceConfig, count_unit_label, dose_unit_label};
 
 use crate::settings::ui_alarm_card::{alarm_card, compact_alarm_card};
 

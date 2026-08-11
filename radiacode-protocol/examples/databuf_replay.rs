@@ -11,7 +11,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|| PathBuf::from("databuf_capture.bin"));
     let bytes = fs::read(&path)?;
     let frame = decode_data_buf(&bytes);
-    println!("records={} warnings={}", frame.records.len(), frame.warnings.len());
+    println!(
+        "records={} warnings={}",
+        frame.records.len(),
+        frame.warnings.len()
+    );
     for record in &frame.records {
         println!("{record:?}");
     }

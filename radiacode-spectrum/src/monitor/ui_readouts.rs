@@ -3,7 +3,7 @@ use egui::Ui;
 
 use radiacode_core::{count_unit_label, dose_accum_unit_label, dose_unit_label};
 
-use crate::dosimeter::{format_session_duration, DosimeterState};
+use crate::dosimeter::{DosimeterState, format_session_duration};
 use crate::monitor::state::{AlarmLevel, MonitorState};
 use crate::theme::{MUTED, SPACE_XS};
 use crate::ui_chrome::draw_sidebar_header;
@@ -46,7 +46,10 @@ fn draw_diagnostics(ui: &mut Ui, monitor: &MonitorState) {
     ui.label(
         RichText::new(format!(
             "Dropped {}  Gaps {}  Lost {}  Warn {}",
-            monitor.rejected_records, monitor.seq_gaps, monitor.lost_records, monitor.decode_warnings
+            monitor.rejected_records,
+            monitor.seq_gaps,
+            monitor.lost_records,
+            monitor.decode_warnings
         ))
         .size(12.0)
         .color(READOUT_META),
@@ -93,9 +96,12 @@ fn draw_accum_readout(ui: &mut Ui, dosimeter: &DosimeterState) {
         );
         ui.label(RichText::new(unit).size(14.0).color(READOUT_UNIT));
         ui.label(
-            RichText::new(format!("Session {}", format_session_duration(latest.duration_secs)))
-                .size(12.0)
-                .color(READOUT_META),
+            RichText::new(format!(
+                "Session {}",
+                format_session_duration(latest.duration_secs)
+            ))
+            .size(12.0)
+            .color(READOUT_META),
         );
     });
 }

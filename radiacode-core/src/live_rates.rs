@@ -1,10 +1,10 @@
 use tracing::debug;
 
-use radiacode_protocol::{decode_data_buf, latest_snapshot, RealTimeRates, VirtString};
 use crate::device::RadiaCode;
 use crate::error::{Error, Result};
 use crate::rate_units::{count_display_from_cps, dose_display_from_rh};
 use crate::types::{AlarmLimits, LiveRates};
+use radiacode_protocol::{RealTimeRates, VirtString, decode_data_buf, latest_snapshot};
 
 pub async fn live_rates(device: &mut RadiaCode, units: &AlarmLimits) -> Result<LiveRates> {
     let response = device.read_virt_string(VirtString::DataBuf).await?;
@@ -14,7 +14,11 @@ pub async fn live_rates(device: &mut RadiaCode, units: &AlarmLimits) -> Result<L
         .rates
         .ok_or(Error::MonitorDataPending)
         .map(|raw| to_live_rates(&raw, units))?;
-    debug!(warnings = frame.warnings.len(), ?rates, "live rates from databuf");
+    debug!(
+        warnings = frame.warnings.len(),
+        ?rates,
+        "live rates from databuf"
+    );
     Ok(rates)
 }
 

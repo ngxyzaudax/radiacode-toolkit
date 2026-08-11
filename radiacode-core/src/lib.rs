@@ -18,12 +18,23 @@ mod status_read;
 mod types;
 mod vsfr_batch;
 
+pub use data_buf_cursor::{DataBufCursor, SeqGap};
+pub use device::RadiaCode;
+pub use device_config::{
+    AlarmSignalMode, BacklightOffTime, DeviceConfig, DisplayDirection, SignalFlags,
+    apply_device_config, load_device_config, sync_device_clock,
+};
+pub use device_model::{model_from_advertisement, model_from_serial, serial_from_advertisement};
+pub use discovery::{
+    DeviceEndpoint, DiscoveredDevice, TransportKind, merge_discovered, resolve_usb_endpoint,
+};
+pub use error::{Error, Result, protocol_error};
 pub use radiacode_protocol::{
-    build_request, channel_to_energy, decode_data_buf, decode_spectrum, framed_request_header,
-    response_matches_request, strip_echoed_header, BytesBuffer, Command, DataBufFrame,
-    DataBufRecord, DataBufSnapshot, CountDisplayUnit, DeviceTicks, DeviceVersions,
-    DoseDisplayUnit, FirmwareVersion, RareStatus, RealTimeData, RealTimeRates, RecordKind,
-    ResponseAssembler, Sequence, Spectrum, Transport, VirtSfr, VirtString,
+    BytesBuffer, Command, CountDisplayUnit, DataBufFrame, DataBufRecord, DataBufSnapshot,
+    DeviceTicks, DeviceVersions, DoseDisplayUnit, FirmwareVersion, RareStatus, RealTimeData,
+    RealTimeRates, RecordKind, ResponseAssembler, Sequence, Spectrum, Transport, VirtSfr,
+    VirtString, build_request, channel_to_energy, decode_data_buf, decode_spectrum,
+    framed_request_header, response_matches_request, strip_echoed_header,
 };
 pub use radiacode_protocol::{
     count_display_from_cps, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
@@ -31,21 +42,10 @@ pub use radiacode_protocol::{
     encode_dose_alarm, latest_rare_status, latest_real_time_rates, latest_snapshot,
     parse_configuration_ini, parse_sfr_file, sfr_supports_leds_on, validate_catalog,
 };
-pub use data_buf_cursor::{DataBufCursor, SeqGap};
-pub use device::RadiaCode;
-pub use device_config::{
-    apply_device_config, load_device_config, sync_device_clock, AlarmSignalMode, BacklightOffTime,
-    DeviceConfig, DisplayDirection, SignalFlags,
-};
-pub use device_model::{model_from_advertisement, model_from_serial, serial_from_advertisement};
-pub use discovery::{
-    merge_discovered, resolve_usb_endpoint, DeviceEndpoint, DiscoveredDevice, TransportKind,
-};
-pub use error::{protocol_error, Error, Result};
+pub use rate_units::{count_unit_label, dose_accum_unit_label, dose_unit_label};
 pub use session_restore::SessionRestore;
 pub use status_read::merge_status;
 pub use types::{
     AccumulatedDose, AlarmLimits, AlarmLimitsUpdate, DeviceMetadata, DeviceStatus, LiveRates,
     MonitorPollSample, TimedRates,
 };
-pub use rate_units::{count_unit_label, dose_accum_unit_label, dose_unit_label};

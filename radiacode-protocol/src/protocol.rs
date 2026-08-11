@@ -72,7 +72,11 @@ pub fn strip_echoed_header(mut response: BytesBuffer, expected: [u8; 4]) -> Resu
 }
 
 fn hex_bytes(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect::<Vec<_>>().join("")
+    bytes
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 #[derive(Debug, Default)]
@@ -90,8 +94,7 @@ impl ResponseAssembler {
                     have: chunk.len(),
                 });
             }
-            let payload_len_i32 =
-                i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            let payload_len_i32 = i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
             if payload_len_i32 < 0 {
                 return Err(Error::ProtocolMismatch {
                     expected: "non-negative response length".into(),

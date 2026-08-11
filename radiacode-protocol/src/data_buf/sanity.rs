@@ -1,4 +1,4 @@
-use super::records::{DataBufRecord, RareData, RealTimeData, RawData, DoseRateDb};
+use super::records::{DataBufRecord, DoseRateDb, RareData, RawData, RealTimeData};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SanityFailure {

@@ -14,7 +14,8 @@ pub fn energy_grid(spectrum: &SpectrumView) -> EnergyGrid {
     let mut indices = Vec::new();
     let mut energies_kev = Vec::new();
     for (channel, _) in spectrum.counts.iter().enumerate() {
-        let energy = channel_to_energy(channel as u32, spectrum.a0, spectrum.a1, spectrum.a2) as f64;
+        let energy =
+            channel_to_energy(channel as u32, spectrum.a0, spectrum.a1, spectrum.a2) as f64;
         if (ENERGY_MIN_KEV..=ENERGY_MAX_KEV).contains(&energy) {
             indices.push(channel);
             energies_kev.push(energy);

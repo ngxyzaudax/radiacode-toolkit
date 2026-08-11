@@ -1,7 +1,7 @@
 use egui::{Color32, RichText, Ui};
 
 use crate::analysis::state::SampleAnalysis;
-use crate::theme::{analysis_sample_color, ANALYSIS_BACKGROUND};
+use crate::theme::{ANALYSIS_BACKGROUND, analysis_sample_color};
 
 pub fn draw_legend(ui: &mut Ui, samples: &[SampleAnalysis], has_background: bool) {
     ui.horizontal_wrapped(|ui| {

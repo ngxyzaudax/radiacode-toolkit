@@ -71,10 +71,11 @@ pub fn merge_discovered(
 ) -> Vec<DiscoveredDevice> {
     let mut merged = usb_devices;
     for device in bluetooth_devices {
-        let duplicate = device
-            .serial
-            .as_ref()
-            .is_some_and(|serial| merged.iter().any(|entry| entry.serial.as_deref() == Some(serial.as_str())));
+        let duplicate = device.serial.as_ref().is_some_and(|serial| {
+            merged
+                .iter()
+                .any(|entry| entry.serial.as_deref() == Some(serial.as_str()))
+        });
         if !duplicate {
             merged.push(device);
         }

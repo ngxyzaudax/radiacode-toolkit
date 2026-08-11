@@ -7,7 +7,10 @@ fn decode_spectrum_format_zero() {
     let a0 = 0.0f32.to_le_bytes();
     let a1 = 1.0f32.to_le_bytes();
     let a2 = 0.0f32.to_le_bytes();
-    let counts = [5u32, 10u32, 0u32].into_iter().flat_map(u32::to_le_bytes).collect::<Vec<_>>();
+    let counts = [5u32, 10u32, 0u32]
+        .into_iter()
+        .flat_map(u32::to_le_bytes)
+        .collect::<Vec<_>>();
     let mut payload = Vec::new();
     payload.extend_from_slice(&duration);
     payload.extend_from_slice(&a0);

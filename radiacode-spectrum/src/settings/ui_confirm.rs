@@ -3,7 +3,10 @@ use egui::Context;
 use crate::settings::action::SettingsAction;
 use crate::settings::state::SettingsState;
 
-pub fn draw_load_confirm_dialog(ctx: &Context, state: &mut SettingsState) -> Option<SettingsAction> {
+pub fn draw_load_confirm_dialog(
+    ctx: &Context,
+    state: &mut SettingsState,
+) -> Option<SettingsAction> {
     let mut action = None;
     egui::Window::new("Unsaved changes")
         .collapsible(false)

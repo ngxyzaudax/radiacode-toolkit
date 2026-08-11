@@ -9,7 +9,7 @@ use radiacode_protocol::{BytesBuffer, Transport};
 use tracing::{debug, info};
 
 use crate::adapter::{find_peripheral, resolve_peripheral};
-use crate::ble_error::{map_ble_error, map_ble_protocol_error, BleError};
+use crate::ble_error::{BleError, map_ble_error, map_ble_protocol_error};
 use crate::execute::{drain_for_settle, drain_until_quiet, execute_request};
 use crate::link::{disconnect_cached_peripheral, disconnect_stale};
 use crate::scan_session::adapter_for_connect;
@@ -30,8 +30,12 @@ impl BluetoothTransport {
     pub async fn connect(mac: &str) -> Result<Self> {
         info!(%mac, "ble transport connect");
         let adapter = adapter_for_connect().await.map_err(map_ble_error)?;
-        let peripheral = resolve_peripheral(&adapter, mac).await.map_err(map_ble_error)?;
-        Self::connect_peripheral(peripheral).await.map_err(map_ble_error)
+        let peripheral = resolve_peripheral(&adapter, mac)
+            .await
+            .map_err(map_ble_error)?;
+        Self::connect_peripheral(peripheral)
+            .await
+            .map_err(map_ble_error)
     }
 
     pub async fn connect_fresh(mac: &str) -> Result<Self> {
@@ -42,7 +46,9 @@ impl BluetoothTransport {
         let peripheral = find_peripheral(&adapter, mac, FRESH_SCAN)
             .await
             .map_err(map_ble_error)?;
-        Self::connect_peripheral(peripheral).await.map_err(map_ble_error)
+        Self::connect_peripheral(peripheral)
+            .await
+            .map_err(map_ble_error)
     }
 
     async fn connect_peripheral(peripheral: Peripheral) -> std::result::Result<Self, BleError> {
@@ -120,7 +126,12 @@ impl Transport for BluetoothTransport {
 }
 
 pub async fn connect(mac: &str) -> Result<RadiaCode> {
-    RadiaCode::open(Box::new(BluetoothTransport::connect(mac).await?), false, None).await
+    RadiaCode::open(
+        Box::new(BluetoothTransport::connect(mac).await?),
+        false,
+        None,
+    )
+    .await
 }
 
 pub async fn reconnect_session(mac: &str, restore: &SessionRestore) -> Result<RadiaCode> {

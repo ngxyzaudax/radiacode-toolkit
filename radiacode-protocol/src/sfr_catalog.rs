@@ -1,7 +1,6 @@
 pub fn sfr_supports_leds_on(text: &str) -> bool {
-    text.lines().any(|line| {
-        line.contains("VSFR_LEDS_ON") || line.contains("Addr=0x00000545")
-    })
+    text.lines()
+        .any(|line| line.contains("VSFR_LEDS_ON") || line.contains("Addr=0x00000545"))
 }
 
 #[cfg(test)]

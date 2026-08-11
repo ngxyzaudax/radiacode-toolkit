@@ -1,6 +1,6 @@
-use radiacode_protocol::Command;
 use crate::device::RadiaCode;
 use crate::error::Result;
+use radiacode_protocol::Command;
 
 pub async fn set_local_time_now(device: &mut RadiaCode) -> Result<()> {
     let payload = local_time_payload(std::time::SystemTime::now())?;

@@ -1,8 +1,8 @@
 use egui::{Pos2, Rect, Stroke};
 
-use crate::theme::ACCENT;
 use crate::spectrogram::layout::SpectrogramLayout;
 use crate::spectrogram::model::SpectrogramRow;
+use crate::theme::ACCENT;
 
 pub fn draw_count_rate_overlay(
     painter: &egui::Painter,
@@ -47,7 +47,7 @@ fn count_rate_row_y(
 
 #[cfg(test)]
 mod tests {
-    use egui::{pos2, Rect};
+    use egui::{Rect, pos2};
 
     use super::count_rate_row_y;
     use crate::spectrogram::layout::SpectrogramLayout;
@@ -57,7 +57,10 @@ mod tests {
             cell_px,
             display_cols: 10,
             display_rows,
-            image_rect: Rect::from_min_max(pos2(40.0, 0.0), pos2(140.0, display_rows as f32 * cell_px)),
+            image_rect: Rect::from_min_max(
+                pos2(40.0, 0.0),
+                pos2(140.0, display_rows as f32 * cell_px),
+            ),
         }
     }
 

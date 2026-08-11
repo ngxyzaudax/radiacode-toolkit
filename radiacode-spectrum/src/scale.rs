@@ -60,7 +60,7 @@ pub fn y_axis_top(peak: f64, scale: YScale) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{display_rate, display_value, rate_log_floor, y_axis_top, YScale};
+    use super::{YScale, display_rate, display_value, rate_log_floor, y_axis_top};
 
     #[test]
     fn log_display_never_negative() {

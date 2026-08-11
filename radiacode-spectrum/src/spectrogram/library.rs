@@ -1,12 +1,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::spectrogram::library_meta::{load_meta, save_meta, LibraryMeta};
+use crate::spectrogram::library_meta::{LibraryMeta, load_meta, save_meta};
 use crate::spectrogram::model::SpectrogramSeries;
 use crate::spectrogram::rcspg;
 use crate::spectrogram::storage::{
-    ensure_dir, load_recording, spectrograms_dir, timestamp_filename, write_recording,
-    RecordingWriter,
+    RecordingWriter, ensure_dir, load_recording, spectrograms_dir, timestamp_filename,
+    write_recording,
 };
 
 pub fn rename_entry(path: &Path, name: &str) -> Result<(), String> {

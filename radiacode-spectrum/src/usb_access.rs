@@ -2,7 +2,7 @@ use std::sync::mpsc::{self, Receiver};
 
 use egui::{Context, RichText};
 use radiacode_core::DeviceEndpoint;
-use radiacode_usb::{access_status, install_access_rule, UsbAccessStatus};
+use radiacode_usb::{UsbAccessStatus, access_status, install_access_rule};
 use tracing::info;
 
 use crate::theme::ACCENT;
@@ -119,8 +119,8 @@ pub fn draw_usb_access_dialog(
             ui.label(&prompt.message);
             ui.add_space(12.0);
             ui.horizontal(|ui| {
-                let can_install = !prompt.installing
-                    && prompt.status != UsbAccessStatus::RuleInstalledNeedReplug;
+                let can_install =
+                    !prompt.installing && prompt.status != UsbAccessStatus::RuleInstalledNeedReplug;
                 if ui
                     .add_enabled(can_install, egui::Button::new("Grant USB access"))
                     .clicked()

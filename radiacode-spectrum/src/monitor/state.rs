@@ -77,9 +77,7 @@ impl MonitorState {
         rejected_records: usize,
         seq_gaps: &[radiacode_core::SeqGap],
     ) {
-        self.decode_warnings = self
-            .decode_warnings
-            .saturating_add(decode_warnings as u64);
+        self.decode_warnings = self.decode_warnings.saturating_add(decode_warnings as u64);
         self.rejected_records = self
             .rejected_records
             .saturating_add(rejected_records as u64);
@@ -127,14 +125,16 @@ impl MonitorState {
     pub fn dose_alarm_level(&self) -> AlarmLevel {
         alarm_level(
             self.latest.map(|sample| sample.dose_rate),
-            self.limits.map(|limits| (limits.l1_dose_rate, limits.l2_dose_rate)),
+            self.limits
+                .map(|limits| (limits.l1_dose_rate, limits.l2_dose_rate)),
         )
     }
 
     pub fn count_alarm_level(&self) -> AlarmLevel {
         alarm_level(
             self.latest.map(|sample| sample.count_rate),
-            self.limits.map(|limits| (limits.l1_count_rate, limits.l2_count_rate)),
+            self.limits
+                .map(|limits| (limits.l1_count_rate, limits.l2_count_rate)),
         )
     }
 

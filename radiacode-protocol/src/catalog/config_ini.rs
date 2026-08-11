@@ -36,7 +36,10 @@ pub fn parse_configuration_ini(text: &str) -> ConfigurationCatalog {
         if line.starts_with("[[GRP_") && line.ends_with(']') {
             flush_channel(&mut current_group, &mut current_channel);
             flush_group(&mut catalog, &mut current_group);
-            let name = line.trim_start_matches("[[").trim_end_matches(']').to_string();
+            let name = line
+                .trim_start_matches("[[")
+                .trim_end_matches(']')
+                .to_string();
             current_group = Some(MessageGroup {
                 name,
                 entity: 0,
@@ -47,7 +50,10 @@ pub fn parse_configuration_ini(text: &str) -> ConfigurationCatalog {
         }
         if line.starts_with("[CHN_") && line.ends_with(']') {
             flush_channel(&mut current_group, &mut current_channel);
-            let name = line.trim_start_matches('[').trim_end_matches(']').to_string();
+            let name = line
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .to_string();
             current_channel = Some((
                 name,
                 ChannelDef {

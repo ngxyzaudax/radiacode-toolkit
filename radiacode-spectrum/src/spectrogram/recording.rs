@@ -10,7 +10,7 @@ use crate::spectrogram::recording_seed::{
 };
 use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::storage::{
-    ensure_dir, load_recording, open_recording_append, timestamp_filename, RecordingWriter,
+    RecordingWriter, ensure_dir, load_recording, open_recording_append, timestamp_filename,
 };
 
 pub fn start_recording(
@@ -18,7 +18,10 @@ pub fn start_recording(
     spectrum: Option<&SpectrumView>,
     device_serial: Option<&str>,
 ) -> Result<(), String> {
-    let mut cap = state.capture.lock().map_err(|_| "capture lock failed".to_string())?;
+    let mut cap = state
+        .capture
+        .lock()
+        .map_err(|_| "capture lock failed".to_string())?;
     if cap.recording.is_some() {
         return Ok(());
     }
@@ -34,8 +37,7 @@ pub fn start_recording(
     let path = dir.join(timestamp_filename());
     let header = recording_header(&cap, spectrum, device_serial, grid.indices.len() as u32);
     info!(path = %path.display(), "spectrogram recording started");
-    let mut writer =
-        RecordingWriter::create(path, &header).map_err(|error| error.to_string())?;
+    let mut writer = RecordingWriter::create(path, &header).map_err(|error| error.to_string())?;
     let seeded_rows = seed_writer_from_live(&mut writer, cap.live_series.as_ref())
         .map_err(|error| error.to_string())?;
     let continue_live = seeded_rows > 0 && cap.baseline.is_some();
@@ -87,7 +89,10 @@ pub fn resume_capture(state: &mut SpectrogramState) -> Result<(), String> {
 }
 
 pub fn stop_recording(state: &mut SpectrogramState) -> Result<(), String> {
-    let mut cap = state.capture.lock().map_err(|_| "capture lock failed".to_string())?;
+    let mut cap = state
+        .capture
+        .lock()
+        .map_err(|_| "capture lock failed".to_string())?;
     let Some(writer) = cap.recording.take() else {
         return Ok(());
     };
@@ -106,7 +111,10 @@ pub fn resume_recording(
     spectrum: Option<&SpectrumView>,
     device_serial: Option<&str>,
 ) -> Result<(), String> {
-    let mut cap = state.capture.lock().map_err(|_| "capture lock failed".to_string())?;
+    let mut cap = state
+        .capture
+        .lock()
+        .map_err(|_| "capture lock failed".to_string())?;
     if cap.recording.is_some() {
         return Ok(());
     }
@@ -143,7 +151,10 @@ pub fn load_into_state(state: &mut SpectrogramState, path: PathBuf) {
                 state.view_range.fit_series_energy(&loaded.energies_kev);
             }
             state.status = if state.is_recording() {
-                format!("Viewing library file {} (recording continues).", path.display())
+                format!(
+                    "Viewing library file {} (recording continues).",
+                    path.display()
+                )
             } else {
                 format!("Loaded {}", path.display())
             };

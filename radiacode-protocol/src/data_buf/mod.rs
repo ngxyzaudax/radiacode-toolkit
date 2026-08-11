@@ -10,7 +10,7 @@ mod snapshot;
 #[cfg(test)]
 mod tests;
 
-pub use decode::{decode_data_buf, DataBufFrame, DecodeWarning, DecodeWarningKind};
+pub use decode::{DataBufFrame, DecodeWarning, DecodeWarningKind, decode_data_buf};
 pub use flags::{EventId, StatusFlags};
 pub use group::RecordKind;
 pub use header::{DeviceTicks, RecordHeader};
@@ -21,6 +21,6 @@ pub use records::{
 pub use sanity::SanityFailure;
 pub use seq::Seq;
 pub use snapshot::{
-    latest_rare_record, latest_rare_status, latest_real_time_rates, latest_snapshot,
-    real_time_records, snapshot_from_frame, DataBufSnapshot,
+    DataBufSnapshot, latest_rare_record, latest_rare_status, latest_real_time_rates,
+    latest_snapshot, real_time_records, snapshot_from_frame,
 };

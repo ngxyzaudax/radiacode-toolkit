@@ -8,8 +8,7 @@ const LED_RADIUS: f32 = 4.0;
 pub fn draw_settings_status_led(ui: &mut Ui, state: &SettingsState, connected: bool, dirty: bool) {
     let (color, tip) = settings_led(state, connected, dirty);
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(LED_RADIUS * 2.0), Sense::hover());
-    ui.painter()
-        .circle_filled(rect.center(), LED_RADIUS, color);
+    ui.painter().circle_filled(rect.center(), LED_RADIUS, color);
     response.on_hover_text(tip);
 }
 

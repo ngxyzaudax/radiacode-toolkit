@@ -9,12 +9,12 @@ mod scan_session;
 mod transport;
 mod uuids;
 
-pub use ble_error::{is_connection_lost, map_ble_error, BleError};
+pub use ble_error::{BleError, is_connection_lost, map_ble_error};
 pub use radiacode_core::{
-    merge_discovered, AlarmLimits, AlarmLimitsUpdate, DeviceEndpoint, DeviceMetadata,
-    DeviceStatus, DiscoveredDevice, Error, LiveRates, RadiaCode, Result, SessionRestore,
-    Spectrum, Transport, TransportKind,
+    AlarmLimits, AlarmLimitsUpdate, DeviceEndpoint, DeviceMetadata, DeviceStatus, DiscoveredDevice,
+    Error, LiveRates, RadiaCode, Result, SessionRestore, Spectrum, Transport, TransportKind,
+    merge_discovered,
 };
-pub use scan::scan_radiacode_devices;
-pub use transport::{connect, reconnect_session, BluetoothTransport};
 pub use rssi::read_connected_rssi_dbm;
+pub use scan::scan_radiacode_devices;
+pub use transport::{BluetoothTransport, connect, reconnect_session};

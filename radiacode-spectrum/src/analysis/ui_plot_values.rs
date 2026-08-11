@@ -1,5 +1,5 @@
 use crate::analysis::compare::Comparison;
-use crate::analysis::spectrum::{counts_per_sec, CollapsedSpectrum};
+use crate::analysis::spectrum::{CollapsedSpectrum, counts_per_sec};
 use crate::analysis::state::SampleAnalysis;
 use crate::smooth::moving_average_f64;
 

@@ -3,7 +3,7 @@ use egui::{RichText, Ui};
 use crate::analysis::state::AnalysisState;
 use crate::analysis::ui_plot::draw_analysis_plots;
 use crate::scale::{HistogramStyle, YScale};
-use crate::theme::{analysis_sample_color, MUTED};
+use crate::theme::{MUTED, analysis_sample_color};
 
 pub fn draw_analysis_view(ui: &mut Ui, state: &AnalysisState, y_scale: YScale) {
     if state.samples.is_empty() && state.background.is_none() {

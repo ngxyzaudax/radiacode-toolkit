@@ -1,4 +1,4 @@
-use egui::{pos2, Rect, Vec2};
+use egui::{Rect, Vec2, pos2};
 
 pub const MIN_CELL_PX: f32 = 3.0;
 pub const MIN_OVERVIEW_CELL_PX: f32 = 0.5;

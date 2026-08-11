@@ -1,13 +1,9 @@
 use egui::{Align2, FontId, Ui};
 
-use crate::theme::MUTED;
 use crate::spectrogram::model::SpectrogramSeries;
+use crate::theme::MUTED;
 
-pub fn draw_header_line(
-    ui: &mut Ui,
-    series: &SpectrogramSeries,
-    viewing_library: bool,
-) {
+pub fn draw_header_line(ui: &mut Ui, series: &SpectrogramSeries, viewing_library: bool) {
     let duration = format_duration(series.duration_secs());
     let interval = series.header.interval_secs.round() as u64;
     let (gap_count, gap_offline) = series.gap_summary();
@@ -17,11 +13,7 @@ pub fn draw_header_line(
         String::new()
     };
     let mode = if viewing_library { "library" } else { "live" };
-    let energy_max = series
-        .energies_kev
-        .last()
-        .copied()
-        .unwrap_or(0.0);
+    let energy_max = series.energies_kev.last().copied().unwrap_or(0.0);
     ui.label(
         egui::RichText::new(format!(
             "{mode}  |  total {duration}  |  interval {interval}s  |  {} ch  |  0–{energy_max:.0} keV{gap_suffix}",

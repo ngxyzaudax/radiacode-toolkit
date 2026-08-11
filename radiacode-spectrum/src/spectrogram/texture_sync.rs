@@ -1,6 +1,6 @@
 use egui::{Context, TextureOptions};
 
-use crate::spectrogram::layout::{channels_in_energy_range, SpectrogramLayout};
+use crate::spectrogram::layout::{SpectrogramLayout, channels_in_energy_range};
 use crate::spectrogram::model::SpectrogramDisplay;
 use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::texture::source_columns;
@@ -8,7 +8,10 @@ use crate::spectrogram::texture::source_columns;
 pub fn sync_texture(ctx: &Context, state: &mut SpectrogramState, layout: SpectrogramLayout) {
     let energy_min = state.view_range.energy_min_kev;
     let energy_max = state.view_range.energy_max_kev;
-    let total_rows = state.active_series().map(|series| series.row_count()).unwrap_or(0);
+    let total_rows = state
+        .active_series()
+        .map(|series| series.row_count())
+        .unwrap_or(0);
     let row_start = state
         .view_range
         .visible_start(total_rows, layout.display_rows);

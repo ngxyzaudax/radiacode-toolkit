@@ -1,5 +1,5 @@
-use radiacode_protocol::{Command, VirtSfr, VirtString};
 use radiacode_protocol::Error as ProtocolError;
+use radiacode_protocol::{Command, VirtSfr, VirtString};
 
 use crate::device::RadiaCode;
 use crate::error::Result;

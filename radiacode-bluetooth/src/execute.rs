@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use btleplug::api::{Characteristic, Peripheral as _, WriteType};
 use btleplug::platform::Peripheral;
-use futures::stream::BoxStream;
 use futures::StreamExt;
+use futures::stream::BoxStream;
 use radiacode_protocol::{
-    framed_request_header, response_matches_request, BytesBuffer, Error, ResponseAssembler, Result,
+    BytesBuffer, Error, ResponseAssembler, Result, framed_request_header, response_matches_request,
 };
-use tokio::time::{timeout, Instant};
+use tokio::time::{Instant, timeout};
 use tracing::{debug, warn};
 
 use crate::ble_error::map_ble_protocol_error;
@@ -82,7 +82,10 @@ pub async fn execute_request(
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
-            warn!(request_len = request.len(), discarded, "ble response timed out");
+            warn!(
+                request_len = request.len(),
+                discarded, "ble response timed out"
+            );
             drain_until_quiet(notifications).await;
             return Err(Error::Timeout);
         }
@@ -94,11 +97,17 @@ pub async fn execute_request(
 
         if let Some(payload) = assembler.push(&next.value)? {
             if response_matches_request(&payload, expected) {
-                debug!(response_len = payload.len(), discarded, "ble response complete");
+                debug!(
+                    response_len = payload.len(),
+                    discarded, "ble response complete"
+                );
                 return Ok(BytesBuffer::new(payload));
             }
             discarded += 1;
-            warn!(response_len = payload.len(), discarded, "discarding unrelated ble frame");
+            warn!(
+                response_len = payload.len(),
+                discarded, "discarding unrelated ble frame"
+            );
             assembler = ResponseAssembler::default();
         }
     }

@@ -1,12 +1,12 @@
-use std::sync::atomic::{AtomicU64, Ordering};
 use crossbeam_channel::Sender;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use radiacode_bluetooth::{scan_radiacode_devices, BleError};
+use radiacode_bluetooth::{BleError, scan_radiacode_devices};
 use radiacode_core::{
-    merge_discovered, merge_status, AlarmLimits, DeviceConfig, DeviceEndpoint, DeviceStatus,
-    DiscoveredDevice, Error, RadiaCode, SessionRestore, Spectrum, DataBufCursor,
+    AlarmLimits, DataBufCursor, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice,
+    Error, RadiaCode, SessionRestore, Spectrum, merge_discovered, merge_status,
 };
 use radiacode_usb::scan_usb_devices;
 use tracing::{debug, error, info, warn};
@@ -92,7 +92,10 @@ pub async fn handle_connect(
             match load_device_info(&mut device, endpoint, hint_rssi, events).await {
                 Ok(info) => {
                     if !session.active() {
-                        warn!(?endpoint, "connect aborted after metadata load: session ended");
+                        warn!(
+                            ?endpoint,
+                            "connect aborted after metadata load: session ended"
+                        );
                         let _ = device.disconnect().await;
                         return None;
                     }
@@ -331,8 +334,7 @@ async fn handle_device_error(
 }
 
 fn should_reconnect(error: &Error, session_endpoint: Option<&DeviceEndpoint>) -> bool {
-    session_endpoint.is_some()
-        && (is_connection_lost(error) || error.is_timeout())
+    session_endpoint.is_some() && (is_connection_lost(error) || error.is_timeout())
 }
 
 fn is_connection_lost(error: &Error) -> bool {
@@ -383,9 +385,9 @@ async fn reconnect_and_restore(
                     match fetch_spectrum_with_retries(&mut device).await {
                         Ok(spectrum) => {
                             if session.active() {
-                                let _ = events.send(WorkerEvent::Spectrum(SpectrumView::from_spectrum(
-                                    spectrum,
-                                )));
+                                let _ = events.send(WorkerEvent::Spectrum(
+                                    SpectrumView::from_spectrum(spectrum),
+                                ));
                             }
                             Some(device)
                         }
@@ -445,11 +447,14 @@ pub async fn handle_monitor(
                 link_status,
                 session_restore,
             )
-            .await
+            .await;
         }
     };
     let refresh_rssi = false;
-    match device.poll_monitor(&limits, data_buf_cursor, refresh_rssi).await {
+    match device
+        .poll_monitor(&limits, data_buf_cursor, refresh_rssi)
+        .await
+    {
         Ok((sample, fresh)) => {
             merge_status(link_status, fresh);
             if !session.active() {

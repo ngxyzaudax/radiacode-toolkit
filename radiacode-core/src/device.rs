@@ -2,11 +2,11 @@ use std::time::Duration;
 
 use tracing::{debug, info, warn};
 
-use radiacode_protocol::{
-    build_request, request_header, strip_echoed_header, BytesBuffer, Command, Sequence, Transport,
-    VirtSfr, VirtString,
-};
 use radiacode_protocol::Error as ProtocolError;
+use radiacode_protocol::{
+    BytesBuffer, Command, Sequence, Transport, VirtSfr, VirtString, build_request, request_header,
+    strip_echoed_header,
+};
 
 use crate::error::{Error, Result};
 use crate::session_restore::SessionRestore;
@@ -52,16 +52,25 @@ impl RadiaCode {
         let mut transport = transport;
         for attempt in 0..attempts {
             if attempt > 0 {
-                warn!(attempt, reconnect, "retrying radiacode open after transient failure");
+                warn!(
+                    attempt,
+                    reconnect, "retrying radiacode open after transient failure"
+                );
                 tokio::time::sleep(retry_delay).await;
             }
             match Self::try_open_once(transport, ignore_firmware_check, restore).await {
                 Ok(device) => return Ok(device),
-                Err(OpenFailure { error, transport: recovered }) if error.is_transient() => {
+                Err(OpenFailure {
+                    error,
+                    transport: recovered,
+                }) if error.is_transient() => {
                     transport = recovered;
                     last_error = Some(error);
                 }
-                Err(OpenFailure { error, transport: recovered }) => {
+                Err(OpenFailure {
+                    error,
+                    transport: recovered,
+                }) => {
                     let _ = recovered.disconnect().await;
                     return Err(error);
                 }
@@ -77,7 +86,10 @@ impl RadiaCode {
         restore: Option<&SessionRestore>,
     ) -> std::result::Result<Self, OpenFailure> {
         let sequence = Sequence::session_start();
-        debug!(seq_start = sequence.start_value(), "command sequence initialized");
+        debug!(
+            seq_start = sequence.start_value(),
+            "command sequence initialized"
+        );
         let mut device = Self {
             transport,
             sequence,
@@ -86,10 +98,7 @@ impl RadiaCode {
                 .unwrap_or(0),
             cached_versions: restore.map(|session| session.versions.clone()),
         };
-        if let Err(error) = device
-            .initialize(ignore_firmware_check, restore)
-            .await
-        {
+        if let Err(error) = device.initialize(ignore_firmware_check, restore).await {
             warn!(%error, "initialize failed, disconnecting partial session");
             let transport = device.transport;
             return Err(OpenFailure { error, transport });
@@ -102,14 +111,18 @@ impl RadiaCode {
         ignore_firmware_check: bool,
         restore: Option<&SessionRestore>,
     ) -> Result<()> {
-        debug!(reconnect = restore.is_some(), "initializing radiacode session");
+        debug!(
+            reconnect = restore.is_some(),
+            "initializing radiacode session"
+        );
         self.execute_raw(Command::SetExchange, &[0x01, 0xff, 0x12, 0xff])
             .await?;
         self.drain_transport().await;
         tokio::time::sleep(INIT_SETTLE).await;
         self.drain_transport().await;
         crate::device_time::set_local_time_now(self).await?;
-        self.write_vsfr(VirtSfr::DeviceTime, &0u32.to_le_bytes()).await?;
+        self.write_vsfr(VirtSfr::DeviceTime, &0u32.to_le_bytes())
+            .await?;
         self.drain_transport().await;
         tokio::time::sleep(INIT_SETTLE).await;
         self.drain_transport().await;

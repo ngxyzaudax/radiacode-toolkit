@@ -131,24 +131,47 @@ impl VirtSfr {
     pub fn access(self) -> SfrAccess {
         match self {
             Self::DeviceTime | Self::DoseReset => SfrAccess::Write,
-            Self::TempDegC | Self::Cps | Self::DrUrH | Self::DsUr | Self::SysStatus
-            | Self::SysMcuTemp | Self::VBiasMv => SfrAccess::Read,
+            Self::TempDegC
+            | Self::Cps
+            | Self::DrUrH
+            | Self::DsUr
+            | Self::SysStatus
+            | Self::SysMcuTemp
+            | Self::VBiasMv => SfrAccess::Read,
             _ => SfrAccess::ReadWrite,
         }
     }
 
     pub fn static_value_kind(self) -> Option<SfrValueKind> {
         match self {
-            Self::DispBrt | Self::SoundOn | Self::VibroOn | Self::LedsOn | Self::CpsFilter
-            | Self::RawFilter | Self::DsUnits | Self::CrUnits | Self::UseNanoSvH => {
-                Some(SfrValueKind::U8)
-            }
-            Self::DispOffTime | Self::DrLev1UrH | Self::DrLev2UrH | Self::CrLev1Cp10s
-            | Self::CrLev2Cp10s | Self::DsLev1Ur | Self::DsLev2Ur | Self::DeviceTime
-            | Self::Cps | Self::DrUrH | Self::DsUr | Self::SysStatus => Some(SfrValueKind::U32),
+            Self::DispBrt
+            | Self::SoundOn
+            | Self::VibroOn
+            | Self::LedsOn
+            | Self::CpsFilter
+            | Self::RawFilter
+            | Self::DsUnits
+            | Self::CrUnits
+            | Self::UseNanoSvH => Some(SfrValueKind::U8),
+            Self::DispOffTime
+            | Self::DrLev1UrH
+            | Self::DrLev2UrH
+            | Self::CrLev1Cp10s
+            | Self::CrLev2Cp10s
+            | Self::DsLev1Ur
+            | Self::DsLev2Ur
+            | Self::DeviceTime
+            | Self::Cps
+            | Self::DrUrH
+            | Self::DsUr
+            | Self::SysStatus => Some(SfrValueKind::U32),
             Self::TempDegC | Self::SysMcuTemp => Some(SfrValueKind::F32),
-            Self::DeviceCtrl | Self::DispDir | Self::SoundCtrl | Self::VibroCtrl
-            | Self::AlarmMode | Self::VBiasMv => Some(SfrValueKind::U32),
+            Self::DeviceCtrl
+            | Self::DispDir
+            | Self::SoundCtrl
+            | Self::VibroCtrl
+            | Self::AlarmMode
+            | Self::VBiasMv => Some(SfrValueKind::U32),
             _ => None,
         }
     }

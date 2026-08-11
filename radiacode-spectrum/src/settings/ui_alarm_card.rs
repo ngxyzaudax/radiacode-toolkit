@@ -1,13 +1,13 @@
 use egui::{Ui, Vec2};
 
 use crate::settings::ui_alarm_cells::{
-    compact_gap, compact_label, compact_oos_label, compact_signal_check, compact_title,
-    compact_unit, compact_value, fixed_gap, fixed_label, fixed_title, fixed_unit, fixed_value,
-    icon_cell, oos_label, signal_check, CHECK_WIDTH, COMPACT_COL_SPACING, COMPACT_FRAME_MARGIN,
-    COMPACT_ROW_SPACING, COMPACT_UNIT_WIDTH, COMPACT_VALUE_WIDTH, LABEL_WIDTH, UNIT_WIDTH,
-    VALUE_WIDTH,
+    CHECK_WIDTH, COMPACT_COL_SPACING, COMPACT_FRAME_MARGIN, COMPACT_ROW_SPACING,
+    COMPACT_UNIT_WIDTH, COMPACT_VALUE_WIDTH, LABEL_WIDTH, UNIT_WIDTH, VALUE_WIDTH, compact_gap,
+    compact_label, compact_oos_label, compact_signal_check, compact_title, compact_unit,
+    compact_value, fixed_gap, fixed_label, fixed_title, fixed_unit, fixed_value, icon_cell,
+    oos_label, signal_check,
 };
-use crate::settings::ui_icons::{paint_signal_icon, SignalIconKind};
+use crate::settings::ui_icons::{SignalIconKind, paint_signal_icon};
 use crate::theme::{SPACE_SM, SPACE_XS};
 
 const COL_SPACING: f32 = SPACE_SM;
@@ -43,19 +43,7 @@ pub fn alarm_card(
                 ui.set_min_size(Vec2::new(INNER_WIDTH, size.y - PAD_Y));
                 ui.set_max_width(INNER_WIDTH);
                 draw_alarm_grid(
-                    ui,
-                    title,
-                    warning,
-                    danger,
-                    unit,
-                    speed,
-                    sw,
-                    vw,
-                    sd,
-                    vd,
-                    so,
-                    vo,
-                    false,
+                    ui, title, warning, danger, unit, speed, sw, vw, sd, vd, so, vo, false,
                 );
             });
     });
@@ -75,19 +63,7 @@ pub fn compact_alarm_card(
         .inner_margin(egui::Margin::same(COMPACT_FRAME_MARGIN as i8))
         .show(ui, |ui| {
             draw_alarm_grid(
-                ui,
-                title,
-                warning,
-                danger,
-                unit,
-                speed,
-                sw,
-                vw,
-                sd,
-                vd,
-                so,
-                vo,
-                true,
+                ui, title, warning, danger, unit, speed, sw, vw, sd, vd, so, vo, true,
             );
         });
 }

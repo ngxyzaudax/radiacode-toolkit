@@ -1,6 +1,8 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::{BacklightOffTime, CountDisplayUnit, DeviceConfig, DisplayDirection, DoseDisplayUnit};
+use radiacode_core::{
+    BacklightOffTime, CountDisplayUnit, DeviceConfig, DisplayDirection, DoseDisplayUnit,
+};
 
 use crate::model::DeviceInfo;
 use crate::theme::MUTED;
@@ -64,7 +66,11 @@ pub fn draw_screen_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
     });
     ui.horizontal(|ui| {
         ui.label("Rotation");
-        for value in [DisplayDirection::Auto, DisplayDirection::Left, DisplayDirection::Right] {
+        for value in [
+            DisplayDirection::Auto,
+            DisplayDirection::Left,
+            DisplayDirection::Right,
+        ] {
             ui.selectable_value(&mut draft.display_dir, value, value.label());
         }
     });

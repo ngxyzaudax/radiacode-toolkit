@@ -1,7 +1,7 @@
 use egui::{Color32, Pos2, Rect, Stroke};
 
-use crate::theme::{ACCENT, MUTED};
 use crate::spectrogram::layout::SpectrogramLayout;
+use crate::theme::{ACCENT, MUTED};
 
 pub struct IsotopeLine {
     pub name: &'static str,
@@ -41,29 +41,43 @@ pub fn draw_grid(
     let rows = layout.display_rows as i32;
     for col in 0..=cols {
         let x = image_rect.left() + col as f32 * layout.cell_px;
-        painter.line_segment([Pos2::new(x, image_rect.top()), Pos2::new(x, image_rect.bottom())], stroke);
+        painter.line_segment(
+            [
+                Pos2::new(x, image_rect.top()),
+                Pos2::new(x, image_rect.bottom()),
+            ],
+            stroke,
+        );
     }
     for row in 0..=rows {
         let y = image_rect.top() + row as f32 * layout.cell_px;
-        painter.line_segment([Pos2::new(image_rect.left(), y), Pos2::new(image_rect.right(), y)], stroke);
+        painter.line_segment(
+            [
+                Pos2::new(image_rect.left(), y),
+                Pos2::new(image_rect.right(), y),
+            ],
+            stroke,
+        );
     }
 }
 
-pub fn draw_crosshair(
-    painter: &egui::Painter,
-    hover: Pos2,
-    image_rect: Rect,
-) {
+pub fn draw_crosshair(painter: &egui::Painter, hover: Pos2, image_rect: Rect) {
     if !image_rect.contains(hover) {
         return;
     }
     let stroke = Stroke::new(1.0, ACCENT);
     painter.line_segment(
-        [Pos2::new(hover.x, image_rect.top()), Pos2::new(hover.x, image_rect.bottom())],
+        [
+            Pos2::new(hover.x, image_rect.top()),
+            Pos2::new(hover.x, image_rect.bottom()),
+        ],
         stroke,
     );
     painter.line_segment(
-        [Pos2::new(image_rect.left(), hover.y), Pos2::new(image_rect.right(), hover.y)],
+        [
+            Pos2::new(image_rect.left(), hover.y),
+            Pos2::new(image_rect.right(), hover.y),
+        ],
         stroke,
     );
 }
@@ -87,7 +101,10 @@ pub fn draw_isotope_lines(
         let t = ((line.energy_kev - energy_min) / span) as f32;
         let x = egui::lerp(image_rect.left()..=image_rect.right(), t);
         painter.line_segment(
-            [Pos2::new(x, image_rect.top()), Pos2::new(x, image_rect.bottom())],
+            [
+                Pos2::new(x, image_rect.top()),
+                Pos2::new(x, image_rect.bottom()),
+            ],
             stroke,
         );
         painter.text(

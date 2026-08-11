@@ -5,7 +5,7 @@ use crate::analysis::ui_role_cards::{draw_background_card, draw_samples_card, dr
 use crate::scale::YScale;
 use crate::smooth::normalize_window;
 use crate::spectrogram::model::RecordingEntry;
-use crate::theme::{analysis_sample_color, MUTED, SPACE_SM, SPACE_XS};
+use crate::theme::{MUTED, SPACE_SM, SPACE_XS, analysis_sample_color};
 use crate::ui_chrome::draw_sidebar_header;
 use crate::ui_recording_library::{
     analysis_name_color, draw_analysis_role_badges, draw_empty_library, draw_recording_card,
@@ -58,7 +58,11 @@ pub fn draw_analysis_controls(
         ui.label(RichText::new(&state.status).small().color(MUTED));
     }
     if !state.error.is_empty() {
-        ui.label(RichText::new(&state.error).small().color(egui::Color32::from_rgb(220, 120, 120)));
+        ui.label(
+            RichText::new(&state.error)
+                .small()
+                .color(egui::Color32::from_rgb(220, 120, 120)),
+        );
     }
     None
 }

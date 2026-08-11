@@ -17,4 +17,3 @@ pub fn startup_viewport_builder() -> egui::ViewportBuilder {
 pub fn startup_resize_frames() -> u8 {
     STARTUP_RESIZE_FRAMES
 }
-

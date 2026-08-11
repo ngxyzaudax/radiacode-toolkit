@@ -23,9 +23,7 @@ async fn read_for_address(mac: &str, address: Option<Address>) -> Option<i16> {
     let address = address?;
     let client = Client::open().ok()?;
     let mut events = client.events().await;
-    tokio::spawn(async move {
-        while events.next().await.is_some() {}
-    });
+    tokio::spawn(async move { while events.next().await.is_some() {} });
     let reply = client
         .call(None, GetConnectionInformation::new(address))
         .await

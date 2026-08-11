@@ -1,7 +1,7 @@
 use egui::{RichText, Ui, Vec2b};
 use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
 
-use crate::monitor::plot_bounds::{plot_bounds, series_points, PlotBounds, PlotSeries};
+use crate::monitor::plot_bounds::{PlotBounds, PlotSeries, plot_bounds, series_points};
 use crate::monitor::state::MonitorState;
 use crate::plot_style::styled_line;
 use crate::scale::HistogramStyle;
@@ -66,14 +66,12 @@ pub fn draw_rate_plot(
             }
             if let Some(limits) = monitor.limits {
                 let (alarm_one, alarm_two) = match series {
-                    PlotSeries::Dose => (
-                        limits.l1_dose_rate.max(0.0),
-                        limits.l2_dose_rate.max(0.0),
-                    ),
-                    PlotSeries::Count => (
-                        limits.l1_count_rate.max(0.0),
-                        limits.l2_count_rate.max(0.0),
-                    ),
+                    PlotSeries::Dose => {
+                        (limits.l1_dose_rate.max(0.0), limits.l2_dose_rate.max(0.0))
+                    }
+                    PlotSeries::Count => {
+                        (limits.l1_count_rate.max(0.0), limits.l2_count_rate.max(0.0))
+                    }
                 };
                 draw_alarm_lines(plot_ui, bounds, alarm_one, alarm_two);
             }

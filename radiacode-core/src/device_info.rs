@@ -3,10 +3,8 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::debug;
 
-use radiacode_protocol::{
-    decode_fw_version, decode_spectrum, Command, Spectrum, VirtString,
-};
 use radiacode_protocol::Error as ProtocolError;
+use radiacode_protocol::{Command, Spectrum, VirtString, decode_fw_version, decode_spectrum};
 
 use crate::device::RadiaCode;
 use crate::error::{Error, Result};

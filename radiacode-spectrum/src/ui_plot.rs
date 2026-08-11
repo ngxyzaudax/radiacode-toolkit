@@ -1,10 +1,12 @@
 use egui::{RichText, Ui, Vec2b};
 use egui_plot::{Bar, HoverPosition, Plot};
 
-use crate::energy::{bar_energy_width, clamp_energy_range, energy_grid, ENERGY_MAX_KEV, ENERGY_MIN_KEV};
+use crate::energy::{
+    ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range, energy_grid,
+};
 use crate::model::SpectrumView;
 use crate::plot_style::styled_histogram_line;
-use crate::scale::{display_value, y_axis_top, HistogramStyle, YScale};
+use crate::scale::{HistogramStyle, YScale, display_value, y_axis_top};
 use crate::smooth::moving_average;
 use crate::theme::{MUTED, SPECTRUM_BAR};
 
@@ -92,11 +94,7 @@ fn hover_counts(displayed: f64, y_scale: YScale) -> String {
     }
 }
 
-fn build_spectrum_bars(
-    spectrum: &SpectrumView,
-    y_scale: YScale,
-    smooth_window: usize,
-) -> Vec<Bar> {
+fn build_spectrum_bars(spectrum: &SpectrumView, y_scale: YScale, smooth_window: usize) -> Vec<Bar> {
     let smoothed = moving_average(&spectrum.counts, smooth_window);
     let grid = energy_grid(spectrum);
     grid.energies_kev
@@ -104,8 +102,11 @@ fn build_spectrum_bars(
         .enumerate()
         .map(|(index, &energy)| {
             let height = display_value(smoothed[grid.indices[index]], y_scale);
-            Bar::new(energy, height)
-                .width(bar_energy_width(&grid.energies_kev, index, spectrum.a1 as f64))
+            Bar::new(energy, height).width(bar_energy_width(
+                &grid.energies_kev,
+                index,
+                spectrum.a1 as f64,
+            ))
         })
         .collect()
 }

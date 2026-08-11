@@ -41,7 +41,10 @@ fn manual_z_range(settings: &SpectrogramSettings) -> ZScaleRange {
 
 fn series_display_values(series: &SpectrogramSeries) -> Vec<u32> {
     let capture_interval = series.header.interval_secs;
-    let cell_count = series.rows.len().saturating_mul(series.energies_kev.len().max(1));
+    let cell_count = series
+        .rows
+        .len()
+        .saturating_mul(series.energies_kev.len().max(1));
     if cell_count > FULL_ZSCAN_CELL_LIMIT {
         return row_peak_values(&series.rows, capture_interval);
     }
@@ -58,9 +61,7 @@ fn row_peak_values(rows: &[SpectrogramRow], target_interval_secs: f64) -> Vec<u3
         .filter_map(|row| {
             row.counts
                 .iter()
-                .map(|&raw| {
-                    display_count(raw, row.kind, target_interval_secs, row.interval_secs)
-                })
+                .map(|&raw| display_count(raw, row.kind, target_interval_secs, row.interval_secs))
                 .max()
         })
         .filter(|&value| value > 0)
@@ -71,9 +72,9 @@ fn row_display_values(
     row: &SpectrogramRow,
     target_interval_secs: f64,
 ) -> impl Iterator<Item = u32> + '_ {
-    row.counts.iter().map(move |&raw| {
-        display_count(raw, row.kind, target_interval_secs, row.interval_secs)
-    })
+    row.counts
+        .iter()
+        .map(move |&raw| display_count(raw, row.kind, target_interval_secs, row.interval_secs))
 }
 
 pub fn map_count(value: f32, range: &ZScaleRange) -> f32 {
@@ -86,7 +87,7 @@ pub fn map_count(value: f32, range: &ZScaleRange) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{compute_series_z_range, map_count, resolve_z_range, ZScaleRange};
+    use super::{ZScaleRange, compute_series_z_range, map_count, resolve_z_range};
     use crate::spectrogram::model::{RowKind, SpectrogramHeader, SpectrogramSeries};
     use crate::spectrogram::settings::SpectrogramSettings;
 
@@ -101,7 +102,10 @@ mod tests {
             device_serial: None,
             energies_kev: (0..counts.len()).map(|index| index as f64).collect(),
         };
-        let mut series = SpectrogramSeries::new(header, (0..counts.len()).map(|index| index as f64).collect());
+        let mut series = SpectrogramSeries::new(
+            header,
+            (0..counts.len()).map(|index| index as f64).collect(),
+        );
         series.push_row(counts, 5.0, RowKind::Normal, 1000);
         series
     }

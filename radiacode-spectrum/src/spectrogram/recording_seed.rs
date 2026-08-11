@@ -2,7 +2,7 @@ use crate::energy::energy_grid;
 use crate::model::SpectrumView;
 use crate::spectrogram::capture::SpectrogramCapture;
 use crate::spectrogram::model::{SpectrogramHeader, SpectrogramSeries};
-use crate::spectrogram::storage::{header_now, RecordingWriter};
+use crate::spectrogram::storage::{RecordingWriter, header_now};
 
 pub fn ensure_live_series(
     capture: &mut SpectrogramCapture,

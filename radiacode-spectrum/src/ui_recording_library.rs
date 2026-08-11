@@ -34,7 +34,11 @@ pub fn draw_recording_title(ui: &mut Ui, name: &str, accent: Option<Color32>) {
 }
 
 pub fn draw_recording_meta(ui: &mut Ui, entry: &RecordingEntry) {
-    ui.label(RichText::new(recording_meta_line(entry)).small().color(MUTED));
+    ui.label(
+        RichText::new(recording_meta_line(entry))
+            .small()
+            .color(MUTED),
+    );
 }
 
 pub fn draw_recording_comment(ui: &mut Ui, comment: &str, on_add: impl FnOnce()) {
@@ -61,11 +65,7 @@ pub fn draw_role_badge(ui: &mut Ui, label: &str, color: Color32) {
         });
 }
 
-pub fn draw_analysis_role_badges(
-    ui: &mut Ui,
-    is_background: bool,
-    sample_color: Option<Color32>,
-) {
+pub fn draw_analysis_role_badges(ui: &mut Ui, is_background: bool, sample_color: Option<Color32>) {
     ui.horizontal(|ui| {
         if is_background {
             draw_role_badge(ui, "Background", ANALYSIS_BACKGROUND);
@@ -76,10 +76,7 @@ pub fn draw_analysis_role_badges(
     });
 }
 
-pub fn analysis_name_color(
-    is_background: bool,
-    sample_color: Option<Color32>,
-) -> Option<Color32> {
+pub fn analysis_name_color(is_background: bool, sample_color: Option<Color32>) -> Option<Color32> {
     sample_color.or(is_background.then_some(ANALYSIS_BACKGROUND))
 }
 

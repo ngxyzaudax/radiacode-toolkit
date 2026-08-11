@@ -40,9 +40,15 @@ pub fn draw_transport(
         }
         ui.add_space(8.0);
         ui.label(
-            RichText::new(transport_status(state, connected, recording, capture_paused, can_append))
-                .small()
-                .color(MUTED),
+            RichText::new(transport_status(
+                state,
+                connected,
+                recording,
+                capture_paused,
+                can_append,
+            ))
+            .small()
+            .color(MUTED),
         );
     });
     action

@@ -8,7 +8,7 @@ use super::header::{DeviceTicks, RecordHeader};
 use super::records::{
     AccelData, DataBufRecord, DoseRateDb, EventRecord, RareData, RawData, RealTimeData,
 };
-use super::sanity::{record_passes_sanity, SanityFailure};
+use super::sanity::{SanityFailure, record_passes_sanity};
 use super::seq::Seq;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

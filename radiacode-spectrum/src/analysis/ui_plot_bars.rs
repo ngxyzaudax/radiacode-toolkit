@@ -1,9 +1,9 @@
 use egui::{Color32, Ui, Vec2b};
 use egui_plot::{Bar, Plot};
 
-use crate::energy::{bar_energy_width, clamp_energy_range, ENERGY_MAX_KEV, ENERGY_MIN_KEV};
+use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range};
 use crate::plot_style::styled_histogram_line;
-use crate::scale::{display_rate, rate_log_floor, y_axis_top, HistogramStyle, YScale};
+use crate::scale::{HistogramStyle, YScale, display_rate, rate_log_floor, y_axis_top};
 
 pub struct PlotSeries<'a> {
     pub id: &'a str,
@@ -97,12 +97,7 @@ fn plot_series(
                 if item.bars.is_empty() {
                     continue;
                 }
-                plot_ui.line(styled_histogram_line(
-                    item.id,
-                    item.bars,
-                    item.color,
-                    style,
-                ));
+                plot_ui.line(styled_histogram_line(item.id, item.bars, item.color, style));
             }
         });
 }

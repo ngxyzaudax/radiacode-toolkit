@@ -1,13 +1,10 @@
-use egui::{CollapsingHeader, Color32, CornerRadius, RichText, Sense, Stroke, StrokeKind, Ui, Vec2};
+use egui::{
+    CollapsingHeader, Color32, CornerRadius, RichText, Sense, Stroke, StrokeKind, Ui, Vec2,
+};
 
 use crate::theme::{ACCENT, MUTED, SPACE_SM, SPACE_XS};
 
-pub fn settings_section(
-    ui: &mut Ui,
-    title: &str,
-    hint: &str,
-    add_contents: impl FnOnce(&mut Ui),
-) {
+pub fn settings_section(ui: &mut Ui, title: &str, hint: &str, add_contents: impl FnOnce(&mut Ui)) {
     CollapsingHeader::new(RichText::new(title).strong())
         .default_open(true)
         .show(ui, |ui| {
@@ -35,10 +32,18 @@ pub fn toggle_knob(ui: &mut Ui, on: &mut bool) -> bool {
     } else {
         visuals.bg_fill
     };
-    ui.painter()
-        .rect(rect, CornerRadius::same(9), track, Stroke::NONE, StrokeKind::Inside);
+    ui.painter().rect(
+        rect,
+        CornerRadius::same(9),
+        track,
+        Stroke::NONE,
+        StrokeKind::Inside,
+    );
     let radius = 0.5 * rect.height() - 2.0;
-    let circle_x = egui::lerp((rect.left() + radius + 2.0)..=(rect.right() - radius - 2.0), how_on);
+    let circle_x = egui::lerp(
+        (rect.left() + radius + 2.0)..=(rect.right() - radius - 2.0),
+        how_on,
+    );
     ui.painter().circle(
         egui::pos2(circle_x, rect.center().y),
         radius,

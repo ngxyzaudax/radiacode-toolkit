@@ -74,8 +74,10 @@ pub fn timestamp_filename() -> String {
     let now = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc());
     format!(
         "{}.rcwf",
-        now.format(format_description!("[year]-[month]-[day]_[hour]-[minute]-[second]"))
-            .unwrap_or_else(|_| "recording".into())
+        now.format(format_description!(
+            "[year]-[month]-[day]_[hour]-[minute]-[second]"
+        ))
+        .unwrap_or_else(|_| "recording".into())
     )
 }
 
@@ -268,9 +270,7 @@ pub fn load_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
     })
 }
 
-fn read_recording_prefix(
-    file: &mut File,
-) -> std::io::Result<(u32, SpectrogramHeader, u32, u32)> {
+fn read_recording_prefix(file: &mut File) -> std::io::Result<(u32, SpectrogramHeader, u32, u32)> {
     let mut magic = [0_u8; 4];
     file.read_exact(&mut magic)?;
     if &magic != MAGIC {
@@ -354,7 +354,7 @@ fn read_f64(reader: &mut File) -> std::io::Result<f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{header_now, load_recording, load_recording_index, RecordingWriter, VERSION_V1};
+    use super::{RecordingWriter, VERSION_V1, header_now, load_recording, load_recording_index};
     use crate::spectrogram::model::{RowKind, SpectrogramRow};
     use tempfile::tempdir;
 

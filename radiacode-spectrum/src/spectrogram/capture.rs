@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use crossbeam_channel::{Receiver, Sender};
@@ -9,7 +9,7 @@ use crate::model::SpectrumView;
 use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::ingest;
 use crate::spectrogram::model::SpectrogramSeries;
-use crate::spectrogram::settings::{load_settings, SpectrogramSettings};
+use crate::spectrogram::settings::{SpectrogramSettings, load_settings};
 use crate::spectrogram::storage::RecordingWriter;
 
 pub struct SpectrogramCapture {

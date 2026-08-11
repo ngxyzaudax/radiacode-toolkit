@@ -2,8 +2,8 @@ use egui::{RichText, Ui};
 
 use crate::model::ConnectionState;
 use crate::spectrogram::state::SpectrogramState;
-use crate::spectrogram::ui_settings::draw_spectrogram_settings;
 use crate::spectrogram::ui_library::draw_library;
+use crate::spectrogram::ui_settings::draw_spectrogram_settings;
 use crate::spectrogram::ui_transport::draw_transport;
 use crate::theme::{MUTED, SPACE_SM, SPACE_XS};
 use crate::ui_chrome::{draw_sidebar_divider, draw_sidebar_header};

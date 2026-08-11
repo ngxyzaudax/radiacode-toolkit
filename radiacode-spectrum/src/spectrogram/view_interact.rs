@@ -103,8 +103,8 @@ fn zoom_at_pointer(
     let anchor = response
         .hover_pos()
         .map(|pos| {
-            let t = ((pos.x - image_rect.left()) / image_rect.width().max(1.0)).clamp(0.0, 1.0)
-                as f64;
+            let t =
+                ((pos.x - image_rect.left()) / image_rect.width().max(1.0)).clamp(0.0, 1.0) as f64;
             state.view_range.energy_min_kev
                 + (state.view_range.energy_max_kev - state.view_range.energy_min_kev) * t
         })
@@ -159,7 +159,9 @@ fn row_kind_line(kind: RowKind, total: u64) -> String {
             } else {
                 0.0
             };
-            format!("kind: gap recovery\noffline {offline_secs:.0} s\nraw total {raw_total}\n{rate:.1} counts/s")
+            format!(
+                "kind: gap recovery\noffline {offline_secs:.0} s\nraw total {raw_total}\n{rate:.1} counts/s"
+            )
         }
         RowKind::LiveSpike { rate_factor } => {
             format!("kind: live spike\n{rate_factor:.1}× recent median\nrow total {total}")
