@@ -1,14 +1,19 @@
-use egui::{RichText, Ui};
+use std::path::PathBuf;
+
+use egui::{Context, RichText, Ui};
 
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::library;
 use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
+use crate::ui::{ConfirmChoice, SPECTROGRAM_LIBRARY_DELETE, draw_confirm_dialog_open};
 use crate::ui_recording_library::{
     draw_empty_library, draw_recording_card, draw_recording_comment, draw_recording_meta,
     draw_recording_search, draw_recording_title, draw_role_badge, scroll_recording_list,
 };
+
+const PENDING_LIBRARY_DELETE: &str = "spectrogram_library_delete_pending";
 
 pub fn draw_library(
     ui: &mut Ui,
@@ -25,13 +30,14 @@ pub fn draw_library(
     ui.add_space(4.0);
     if entries.is_empty() {
         draw_empty_library(ui, state.library_filter.trim().is_empty());
-        return;
+    } else {
+        scroll_recording_list(ui, 280.0, |ui| {
+            for entry in entries {
+                draw_library_entry(ui, state, &entry, action);
+            }
+        });
     }
-    scroll_recording_list(ui, 280.0, |ui| {
-        for entry in entries {
-            draw_library_entry(ui, state, &entry, action);
-        }
-    });
+    draw_library_delete_confirm(ui.ctx(), state, action);
 }
 
 fn draw_library_editor(
@@ -111,7 +117,7 @@ fn draw_library_entry(
                     export_entry(state, entry);
                 }
                 if ui.small_button("Delete").clicked() {
-                    delete_entry(state, entry, action);
+                    set_pending_library_delete(ui.ctx(), Some(path));
                 }
             });
         } else {
@@ -122,6 +128,37 @@ fn draw_library_entry(
                 }
             });
         }
+    });
+}
+
+fn draw_library_delete_confirm(
+    ctx: &Context,
+    state: &mut SpectrogramState,
+    action: &mut Option<SpectrogramControlsAction>,
+) {
+    let Some(path) = pending_library_delete(ctx) else {
+        return;
+    };
+    match draw_confirm_dialog_open(ctx, true, SPECTROGRAM_LIBRARY_DELETE) {
+        Some(ConfirmChoice::Confirm) => {
+            delete_entry(state, &path, action);
+            set_pending_library_delete(ctx, None);
+        }
+        Some(ConfirmChoice::Cancel) => set_pending_library_delete(ctx, None),
+        None => {}
+    }
+}
+
+fn pending_library_delete(ctx: &Context) -> Option<PathBuf> {
+    ctx.data(|data| {
+        data.get_temp::<Option<PathBuf>>(egui::Id::new(PENDING_LIBRARY_DELETE))
+    })
+    .flatten()
+}
+
+fn set_pending_library_delete(ctx: &Context, path: Option<PathBuf>) {
+    ctx.data_mut(|data| {
+        data.insert_temp(egui::Id::new(PENDING_LIBRARY_DELETE), path);
     });
 }
 
@@ -156,14 +193,14 @@ fn export_entry(state: &mut SpectrogramState, entry: &RecordingEntry) {
 
 fn delete_entry(
     state: &mut SpectrogramState,
-    entry: &RecordingEntry,
+    path: &PathBuf,
     action: &mut Option<SpectrogramControlsAction>,
 ) {
-    if library::delete_entry(&entry.path).is_ok() {
-        if state.loaded_path.as_ref() == Some(&entry.path) {
+    if library::delete_entry(path).is_ok() {
+        if state.loaded_path.as_ref() == Some(path) {
             state.close_loaded();
         }
-        if state.library_edit_path.as_ref() == Some(&entry.path) {
+        if state.library_edit_path.as_ref() == Some(path) {
             state.library_edit_path = None;
         }
         state.refresh_history();

@@ -1,11 +1,11 @@
-use egui::Ui;
+use egui::{RichText, Ui};
 
 use crate::model::ConnectionState;
 use crate::plot_style::draw_plot_style_toggle;
 use crate::scale::YScale;
 use crate::smooth::normalize_window;
 use crate::theme::{SPACE_SM, SPACE_XS};
-use crate::ui_chrome::draw_sidebar_header;
+use crate::ui::{SPECTRUM_RESET, draw_reset_confirm};
 
 pub struct ControlsProps<'a> {
     pub connection: ConnectionState,
@@ -24,7 +24,21 @@ pub fn draw_spectrum_controls(ui: &mut Ui, props: ControlsProps<'_>) -> Option<C
     }
 
     let mut action = None;
-    draw_sidebar_header(ui, "Spectrum");
+    let ctx = ui.ctx().clone();
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("Spectrum").strong());
+        if draw_reset_confirm(
+            ui,
+            &ctx,
+            "spectrum_reset",
+            true,
+            "Reset spectrum accumulation",
+            SPECTRUM_RESET,
+        ) {
+            action = Some(ControlsAction::Reset);
+        }
+    });
+    ui.add_space(SPACE_XS);
     ui.label("Y scale");
     ui.horizontal(|ui| {
         ui.selectable_value(props.y_scale, YScale::Linear, "Linear");
@@ -41,8 +55,5 @@ pub fn draw_spectrum_controls(ui: &mut Ui, props: ControlsProps<'_>) -> Option<C
         *props.smooth_window = normalize_window(slider as usize);
     }
     ui.add_space(SPACE_SM);
-    if ui.button("Reset accumulation").clicked() {
-        action = Some(ControlsAction::Reset);
-    }
     action
 }

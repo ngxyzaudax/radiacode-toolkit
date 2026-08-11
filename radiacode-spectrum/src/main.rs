@@ -17,6 +17,7 @@ mod settings;
 mod smooth;
 mod spectrogram;
 mod theme;
+mod ui;
 mod ui_chrome;
 mod ui_controls;
 mod ui_device_status;

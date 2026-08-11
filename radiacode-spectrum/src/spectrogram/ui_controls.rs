@@ -6,6 +6,7 @@ use crate::spectrogram::ui_library::draw_library;
 use crate::spectrogram::ui_settings::draw_spectrogram_settings;
 use crate::spectrogram::ui_transport::draw_transport;
 use crate::theme::{MUTED, SPACE_SM, SPACE_XS};
+use crate::ui::{SPECTROGRAM_RESET, draw_reset_confirm};
 use crate::ui_chrome::{draw_sidebar_divider, draw_sidebar_header};
 
 pub use crate::spectrogram::controls_action::SpectrogramControlsAction;
@@ -16,18 +17,26 @@ pub fn draw_spectrogram_controls(
     connection: ConnectionState,
 ) -> Option<SpectrogramControlsAction> {
     let mut action = None;
-    draw_sidebar_header(ui, "Spectrogram");
+    let ctx = ui.ctx().clone();
+    let can_reset = !state.is_recording();
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("Spectrogram").strong());
+        if draw_reset_confirm(
+            ui,
+            &ctx,
+            "spectrogram_reset",
+            can_reset,
+            "Reset spectrogram accumulation",
+            SPECTROGRAM_RESET,
+        ) {
+            state.reset_accumulation();
+        }
+    });
+    ui.add_space(SPACE_XS);
     action = draw_transport(ui, state, connection).or(action);
 
     ui.add_space(SPACE_SM);
     let settings_changed = draw_spectrogram_settings(ui, state);
-
-    ui.add_space(SPACE_XS);
-    ui.add_enabled_ui(!state.is_recording(), |ui| {
-        if ui.button("Reset accumulation").clicked() {
-            state.reset_accumulation();
-        }
-    });
 
     if settings_changed {
         action = Some(SpectrogramControlsAction::SettingsChanged);

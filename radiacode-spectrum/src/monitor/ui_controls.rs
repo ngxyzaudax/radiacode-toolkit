@@ -29,7 +29,9 @@ pub fn draw_monitor_controls(
     dosimeter: &DosimeterState,
     outline_only: &mut bool,
 ) -> Option<MonitorControlsAction> {
-    draw_monitor_readouts(ui, monitor, dosimeter);
+    if draw_monitor_readouts(ui, monitor, dosimeter, connection) {
+        return Some(MonitorControlsAction::ResetDose);
+    }
     draw_sidebar_divider(ui);
     draw_smoothing_control(ui, &mut settings.app);
     draw_sidebar_divider(ui);
@@ -44,8 +46,7 @@ pub fn draw_monitor_controls(
     }
     draw_sidebar_divider(ui);
     draw_plot_style_toggle(ui, outline_only);
-    draw_sidebar_divider(ui);
-    draw_reset_controls(ui)
+    None
 }
 
 fn draw_smoothing_control(ui: &mut Ui, app: &mut AppConfig) {
@@ -69,27 +70,4 @@ fn smoothing_badge(window: i32) -> (&'static str, egui::Color32) {
     } else {
         ("Smoothed", ACCENT)
     }
-}
-
-fn draw_reset_controls(ui: &mut Ui) -> Option<MonitorControlsAction> {
-    let confirm_id = ui.id().with("dose_reset_confirm");
-    let confirming = ui.data_mut(|data| *data.get_temp_mut_or(confirm_id, false));
-    if confirming {
-        ui.label("Reset accumulated dose on device?");
-        let mut action = None;
-        ui.horizontal(|ui| {
-            if ui.button("Confirm reset").clicked() {
-                ui.data_mut(|data| data.insert_temp(confirm_id, false));
-                action = Some(MonitorControlsAction::ResetDose);
-            }
-            if ui.button("Cancel").clicked() {
-                ui.data_mut(|data| data.insert_temp(confirm_id, false));
-            }
-        });
-        return action;
-    }
-    if ui.button("Reset dose").clicked() {
-        ui.data_mut(|data| data.insert_temp(confirm_id, true));
-    }
-    None
 }
