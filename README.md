@@ -22,7 +22,7 @@
 <p align="center">
   <a href="#demo"><strong>Demo</strong></a>
   ·
-  <a href="#screenshots"><strong>Screenshots</strong></a>
+  <a href="./docs/README.md"><strong>Docs</strong></a>
   ·
   <a href="#quick-start"><strong>Quick start</strong></a>
   ·
@@ -39,55 +39,15 @@
   <img src="./docs/demo/radiacode_demo.gif" width="900" alt="Radiacode Toolkit demo — live Monitor, Spectrum, Spectrogram, Analysis, and Settings" />
 </p>
 
-<p align="center">
-  <a href="./docs/README.md">Documentation index</a>
-</p>
+| Tab | What it does |
+| --- | --- |
+| [Monitor](./docs/monitor/README.md) | Live dose rate, count rate, and session dose |
+| [Spectrum](./docs/spectrum/README.md) | Live 1024-channel energy histogram |
+| [Spectrogram](./docs/spectrogram/README.md) | Time–energy waterfall and recordings |
+| [Analysis](./docs/analysis/README.md) | Offline comparison of saved spectra |
+| [Settings](./docs/settings/README.md) | Device and application configuration |
 
----
-
-## Screenshots
-
-Detailed notes for each tab live under [`docs/`](./docs/README.md).
-
-### [Monitor](./docs/monitor/README.md)
-
-<p align="center">
-  <a href="./docs/monitor/README.md"><img src="./docs/monitor/screenshot.png" width="900" alt="Monitor tab" /></a>
-</p>
-
-Live dose rate, count rate, and session dose trends with alarm thresholds.
-
-### [Spectrum](./docs/spectrum/README.md)
-
-<p align="center">
-  <a href="./docs/spectrum/README.md"><img src="./docs/spectrum/screenshot.png" width="900" alt="Spectrum tab" /></a>
-</p>
-
-Live 1024-channel energy histogram with calibrated keV axis.
-
-### [Spectrogram](./docs/spectrogram/README.md)
-
-<p align="center">
-  <a href="./docs/spectrogram/README.md"><img src="./docs/spectrogram/screenshot.png" width="900" alt="Spectrogram tab" /></a>
-</p>
-
-Time–energy waterfall, recording transport, and `.rcspg` library.
-
-### [Analysis](./docs/analysis/README.md)
-
-<p align="center">
-  <a href="./docs/analysis/README.md"><img src="./docs/analysis/screenshot.png" width="900" alt="Analysis tab" /></a>
-</p>
-
-Offline comparison of saved spectra with optional background subtraction.
-
-### [Settings](./docs/settings/README.md)
-
-<p align="center">
-  <a href="./docs/settings/README.md"><img src="./docs/settings/screenshot.png" width="900" alt="Settings tab" /></a>
-</p>
-
-Device configuration: units, alarms, screen, and signal feedback.
+Per-tab notes and screenshots: [`docs/`](./docs/README.md).
 
 ---
 
