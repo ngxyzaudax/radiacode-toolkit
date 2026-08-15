@@ -1,11 +1,10 @@
-use egui::Ui;
+use egui::{Sides, Ui};
 
-use crate::layout::draw_toolbar;
 use crate::model::ConnectionState;
 use crate::plot_style::draw_plot_style_toggle;
 use crate::scale::YScale;
 use crate::smooth::normalize_window;
-use crate::theme::SPACE_XS;
+use crate::theme::{SPACE_SM, SPACE_XS};
 use crate::ui::{SPECTRUM_RESET, draw_reset_confirm};
 
 pub struct SpectrumToolbarProps<'a> {
@@ -30,33 +29,45 @@ pub fn draw_spectrum_toolbar(
     }
     let mut action = None;
     let ctx = ui.ctx().clone();
-    draw_toolbar(ui, |ui| {
-        ui.selectable_value(props.y_scale, YScale::Linear, "Linear");
-        ui.selectable_value(props.y_scale, YScale::Logarithmic, "Log");
-        draw_plot_style_toggle(ui, props.outline_only);
-        ui.checkbox(props.show_peaks, "Peaks");
-        ui.add_enabled_ui(*props.show_peaks, |ui| {
-            ui.checkbox(props.identify_isotopes, "Identify");
-        });
-        ui.label("Smoothing");
-        let mut slider = (*props.smooth_window).clamp(1, 16) as i32;
-        if ui
-            .add(egui::Slider::new(&mut slider, 1..=16).text("channels"))
-            .changed()
-        {
-            *props.smooth_window = normalize_window(slider as usize);
-        }
-        if draw_reset_confirm(
+    Sides::new()
+        .spacing(SPACE_SM)
+        .shrink_left()
+        .show(
             ui,
-            &ctx,
-            "spectrum_reset",
-            true,
-            "Reset spectrum accumulation",
-            SPECTRUM_RESET,
-        ) {
-            action = Some(SpectrumToolbarAction::Reset);
-        }
-    });
+            |ui| draw_spectrum_controls(ui, props),
+            |ui| {
+                if draw_reset_confirm(
+                    ui,
+                    &ctx,
+                    "spectrum_reset",
+                    true,
+                    "Reset spectrum accumulation",
+                    SPECTRUM_RESET,
+                ) {
+                    action = Some(SpectrumToolbarAction::Reset);
+                }
+            },
+        );
+    ui.add_space(SPACE_SM);
     ui.add_space(SPACE_XS);
     action
+}
+
+fn draw_spectrum_controls(ui: &mut Ui, props: SpectrumToolbarProps<'_>) {
+    ui.spacing_mut().item_spacing.x = SPACE_SM;
+    ui.selectable_value(props.y_scale, YScale::Linear, "Linear");
+    ui.selectable_value(props.y_scale, YScale::Logarithmic, "Log");
+    draw_plot_style_toggle(ui, props.outline_only);
+    ui.checkbox(props.show_peaks, "Peaks");
+    ui.add_enabled_ui(*props.show_peaks, |ui| {
+        ui.checkbox(props.identify_isotopes, "Identify");
+    });
+    ui.label("Smoothing");
+    let mut slider = (*props.smooth_window).clamp(1, 16) as i32;
+    if ui
+        .add(egui::Slider::new(&mut slider, 1..=16).fixed_decimals(0))
+        .changed()
+    {
+        *props.smooth_window = normalize_window(slider as usize);
+    }
 }

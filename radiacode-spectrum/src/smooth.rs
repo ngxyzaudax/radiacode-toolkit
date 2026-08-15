@@ -1,4 +1,4 @@
-pub const DEFAULT_SMOOTHING_WINDOW: usize = 4;
+pub const DEFAULT_SMOOTHING_WINDOW: usize = 2;
 
 pub fn moving_average_f64(values: &[f64], window: usize) -> Vec<f64> {
     if window <= 1 {
