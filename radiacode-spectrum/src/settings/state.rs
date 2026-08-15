@@ -16,15 +16,6 @@ pub enum SettingsSection {
     Application,
 }
 
-impl SettingsSection {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Device => "Device",
-            Self::Application => "Application",
-        }
-    }
-}
-
 pub struct SettingsState {
     pub baseline: Option<DeviceConfig>,
     pub draft: Option<DeviceConfig>,

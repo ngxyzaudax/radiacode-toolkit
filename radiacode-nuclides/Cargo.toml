@@ -1,0 +1,26 @@
+[package]
+name = "radiacode-nuclides"
+version = "0.1.0"
+edition = "2024"
+description = "Bundled nuclide catalogue with gamma lines and decay chains"
+license = "AGPL-3.0-only"
+
+[features]
+import = ["dep:ureq", "dep:csv"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dependencies.ureq]
+version = "3"
+optional = true
+
+[dependencies.csv]
+version = "1"
+optional = true
+
+[[bin]]
+name = "nuclide-import"
+path = "src/bin/nuclide_import.rs"
+required-features = ["import"]

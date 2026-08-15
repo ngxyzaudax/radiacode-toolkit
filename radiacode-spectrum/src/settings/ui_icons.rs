@@ -8,9 +8,31 @@ pub enum SignalIconKind {
     Vibro,
 }
 
+pub fn paint_save_icon(ui: &mut Ui, rect: egui::Rect, color: Color32) {
+    let painter = ui.painter();
+    let cx = rect.center().x;
+    let cy = rect.center().y;
+    let body = Rect::from_center_size(Pos2::new(cx, cy + 1.0), Vec2::new(10.0, 8.0));
+    painter.rect_stroke(body, 1.0, Stroke::new(1.2, color), StrokeKind::Outside);
+    let tab = Rect::from_center_size(Pos2::new(cx - 2.0, cy - 4.5), Vec2::new(4.0, 2.0));
+    painter.rect_filled(tab, 0.5, color);
+    painter.line_segment(
+        [Pos2::new(cx - 2.0, cy - 1.0), Pos2::new(cx + 2.0, cy + 2.0)],
+        Stroke::new(1.2, color),
+    );
+    painter.line_segment(
+        [Pos2::new(cx + 2.0, cy - 1.0), Pos2::new(cx - 2.0, cy + 2.0)],
+        Stroke::new(1.2, color),
+    );
+}
+
 pub fn paint_signal_icon(ui: &mut Ui, kind: SignalIconKind, active: bool) {
     let size = Vec2::new(14.0, 14.0);
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
+    paint_signal_icon_in(ui, rect, kind, active);
+}
+
+pub fn paint_signal_icon_in(ui: &Ui, rect: Rect, kind: SignalIconKind, active: bool) {
     let color = if active { ACCENT } else { MUTED };
     match kind {
         SignalIconKind::Sound => paint_sound_icon(ui, rect, color),
@@ -18,7 +40,7 @@ pub fn paint_signal_icon(ui: &mut Ui, kind: SignalIconKind, active: bool) {
     }
 }
 
-fn paint_sound_icon(ui: &mut Ui, rect: Rect, color: Color32) {
+fn paint_sound_icon(ui: &Ui, rect: Rect, color: Color32) {
     let painter = ui.painter();
     let cx = rect.center().x - 1.0;
     let cy = rect.center().y;
@@ -36,7 +58,7 @@ fn paint_sound_icon(ui: &mut Ui, rect: Rect, color: Color32) {
     ));
 }
 
-fn paint_vibro_icon(ui: &mut Ui, rect: Rect, color: Color32) {
+fn paint_vibro_icon(ui: &Ui, rect: Rect, color: Color32) {
     let painter = ui.painter();
     let cx = rect.center().x;
     let cy = rect.center().y;

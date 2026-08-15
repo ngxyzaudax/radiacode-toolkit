@@ -1,20 +1,61 @@
 use egui::{Color32, Context, Image, RichText, Sense, Ui};
 
+use crate::app_config::AppConfig;
+use crate::identify::identify_peaks;
+use crate::layout::{draw_master_detail, safe_span, MasterDetailRegion};
+use crate::model::ConnectionState;
+use crate::peak_overlay::draw_identified_spectrogram_lines;
+use crate::peak_profile::peaks_from_spectrogram_view;
 use crate::spectrogram::axes::{draw_header_line, draw_x_axis, x_axis_label, y_axis_label};
+use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::count_rate::draw_count_rate_overlay;
 use crate::spectrogram::layout::{
     DEFAULT_EMPTY_CHANNELS, channels_in_energy_range, compute_layout,
 };
 use crate::spectrogram::model::SpectrogramDisplay;
-use crate::spectrogram::overlays::{draw_crosshair, draw_grid, draw_isotope_lines};
+use crate::spectrogram::overlays::{draw_crosshair, draw_grid};
 use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::texture::source_columns;
 use crate::spectrogram::texture_sync::sync_texture;
 use crate::spectrogram::time_axis::draw_time_axis;
+use crate::spectrogram::ui_library::draw_library;
+use crate::spectrogram::ui_toolbar::draw_spectrogram_toolbar;
 use crate::spectrogram::view_interact::{handle_view_interaction, hover_details};
 use crate::theme::MUTED;
 
-pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut SpectrogramState) {
+const AXIS_LEFT: f32 = 56.0;
+const AXIS_BOTTOM: f32 = 40.0;
+const PLOT_MIN: f32 = 80.0;
+
+pub fn draw_spectrogram_view(
+    ui: &mut Ui,
+    ctx: &Context,
+    state: &mut SpectrogramState,
+    config: &AppConfig,
+    connection: ConnectionState,
+) -> Option<SpectrogramControlsAction> {
+    let mut action = draw_spectrogram_toolbar(ui, state, connection);
+    let mut pane_open = state.pane_open;
+    draw_master_detail(
+        ui,
+        "spectrogram_library",
+        "Library",
+        &mut pane_open,
+        |ui, region| match region {
+            MasterDetailRegion::Pane => draw_library(ui, state, &mut action),
+            MasterDetailRegion::Detail => draw_spectrogram_plot(ui, ctx, state, config),
+        },
+    );
+    state.pane_open = pane_open;
+    action
+}
+
+fn draw_spectrogram_plot(
+    ui: &mut Ui,
+    ctx: &Context,
+    state: &mut SpectrogramState,
+    config: &AppConfig,
+) {
     let total_rows = state
         .active_series()
         .map(|series| series.row_count())
@@ -44,18 +85,16 @@ pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut Spectrogram
 
     let y_label = y_axis_label();
     let x_label = x_axis_label();
-    let axis_left = 56.0;
-    let axis_bottom = 40.0;
     let available = ui.available_size();
     let plot_size = egui::vec2(
-        (available.x - axis_left).max(80.0),
-        (available.y - axis_bottom).max(80.0),
+        safe_span(available.x, AXIS_LEFT, PLOT_MIN),
+        safe_span(available.y, AXIS_BOTTOM, PLOT_MIN),
     );
 
     ui.horizontal(|ui| {
         if !y_label.is_empty() {
             ui.allocate_ui_with_layout(
-                egui::vec2(axis_left - 4.0, plot_size.y),
+                egui::vec2(safe_span(AXIS_LEFT, 4.0, 40.0), plot_size.y),
                 egui::Layout::top_down(egui::Align::Max),
                 |ui| {
                     ui.label(RichText::new(y_label).small().color(MUTED));
@@ -112,13 +151,26 @@ pub fn draw_spectrogram_view(ui: &mut Ui, ctx: &Context, state: &mut Spectrogram
                 layout.display_cols,
             );
             let visible = series.row_window(row_start, layout.display_rows);
-            draw_isotope_lines(
-                &axis_painter,
-                layout.image_rect,
-                energy_min,
-                energy_max,
-                state.show_isotopes,
-            );
+            if state.show_isotopes {
+                let peaks = peaks_from_spectrogram_view(series, visible, &source_cols, 3);
+                let identifications = identify_peaks(&peaks, config);
+                draw_identified_spectrogram_lines(
+                    &axis_painter,
+                    layout.image_rect,
+                    energy_min,
+                    energy_max,
+                    &identifications,
+                );
+            } else if state.show_peaks {
+                let peaks = peaks_from_spectrogram_view(series, visible, &source_cols, 3);
+                crate::peak_overlay::draw_spectrogram_peaks(
+                    &axis_painter,
+                    layout.image_rect,
+                    energy_min,
+                    energy_max,
+                    &peaks,
+                );
+            }
             draw_count_rate_overlay(
                 &axis_painter,
                 layout.image_rect,

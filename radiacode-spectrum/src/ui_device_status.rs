@@ -1,11 +1,12 @@
 use egui::{Color32, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 
+use crate::layout::draw_toolbar;
 use crate::model::DeviceInfo;
 use crate::theme::{ACCENT, MUTED};
 use radiacode_core::TransportKind;
 
 pub fn draw_status_row(ui: &mut Ui, info: &DeviceInfo) {
-    ui.horizontal(|ui| {
+    draw_toolbar(ui, |ui| {
         ui.spacing_mut().item_spacing.x = 14.0;
         match info.battery_percent {
             Some(battery) => draw_battery_chip(ui, battery),

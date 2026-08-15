@@ -11,6 +11,7 @@ egui = "0.35"
 egui_plot = "0.36"
 radiacode-bluetooth = { path = "../radiacode-bluetooth" }
 radiacode-core = { path = "../radiacode-core" }
+radiacode-nuclides = { path = "../radiacode-nuclides" }
 radiacode-usb = { path = "../radiacode-usb" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 serde = { version = "1", features = ["derive"] }

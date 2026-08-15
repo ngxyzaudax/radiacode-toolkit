@@ -1,31 +1,7 @@
 use egui::{Color32, Pos2, Rect, Stroke};
 
 use crate::spectrogram::layout::SpectrogramLayout;
-use crate::theme::{ACCENT, MUTED};
-
-pub struct IsotopeLine {
-    pub name: &'static str,
-    pub energy_kev: f64,
-}
-
-pub const DEFAULT_ISOTOPES: [IsotopeLine; 4] = [
-    IsotopeLine {
-        name: "K-40",
-        energy_kev: 1460.8,
-    },
-    IsotopeLine {
-        name: "Cs-137",
-        energy_kev: 661.7,
-    },
-    IsotopeLine {
-        name: "Co-60",
-        energy_kev: 1173.2,
-    },
-    IsotopeLine {
-        name: "Am-241",
-        energy_kev: 59.5,
-    },
-];
+use crate::theme::ACCENT;
 
 pub fn draw_grid(
     painter: &egui::Painter,
@@ -80,39 +56,4 @@ pub fn draw_crosshair(painter: &egui::Painter, hover: Pos2, image_rect: Rect) {
         ],
         stroke,
     );
-}
-
-pub fn draw_isotope_lines(
-    painter: &egui::Painter,
-    image_rect: Rect,
-    energy_min: f64,
-    energy_max: f64,
-    enabled: bool,
-) {
-    if !enabled {
-        return;
-    }
-    let span = (energy_max - energy_min).max(1.0);
-    let stroke = Stroke::new(1.0, Color32::from_rgba_unmultiplied(255, 220, 80, 160));
-    for line in DEFAULT_ISOTOPES {
-        if line.energy_kev < energy_min || line.energy_kev > energy_max {
-            continue;
-        }
-        let t = ((line.energy_kev - energy_min) / span) as f32;
-        let x = egui::lerp(image_rect.left()..=image_rect.right(), t);
-        painter.line_segment(
-            [
-                Pos2::new(x, image_rect.top()),
-                Pos2::new(x, image_rect.bottom()),
-            ],
-            stroke,
-        );
-        painter.text(
-            Pos2::new(x + 2.0, image_rect.top() + 2.0),
-            egui::Align2::LEFT_TOP,
-            line.name,
-            egui::FontId::new(10.0, egui::FontFamily::Proportional),
-            MUTED,
-        );
-    }
 }

@@ -70,6 +70,32 @@ pub fn draw_app_polling(ui: &mut Ui, state: &mut SettingsState) -> bool {
     changed
 }
 
+pub fn draw_app_monitor_window(ui: &mut Ui, state: &mut SettingsState) -> bool {
+    use crate::monitor_window::{
+        window_preset_count, window_preset_index, window_preset_minutes,
+    };
+    let max_index = window_preset_count().saturating_sub(1) as i32;
+    let mut index = window_preset_index(state.app.monitor_window_minutes) as i32;
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.label("Window");
+        if ui
+            .add(
+                egui::Slider::new(&mut index, 0..=max_index)
+                    .custom_formatter(|value, _| {
+                        format!("{} min", window_preset_minutes(value as usize))
+                    })
+                    .fixed_decimals(0),
+            )
+            .changed()
+        {
+            state.app.monitor_window_minutes = window_preset_minutes(index as usize);
+            changed = true;
+        }
+    });
+    changed
+}
+
 pub fn draw_app_connection(ui: &mut Ui, state: &mut SettingsState) -> bool {
     let mut changed = false;
     changed |= toggle_switch(ui, &mut state.app.remember_device, "Remember last device");
@@ -88,6 +114,60 @@ pub fn draw_app_connection(ui: &mut Ui, state: &mut SettingsState) -> bool {
     changed
 }
 
+pub fn draw_app_matching(ui: &mut Ui, state: &mut SettingsState) -> bool {
+    let mut changed = false;
+    changed |= ui
+        .add(
+            egui::Slider::new(&mut state.app.match_tolerance_frac, 0.001..=0.05)
+                .logarithmic(true)
+                .text("Relative tolerance"),
+        )
+        .changed();
+    changed |= ui
+        .add(
+            egui::Slider::new(&mut state.app.match_tolerance_floor_kev, 1.0..=20.0)
+                .text("Floor (keV)"),
+        )
+        .changed();
+    changed |= ui
+        .add(
+            egui::Slider::new(&mut state.app.match_min_intensity_pct, 0.1..=50.0)
+                .logarithmic(true)
+                .text("Min gamma intensity (%)"),
+        )
+        .changed();
+    changed
+}
+
 pub fn draw_app_alerts(ui: &mut Ui, state: &mut SettingsState) -> bool {
     toggle_switch(ui, &mut state.app.pc_alarm_repeat, "Beep on alarm")
+}
+
+pub fn draw_app_catalogue(ui: &mut Ui, state: &mut SettingsState) -> bool {
+    let changed = ui
+        .add(
+            egui::Slider::new(&mut state.app.catalogue_fwhm_pct, 1.0..=20.0)
+                .text("Resolution FWHM @ 662 keV")
+                .suffix("%")
+                .fixed_decimals(1),
+        )
+        .changed();
+    if changed {
+        state.app.clamp();
+    }
+    changed
+}
+
+pub fn draw_app_appearance(ui: &mut Ui, state: &mut SettingsState) -> bool {
+    let changed = ui
+        .add(
+            egui::Slider::new(&mut state.app.ui_scale, 0.75..=1.5)
+                .text("UI scale")
+                .fixed_decimals(2),
+        )
+        .changed();
+    if changed {
+        state.app.clamp();
+    }
+    changed
 }

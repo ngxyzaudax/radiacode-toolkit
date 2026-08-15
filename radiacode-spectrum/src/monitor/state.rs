@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use radiacode_core::{AlarmLimits, LiveRates, TimedRates};
 
-const HISTORY_MINUTES: f64 = 10.0;
-const MAX_SAMPLES: usize = 600;
+const HISTORY_MINUTES: f64 = 60.0;
+const MAX_SAMPLES: usize = 3900;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MonitorSample {

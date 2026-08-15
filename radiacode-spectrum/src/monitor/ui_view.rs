@@ -1,17 +1,33 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::{count_unit_label, dose_accum_unit_label, dose_unit_label};
+use radiacode_core::{count_unit_label, dose_unit_label};
 
 use crate::dosimeter::DosimeterState;
-use crate::monitor::plot_bounds::PlotSeries;
+use crate::layout::page_scroll;
+use crate::model::ConnectionState;
 use crate::monitor::state::MonitorState;
-use crate::monitor::ui_dose_plot::draw_cumulative_dose_plot;
-use crate::monitor::ui_rate_plot::draw_rate_plot;
+use crate::monitor::ui_plot_row::{
+    draw_accum_row, draw_count_rate_row, draw_dose_rate_row, plot_row_heights,
+};
+use crate::monitor::ui_plot_toolbar::PlotToolbarAction;
+use crate::monitor::ui_toolbar::{draw_monitor_toolbar, MonitorToolbarProps};
 use crate::scale::HistogramStyle;
-use crate::theme::{MUTED, SPACE_SM};
+use crate::settings::{SettingsAction, SettingsState};
+use crate::theme::MUTED;
 
-const PLOT_ROWS: f32 = 3.0;
-const BOTTOM_AXIS_PAD: f32 = SPACE_SM + 2.0;
+const PLOT_ROWS: usize = 3;
+const MIN_ROW_HEIGHT: f32 = 120.0;
+
+pub struct MonitorViewProps<'a> {
+    pub settings: &'a mut SettingsState,
+    pub connection: ConnectionState,
+    pub outline_only: &'a mut bool,
+}
+
+pub enum MonitorViewAction {
+    ResetDose,
+    Settings(SettingsAction),
+}
 
 pub fn draw_monitor_view(
     ui: &mut Ui,
@@ -19,64 +35,154 @@ pub fn draw_monitor_view(
     dosimeter: &DosimeterState,
     style: HistogramStyle,
     smoothing_window: usize,
-) {
+    props: MonitorViewProps<'_>,
+) -> Option<MonitorViewAction> {
+    ui.set_min_height(ui.available_height());
+    let window_secs = props.settings.app.monitor_window_secs();
+    let mut action = None;
     let Some(latest) = monitor.latest else {
         ui.label(RichText::new(&monitor.status).color(MUTED));
-        return;
+        if draw_monitor_toolbar(
+            ui,
+            MonitorToolbarProps {
+                settings: props.settings,
+                outline_only: props.outline_only,
+            },
+        ) {
+            action = Some(MonitorViewAction::Settings(SettingsAction::AppChanged));
+        }
+        return action;
     };
+    if draw_monitor_toolbar(
+        ui,
+        MonitorToolbarProps {
+            settings: props.settings,
+            outline_only: props.outline_only,
+        },
+    ) {
+        action = Some(MonitorViewAction::Settings(SettingsAction::AppChanged));
+    }
     let dose_unit = dose_unit_label(latest.dose_unit);
     let count_unit = count_unit_label(latest.count_unit);
-    let row_height = ((ui.available_height() - BOTTOM_AXIS_PAD) / PLOT_ROWS).max(1.0);
-    let row_width = ui.available_width();
-    draw_plot_row(ui, row_width, row_height, |ui| {
-        draw_rate_plot(
+    let accum_unit = dosimeter
+        .latest
+        .as_ref()
+        .map(|value| radiacode_core::dose_accum_unit_label(value.dose_unit))
+        .unwrap_or("");
+    let plot_area_height = ui.available_height();
+    ui.allocate_ui_with_layout(
+        egui::vec2(ui.available_width(), plot_area_height),
+        egui::Layout::top_down(egui::Align::LEFT),
+        |ui| {
+            ui.set_min_height(plot_area_height);
+            ui.spacing_mut().item_spacing.y = 0.0;
+            let heights = plot_row_heights(ui.available_height());
+            if heights[0] < MIN_ROW_HEIGHT {
+                page_scroll(ui, "monitor_plots_scroll", |ui| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    draw_plot_stack(
+                        ui,
+                        monitor,
+                        dosimeter,
+                        style,
+                        smoothing_window,
+                        window_secs,
+                        dose_unit,
+                        count_unit,
+                        &accum_unit,
+                        props,
+                        [MIN_ROW_HEIGHT; PLOT_ROWS],
+                        &mut action,
+                    );
+                });
+                return;
+            }
+            draw_plot_stack(
+                ui,
+                monitor,
+                dosimeter,
+                style,
+                smoothing_window,
+                window_secs,
+                dose_unit,
+                count_unit,
+                &accum_unit,
+                props,
+                heights,
+                &mut action,
+            );
+        },
+    );
+    action
+}
+
+fn draw_plot_stack(
+    ui: &mut Ui,
+    monitor: &MonitorState,
+    dosimeter: &DosimeterState,
+    style: HistogramStyle,
+    smoothing_window: usize,
+    window_secs: f64,
+    dose_unit: &str,
+    count_unit: &str,
+    accum_unit: &str,
+    props: MonitorViewProps<'_>,
+    heights: [f32; PLOT_ROWS],
+    action: &mut Option<MonitorViewAction>,
+) {
+    merge_plot_action(
+        action,
+        draw_dose_rate_row(
             ui,
-            "monitor_dose_plot",
-            "Dose rate",
+            props.settings,
+            props.connection,
             monitor,
-            PlotSeries::Dose,
             dose_unit,
             style,
             smoothing_window,
-        );
-    });
-    draw_plot_row(ui, row_width, row_height, |ui| {
-        draw_rate_plot(
+            window_secs,
+            heights[0],
+        ),
+    );
+    merge_plot_action(
+        action,
+        draw_count_rate_row(
             ui,
-            "monitor_count_plot",
-            "Count rate",
+            props.settings,
+            props.connection,
             monitor,
-            PlotSeries::Count,
             count_unit,
             style,
             smoothing_window,
-        );
-    });
-    draw_plot_row(ui, row_width, row_height, |ui| {
-        draw_accum_section(ui, dosimeter, style);
-    });
-}
-
-fn draw_plot_row(ui: &mut Ui, width: f32, height: f32, add_contents: impl FnOnce(&mut Ui)) {
-    ui.allocate_ui_with_layout(
-        egui::vec2(width, height),
-        egui::Layout::top_down(egui::Align::LEFT),
-        |ui| {
-            ui.set_width(width);
-            ui.set_height(height);
-            let saved_y = ui.spacing().item_spacing.y;
-            ui.spacing_mut().item_spacing.y = 0.0;
-            add_contents(ui);
-            ui.spacing_mut().item_spacing.y = saved_y;
-        },
+            window_secs,
+            heights[1],
+        ),
+    );
+    merge_plot_action(
+        action,
+        draw_accum_row(
+            ui,
+            props.settings,
+            props.connection,
+            dosimeter,
+            accum_unit,
+            style,
+            heights[2],
+        ),
     );
 }
 
-fn draw_accum_section(ui: &mut Ui, dosimeter: &DosimeterState, style: HistogramStyle) {
-    let Some(latest) = dosimeter.latest else {
-        ui.label(RichText::new(&dosimeter.status).color(MUTED));
+fn merge_plot_action(
+    action: &mut Option<MonitorViewAction>,
+    plot_action: Option<PlotToolbarAction>,
+) {
+    let Some(next) = plot_action else {
         return;
     };
-    let unit = dose_accum_unit_label(latest.dose_unit);
-    draw_cumulative_dose_plot(ui, dosimeter, unit, style);
+    *action = Some(match next {
+        PlotToolbarAction::Settings(settings_action) => {
+            MonitorViewAction::Settings(settings_action)
+        }
+        PlotToolbarAction::ResetDose => MonitorViewAction::ResetDose,
+    });
 }

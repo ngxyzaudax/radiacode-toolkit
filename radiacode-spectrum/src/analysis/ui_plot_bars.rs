@@ -1,7 +1,10 @@
 use egui::{Color32, Ui, Vec2b};
 use egui_plot::{Bar, Plot};
+use radiacode_nuclides::PeakIdentification;
 
 use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range};
+use crate::peak_detect::{SpectrumPeak, peaks_in_energy_range};
+use crate::peak_overlay::{draw_identified_rate_peaks, draw_rate_peaks};
 use crate::plot_style::styled_histogram_line;
 use crate::scale::{HistogramStyle, YScale, display_rate, rate_log_floor, y_axis_top};
 
@@ -41,12 +44,19 @@ pub fn shared_log_floor(value_sets: &[&[f64]]) -> f64 {
     rate_log_floor(&rates)
 }
 
+pub struct PlotPeakOverlay<'a> {
+    pub peaks: &'a [SpectrumPeak],
+    pub identifications: Option<&'a [PeakIdentification]>,
+}
+
 pub fn show_owned_series(
     ui: &mut Ui,
     id: &str,
     owned: &[(String, Vec<Bar>, Color32)],
     y_scale: YScale,
     style: HistogramStyle,
+    log_floor: f64,
+    peak_overlay: Option<PlotPeakOverlay<'_>>,
 ) {
     let series: Vec<PlotSeries<'_>> = owned
         .iter()
@@ -58,7 +68,7 @@ pub fn show_owned_series(
         .collect();
     let peak = series_peak(&series);
     let y_top = y_axis_top(peak, y_scale);
-    plot_series(ui, id, &series, y_scale, y_top, style);
+    plot_series(ui, id, &series, y_scale, y_top, style, log_floor, peak_overlay);
 }
 
 fn series_peak(series: &[PlotSeries<'_>]) -> f64 {
@@ -77,6 +87,8 @@ fn plot_series(
     y_scale: YScale,
     y_top: f64,
     style: HistogramStyle,
+    log_floor: f64,
+    peak_overlay: Option<PlotPeakOverlay<'_>>,
 ) {
     let plot_id = format!("{id}_{y_scale:?}");
     Plot::new(plot_id)
@@ -98,6 +110,21 @@ fn plot_series(
                     continue;
                 }
                 plot_ui.line(styled_histogram_line(item.id, item.bars, item.color, style));
+            }
+            if let Some(overlay) = peak_overlay {
+                let visible = peaks_in_energy_range(overlay.peaks, min_x, max_x);
+                if let Some(identifications) = overlay.identifications {
+                    let visible_ids: Vec<_> = identifications
+                        .iter()
+                        .filter(|id| {
+                            id.peak.energy_kev >= min_x && id.peak.energy_kev <= max_x
+                        })
+                        .cloned()
+                        .collect();
+                    draw_identified_rate_peaks(plot_ui, &visible_ids, y_scale, log_floor);
+                } else {
+                    draw_rate_peaks(plot_ui, &visible, y_scale, log_floor);
+                }
             }
         });
 }

@@ -1,10 +1,12 @@
-use egui::{RichText, ScrollArea, Ui};
+use egui::{RichText, Ui};
 
+use crate::layout::page_scroll;
 use crate::model::{ConnectionState, DeviceInfo};
 use crate::settings::action::SettingsAction;
 use crate::settings::state::{SettingsDeviceOp, SettingsSection, SettingsState};
 use crate::settings::ui_columns::{draw_application_column, draw_detector_column};
 use crate::settings::ui_confirm::draw_load_confirm_dialog;
+use crate::settings::ui_nav::draw_settings_nav;
 use crate::settings::ui_toolbar::draw_sticky_toolbar;
 use crate::theme::{SPACE_SM, SPACE_XS};
 
@@ -20,9 +22,17 @@ pub fn draw_settings_view(
             return Some(next);
         }
     }
+    draw_settings_nav(ui, state);
+    ui.add_space(SPACE_XS);
+    ui.separator();
+    ui.add_space(SPACE_SM);
     match state.section {
-        SettingsSection::Device => draw_device_settings(ui, state, connection, device_info),
-        SettingsSection::Application => draw_application_settings(ui, state, recording),
+        SettingsSection::Device => {
+            draw_device_settings(ui, state, connection, device_info)
+        }
+        SettingsSection::Application => {
+            draw_application_settings(ui, state, recording)
+        }
     }
 }
 
@@ -42,13 +52,9 @@ fn draw_device_settings(
     ui.add_space(SPACE_XS);
     ui.separator();
     ui.add_space(SPACE_SM);
-    ScrollArea::vertical()
-        .id_salt("settings_device_scroll")
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.set_min_width(ui.available_width());
-            draw_detector_column(ui, state, connected, editing, device_info, &mut action);
-        });
+    page_scroll(ui, "settings_device_scroll", |ui| {
+        draw_detector_column(ui, state, connected, editing, device_info, &mut action);
+    });
     action
 }
 
@@ -62,12 +68,8 @@ fn draw_application_settings(
     ui.add_space(SPACE_XS);
     ui.separator();
     ui.add_space(SPACE_SM);
-    ScrollArea::vertical()
-        .id_salt("settings_application_scroll")
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.set_min_width(ui.available_width());
-            draw_application_column(ui, state, recording, &mut action);
-        });
+    page_scroll(ui, "settings_application_scroll", |ui| {
+        draw_application_column(ui, state, recording, &mut action);
+    });
     action
 }

@@ -16,15 +16,6 @@ pub fn draw_sticky_toolbar(
     draw_alarm_actions(ui, connected, dirty, op_busy)
 }
 
-pub fn draw_alarm_toolbar(
-    ui: &mut Ui,
-    state: &SettingsState,
-    connected: bool,
-) -> Option<SettingsAction> {
-    let dirty = state.draft_dirty();
-    draw_alarm_actions(ui, connected, dirty, state.device_busy())
-}
-
 fn draw_alarm_actions(
     ui: &mut Ui,
     connected: bool,
@@ -77,9 +68,6 @@ fn draw_status(ui: &mut Ui, state: &SettingsState, connected: bool, dirty: bool)
         }
         SettingsDeviceOp::Idle if dirty => {
             ui.label(RichText::new("Unsaved changes").small().color(ACCENT));
-        }
-        SettingsDeviceOp::Idle if connected && state.draft.is_some() => {
-            ui.label(RichText::new("Ready").small().color(MUTED));
         }
         SettingsDeviceOp::Idle if !connected => {
             ui.label(RichText::new("Not connected").small().color(MUTED));

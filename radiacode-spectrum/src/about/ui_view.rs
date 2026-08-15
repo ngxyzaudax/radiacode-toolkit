@@ -24,6 +24,17 @@ pub fn draw_about_view(ui: &mut Ui) {
     ui.label(RichText::new("Source").strong());
     ui.hyperlink_to(REPO_URL, REPO_URL);
     ui.add_space(SPACE_LG);
+    ui.label(RichText::new("Nuclear data").strong());
+    ui.label(
+        RichText::new("Nuclide catalogue and gamma lines sourced from IAEA Livechart / ENSDF.")
+            .small()
+            .color(MUTED),
+    );
+    ui.hyperlink_to(
+        "IAEA Livechart of Nuclides",
+        "https://nds.iaea.org/relnsd/vcharthtml/VChartHTML.html",
+    );
+    ui.add_space(SPACE_LG);
     ui.label(
         RichText::new("Licensed under the GNU Affero General Public License v3.0.")
             .small()

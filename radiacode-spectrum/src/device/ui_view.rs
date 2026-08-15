@@ -2,6 +2,7 @@ use egui::{RichText, Ui};
 
 use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
 
+use crate::layout::{clamp_max, page_scroll};
 use crate::model::{ConnectionState, DeviceInfo};
 use crate::theme::{ACCENT, MUTED, SPACE_XL, SPACE_XS};
 
@@ -27,6 +28,15 @@ pub enum DeviceAction {
 }
 
 pub fn draw_device_view(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<DeviceAction> {
+    let mut action = None;
+    page_scroll(ui, "device_page", |ui| {
+        ui.set_max_width(clamp_max(ui.available_width(), 640.0));
+        action = draw_device_body(ui, props);
+    });
+    action
+}
+
+fn draw_device_body(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<DeviceAction> {
     ui.label(RichText::new("Radiacode").size(28.0).color(ACCENT).strong());
     ui.add_space(SPACE_XS);
     ui.label(
@@ -35,7 +45,6 @@ pub fn draw_device_view(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<Devic
             .color(MUTED),
     );
     ui.add_space(SPACE_XL);
-    ui.set_max_width(640.0);
     let action = match props.connection {
         ConnectionState::Connected => props
             .device_info
@@ -46,8 +55,8 @@ pub fn draw_device_view(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<Devic
             None
         }
         ConnectionState::Disconnected => {
-            let list_height = ui.available_height().max(200.0) - 80.0;
-            draw_discovery(ui, &props, list_height.max(200.0))
+            let list_height = (ui.available_height() - 80.0).max(200.0);
+            draw_discovery(ui, &props, list_height)
         }
     };
     ui.add_space(16.0);

@@ -2,35 +2,43 @@ use egui::Ui;
 
 use radiacode_core::{AlarmSignalMode, DeviceConfig, count_unit_label, dose_unit_label};
 
-use crate::settings::ui_alarm_card::{alarm_card, compact_alarm_card};
+use crate::layout::{breakpoint_for, column_count};
+use crate::settings::ui_alarm_card::{alarm_card, compact_alarm_card, INNER_WIDTH};
 
 pub fn draw_alarms_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
     let dose_unit = dose_unit_label(draft.alarms.dose_unit);
     let count_unit = count_unit_label(draft.alarms.count_unit);
-    ui.columns(3, |columns| {
-        dose_rate_card(&mut columns[0], draft, dose_unit, false);
-        count_rate_card(&mut columns[1], draft, count_unit, false);
-        accum_dose_card(&mut columns[2], draft, dose_unit, false);
-    });
+    let width = ui.available_width();
+    let columns = column_count(breakpoint_for(width), 3, 2, 1);
+    let compact = width / (columns as f32) < INNER_WIDTH + 24.0;
+    match columns {
+        3 => ui.columns(3, |columns| {
+            dose_rate_card(&mut columns[0], draft, dose_unit, compact);
+            count_rate_card(&mut columns[1], draft, count_unit, compact);
+            accum_dose_card(&mut columns[2], draft, dose_unit, compact);
+        }),
+        2 => {
+            ui.columns(2, |columns| {
+                dose_rate_card(&mut columns[0], draft, dose_unit, compact);
+                count_rate_card(&mut columns[1], draft, count_unit, compact);
+            });
+            ui.add_space(8.0);
+            accum_dose_card(ui, draft, dose_unit, compact);
+        }
+        _ => {
+            dose_rate_card(ui, draft, dose_unit, compact);
+            ui.add_space(8.0);
+            count_rate_card(ui, draft, count_unit, compact);
+            ui.add_space(8.0);
+            accum_dose_card(ui, draft, dose_unit, compact);
+        }
+    }
     draw_alarm_signal_mode(ui, draft);
-}
-
-pub fn draw_monitor_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
-    let dose_unit = dose_unit_label(draft.alarms.dose_unit);
-    let count_unit = count_unit_label(draft.alarms.count_unit);
-    dose_rate_card(ui, draft, dose_unit, true);
-    ui.add_space(4.0);
-    count_rate_card(ui, draft, count_unit, true);
-}
-
-pub fn draw_dosimeter_alarms_sidebar(ui: &mut Ui, draft: &mut DeviceConfig) {
-    let dose_unit = dose_unit_label(draft.alarms.dose_unit);
-    accum_dose_card(ui, draft, dose_unit, true);
 }
 
 fn draw_alarm_signal_mode(ui: &mut Ui, draft: &mut DeviceConfig) {
     ui.add_space(8.0);
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.label("Signal mode");
         ui.selectable_value(&mut draft.alarm_mode, AlarmSignalMode::Once, "Once");
         ui.selectable_value(

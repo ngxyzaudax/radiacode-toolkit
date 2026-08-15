@@ -4,7 +4,8 @@ use crate::model::DeviceInfo;
 use crate::settings::action::SettingsAction;
 use crate::settings::state::SettingsState;
 use crate::settings::ui_app::{
-    draw_app_alerts, draw_app_capture, draw_app_connection, draw_app_polling,
+    draw_app_alerts, draw_app_appearance, draw_app_capture, draw_app_catalogue,
+    draw_app_connection, draw_app_matching, draw_app_monitor_window, draw_app_polling,
 };
 use crate::settings::ui_device::{
     draw_alarms_panel, draw_device_info, draw_screen_panel, draw_signals_panel, draw_units_panel,
@@ -101,6 +102,41 @@ pub fn draw_application_column(
     );
     settings_section(ui, "Polling", "How often live data is refreshed.", |ui| {
         if draw_app_polling(ui, state) {
+            *action = Some(SettingsAction::AppChanged);
+        }
+    });
+    settings_section(
+        ui,
+        "Monitor window",
+        "Rolling time span for dose and count rate plots.",
+        |ui| {
+            if draw_app_monitor_window(ui, state) {
+                *action = Some(SettingsAction::AppChanged);
+            }
+        },
+    );
+    settings_section(
+        ui,
+        "Isotope matching",
+        "Peak-to-nuclide identification tolerance.",
+        |ui| {
+            if draw_app_matching(ui, state) {
+                *action = Some(SettingsAction::AppChanged);
+            }
+        },
+    );
+    settings_section(
+        ui,
+        "Catalogue preview",
+        "Synthetic gamma spectrum resolution in the nuclide catalogue.",
+        |ui| {
+            if draw_app_catalogue(ui, state) {
+                *action = Some(SettingsAction::AppChanged);
+            }
+        },
+    );
+    settings_section(ui, "Appearance", "UI scale for dense layouts.", |ui| {
+        if draw_app_appearance(ui, state) {
             *action = Some(SettingsAction::AppChanged);
         }
     });

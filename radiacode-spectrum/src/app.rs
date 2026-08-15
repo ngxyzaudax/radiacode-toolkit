@@ -2,34 +2,38 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use eframe::App;
-use egui::{CentralPanel, Context, Panel, Ui, ViewportCommand, ViewportId};
+use egui::{CentralPanel, Context, Ui, ViewportCommand, ViewportId};
 use radiacode_core::{DeviceEndpoint, TransportKind, merge_discovered, resolve_usb_endpoint};
 use tracing::{debug, info, warn};
 
 use crate::about::draw_about_view;
-use crate::analysis::{AnalysisAction, AnalysisState, draw_analysis_controls, draw_analysis_view};
+use crate::analysis::{AnalysisState, draw_analysis_view};
+use crate::catalogue::{CatalogueState, draw_catalogue_view};
 use crate::device::{DeviceAction, DeviceViewProps, draw_device_view};
 use crate::events::AppState;
 use crate::icon::app_icon;
+use crate::layout::page_scroll;
 use crate::model::{ConnectionState, DeviceInfo};
-use crate::monitor::{AlarmLevel, MonitorControlsAction, draw_monitor_controls, draw_monitor_view};
+use crate::monitor::{
+    draw_monitor_leave_confirm, AlarmLevel, MonitorLeaveChoice, MonitorViewAction,
+    MonitorViewProps, draw_monitor_view,
+};
 use crate::pc_alarm::maybe_beep_alarm;
+use crate::peak_overlay::SpectrumPlotAction;
 use crate::plot_style::histogram_style;
 use crate::scale::YScale;
-use crate::settings::{
-    SettingsAction, SettingsDeviceOp, SettingsState, draw_settings_controls, draw_settings_view,
-};
+use crate::settings::{SettingsAction, SettingsDeviceOp, SettingsState, draw_settings_view};
+use crate::smooth::DEFAULT_SMOOTHING_WINDOW;
 use crate::spectrogram::SpectrogramState;
 use crate::spectrogram::capture::SpectrogramCapture;
-use crate::spectrogram::ui_controls::{SpectrogramControlsAction, draw_spectrogram_controls};
+use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::ui_view::draw_spectrogram_view;
+use crate::tabs::draw_tab_bar;
 use crate::theme;
-use crate::ui_chrome::{
-    sidebar_content_frame, tab_uses_page_inset, tab_uses_plot_pad, with_page_inset, with_plot_pad,
-};
-use crate::ui_controls::{ControlsAction, ControlsProps, draw_spectrum_controls};
+use crate::ui_chrome::{tab_uses_page_inset, tab_uses_plot_pad, with_page_inset, with_plot_pad};
 use crate::ui_disconnected::{draw_disconnected_view, shows_tab_content, tab_works_offline};
 use crate::ui_plot::draw_spectrum_plot;
+use crate::ui_toolbar::{SpectrumToolbarAction, SpectrumToolbarProps, draw_spectrum_toolbar};
 use crate::usb_access::{
     UsbAccessAction, UsbAccessOutcome, UsbAccessPrompt, draw_usb_access_dialog, usb_access_required,
 };
@@ -42,11 +46,14 @@ pub struct SpectrumApp {
     settings: SettingsState,
     spectrogram: SpectrogramState,
     analysis: AnalysisState,
+    catalogue: CatalogueState,
     active_tab: ViewTab,
     previous_tab: ViewTab,
     y_scale: YScale,
     smooth_window: usize,
     plot_outline_only: bool,
+    show_spectrum_peaks: bool,
+    show_spectrum_isotopes: bool,
     theme_ready: bool,
     startup_scan_sent: bool,
     icon_sent: bool,
@@ -55,6 +62,9 @@ pub struct SpectrumApp {
     usb_access_prompt: Option<UsbAccessPrompt>,
     last_alarm_level: AlarmLevel,
     auto_connect_attempted: bool,
+    monitor_leave_open: bool,
+    pending_tab: Option<ViewTab>,
+    pending_tab_after_save: Option<ViewTab>,
 }
 
 impl SpectrumApp {
@@ -73,11 +83,14 @@ impl SpectrumApp {
             settings,
             spectrogram,
             analysis,
+            catalogue: CatalogueState::new(),
             active_tab: ViewTab::Device,
             previous_tab: ViewTab::Device,
             y_scale: YScale::Linear,
-            smooth_window: 1,
+            smooth_window: DEFAULT_SMOOTHING_WINDOW,
             plot_outline_only: false,
+            show_spectrum_peaks: false,
+            show_spectrum_isotopes: false,
             theme_ready: false,
             startup_scan_sent: false,
             icon_sent: false,
@@ -86,6 +99,16 @@ impl SpectrumApp {
             usb_access_prompt: None,
             last_alarm_level: AlarmLevel::Normal,
             auto_connect_attempted: false,
+            monitor_leave_open: false,
+            pending_tab: None,
+            pending_tab_after_save: None,
+        }
+    }
+
+    fn apply_ui_scale(&self, ctx: &Context) {
+        let scale = self.settings.app.ui_scale;
+        if (ctx.zoom_factor() - scale).abs() > f32::EPSILON {
+            ctx.set_zoom_factor(scale);
         }
     }
 
@@ -199,6 +222,7 @@ impl SpectrumApp {
             }
             if let WorkerEvent::DeviceConfig(config) = &event {
                 if !self.session_blocked {
+                    let saving = self.settings.device_op == SettingsDeviceOp::Saving;
                     match self.settings.device_op {
                         SettingsDeviceOp::Loading => self.settings.on_loaded(*config),
                         SettingsDeviceOp::Saving => self.settings.on_saved(*config),
@@ -206,6 +230,11 @@ impl SpectrumApp {
                     }
                     self.state.monitor.apply_limits(config.alarms);
                     self.state.dosimeter.apply_limits(config.alarms);
+                    if saving {
+                        if let Some(tab) = self.pending_tab_after_save.take() {
+                            self.active_tab = tab;
+                        }
+                    }
                 }
             }
             if let WorkerEvent::Error(message) = &event {
@@ -213,6 +242,10 @@ impl SpectrumApp {
                     || self.settings.device_op == SettingsDeviceOp::Saving
                 {
                     self.settings.on_device_op_failed(message.clone());
+                    if self.pending_tab_after_save.is_some() {
+                        self.pending_tab = self.pending_tab_after_save.take();
+                        self.monitor_leave_open = true;
+                    }
                 } else if self.settings.status == "Saved to device" {
                     self.settings.status = message.clone();
                 }
@@ -358,27 +391,56 @@ impl SpectrumApp {
         }
     }
 
-    fn handle_controls_action(&mut self, action: ControlsAction) {
-        if matches!(action, ControlsAction::Reset) {
+    fn handle_spectrum_toolbar_action(&mut self, action: SpectrumToolbarAction) {
+        if matches!(action, SpectrumToolbarAction::Reset) {
             self.state.spectrum_fetch_pending = true;
             self.send(WorkerCommand::ResetSpectrum);
         }
     }
 
-    fn handle_monitor_action(&mut self, action: MonitorControlsAction) {
+    fn handle_monitor_view_action(&mut self, action: MonitorViewAction) {
         match action {
-            MonitorControlsAction::ResetDose => {
+            MonitorViewAction::ResetDose => {
                 self.send(WorkerCommand::ResetDose);
             }
-            MonitorControlsAction::Settings(settings_action) => {
+            MonitorViewAction::Settings(settings_action) => {
                 self.handle_settings_action(settings_action);
             }
         }
     }
 
-    fn handle_analysis_action(&mut self, action: AnalysisAction) {
-        if matches!(action, AnalysisAction::ClearSelection) {
-            self.analysis.clear_selection();
+    fn try_switch_tab(&mut self, tab: ViewTab) -> bool {
+        if self.active_tab == ViewTab::Monitor
+            && tab != ViewTab::Monitor
+            && self.settings.draft_dirty()
+        {
+            self.pending_tab = Some(tab);
+            self.monitor_leave_open = true;
+            return false;
+        }
+        self.active_tab = tab;
+        true
+    }
+
+    fn handle_monitor_leave_choice(&mut self, choice: MonitorLeaveChoice) {
+        match choice {
+            MonitorLeaveChoice::Save => {
+                self.pending_tab_after_save = self.pending_tab.take();
+                self.monitor_leave_open = false;
+                self.handle_settings_action(SettingsAction::SaveDevice);
+            }
+            MonitorLeaveChoice::Discard => {
+                self.settings.discard();
+                self.sync_draft_alarm_limits();
+                if let Some(tab) = self.pending_tab.take() {
+                    self.active_tab = tab;
+                }
+                self.monitor_leave_open = false;
+            }
+            MonitorLeaveChoice::Stay => {
+                self.pending_tab = None;
+                self.monitor_leave_open = false;
+            }
         }
     }
 
@@ -404,6 +466,7 @@ impl SpectrumApp {
             }
             SettingsAction::DiscardChanges => {
                 self.settings.discard();
+                self.sync_draft_alarm_limits();
             }
             SettingsAction::SyncClock => {
                 self.settings.status = "Syncing clock…".into();
@@ -481,7 +544,26 @@ impl SpectrumApp {
     }
 
     fn enter_monitor_tab(&mut self) {
-        self.enter_device_config_tab();
+        if self.state.connection != ConnectionState::Connected {
+            return;
+        }
+        if self.settings.draft_dirty() {
+            return;
+        }
+        self.start_device_load();
+    }
+
+    fn enter_catalogue_tab(&mut self) {
+        self.catalogue.on_tab_enter();
+    }
+
+    fn handle_spectrum_plot_action(&mut self, action: SpectrumPlotAction) {
+        match action {
+            SpectrumPlotAction::OpenCatalogue(id) => {
+                self.catalogue.select(id);
+                self.active_tab = ViewTab::Catalogue;
+            }
+        }
     }
 
     fn handle_spectrogram_action(&mut self, action: SpectrogramControlsAction) {
@@ -618,55 +700,6 @@ impl SpectrumApp {
         }
     }
 
-    fn draw_sidebar(&mut self, ui: &mut Ui) {
-        match self.active_tab {
-            ViewTab::Device | ViewTab::About => {}
-            ViewTab::Monitor => {
-                if let Some(action) = draw_monitor_controls(
-                    ui,
-                    &mut self.settings,
-                    self.state.connection,
-                    &self.state.monitor,
-                    &self.state.dosimeter,
-                    &mut self.plot_outline_only,
-                ) {
-                    self.handle_monitor_action(action);
-                }
-                self.sync_draft_alarm_limits();
-            }
-            ViewTab::Spectrum => {
-                if let Some(action) = draw_spectrum_controls(
-                    ui,
-                    ControlsProps {
-                        connection: self.state.connection,
-                        y_scale: &mut self.y_scale,
-                        smooth_window: &mut self.smooth_window,
-                        outline_only: &mut self.plot_outline_only,
-                    },
-                ) {
-                    self.handle_controls_action(action);
-                }
-            }
-            ViewTab::Spectrogram => {
-                if let Some(action) =
-                    draw_spectrogram_controls(ui, &mut self.spectrogram, self.state.connection)
-                {
-                    self.handle_spectrogram_action(action);
-                }
-            }
-            ViewTab::Analysis => {
-                if let Some(action) =
-                    draw_analysis_controls(ui, &mut self.analysis, &mut self.y_scale)
-                {
-                    self.handle_analysis_action(action);
-                }
-            }
-            ViewTab::Settings => {
-                draw_settings_controls(ui, &mut self.settings);
-            }
-        }
-    }
-
     fn draw_central_content(&mut self, ui: &mut Ui, ctx: &Context) {
         if self.active_tab == ViewTab::Device {
             if let Some(action) = draw_device_view(
@@ -699,36 +732,86 @@ impl SpectrumApp {
             return;
         }
         if self.active_tab == ViewTab::About {
-            draw_about_view(ui);
+            page_scroll(ui, "about_page", draw_about_view);
             return;
         }
         if self.active_tab == ViewTab::Analysis {
-            draw_analysis_view(ui, &self.analysis, self.y_scale);
+            if let Some(action) =
+                draw_analysis_view(ui, &mut self.analysis, self.y_scale, &self.settings.app)
+            {
+                self.handle_spectrum_plot_action(action);
+            }
+            return;
+        }
+        if self.active_tab == ViewTab::Catalogue {
+            if draw_catalogue_view(ui, &mut self.catalogue, &mut self.settings.app) {
+                self.settings.persist_app();
+            }
             return;
         }
         if shows_tab_content(self.state.connection) {
             let plot_style = histogram_style(self.plot_outline_only);
             match self.active_tab {
-                ViewTab::Monitor => draw_monitor_view(
-                    ui,
-                    &self.state.monitor,
-                    &self.state.dosimeter,
-                    plot_style,
-                    self.settings.app.monitor_smoothing_window,
-                ),
+                ViewTab::Monitor => {
+                    if let Some(action) = draw_monitor_view(
+                        ui,
+                        &self.state.monitor,
+                        &self.state.dosimeter,
+                        plot_style,
+                        self.settings.app.monitor_smoothing_window,
+                        MonitorViewProps {
+                            settings: &mut self.settings,
+                            connection: self.state.connection,
+                            outline_only: &mut self.plot_outline_only,
+                        },
+                    ) {
+                        self.handle_monitor_view_action(action);
+                    }
+                    self.sync_draft_alarm_limits();
+                }
                 ViewTab::Spectrum => {
-                    draw_spectrum_plot(
+                    if let Some(action) = draw_spectrum_toolbar(
+                        ui,
+                        SpectrumToolbarProps {
+                            connection: self.state.connection,
+                            y_scale: &mut self.y_scale,
+                            smooth_window: &mut self.smooth_window,
+                            outline_only: &mut self.plot_outline_only,
+                            show_peaks: &mut self.show_spectrum_peaks,
+                            identify_isotopes: &mut self.show_spectrum_isotopes,
+                        },
+                    ) {
+                        self.handle_spectrum_toolbar_action(action);
+                    }
+                    if let Some(action) = draw_spectrum_plot(
                         ui,
                         self.state.spectrum.as_ref(),
                         self.y_scale,
                         self.smooth_window,
                         plot_style,
-                    );
+                        self.show_spectrum_peaks,
+                        self.show_spectrum_isotopes,
+                        &self.settings.app,
+                    ) {
+                        self.handle_spectrum_plot_action(action);
+                    }
                 }
                 ViewTab::Spectrogram => {
-                    draw_spectrogram_view(ui, ctx, &mut self.spectrogram);
+                    if let Some(action) = draw_spectrogram_view(
+                        ui,
+                        ctx,
+                        &mut self.spectrogram,
+                        &self.settings.app,
+                        self.state.connection,
+                    ) {
+                        self.handle_spectrogram_action(action);
+                    }
                 }
-                ViewTab::Device | ViewTab::Analysis | ViewTab::Settings | ViewTab::About => {}
+                ViewTab::Device
+                | ViewTab::Analysis
+                | ViewTab::Catalogue
+                | ViewTab::Settings
+                | ViewTab::About => {}
             }
             return;
         }
@@ -740,6 +823,7 @@ impl App for SpectrumApp {
     fn logic(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         self.ensure_window_icon(ctx);
         self.ensure_startup_window_size(ctx);
+        self.apply_ui_scale(ctx);
         if !self.theme_ready {
             theme::apply(ctx);
             self.theme_ready = true;
@@ -767,54 +851,14 @@ impl App for SpectrumApp {
                 self.handle_usb_access_action(action);
             }
         }
-        Panel::left("sidebar")
-            .resizable(true)
-            .default_size(300.0)
-            .show(ui, |ui| {
-                sidebar_content_frame().show(ui, |ui| {
-                    if shows_tab_content(self.state.connection)
-                        || tab_works_offline(self.active_tab)
-                    {
-                        self.draw_sidebar(ui);
-                    }
-                });
-            });
-
+        if let Some(choice) = draw_monitor_leave_confirm(&ctx, self.monitor_leave_open) {
+            self.handle_monitor_leave_choice(choice);
+        }
         CentralPanel::default().show(ui, |ui| {
             let previous_tab = self.previous_tab;
-            ui.horizontal(|ui| {
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Device,
-                    ViewTab::Device.label(),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Monitor,
-                    ViewTab::Monitor.label(),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Spectrum,
-                    ViewTab::Spectrum.label(),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Spectrogram,
-                    ViewTab::Spectrogram.label(),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Analysis,
-                    ViewTab::Analysis.label(),
-                );
-                ui.selectable_value(
-                    &mut self.active_tab,
-                    ViewTab::Settings,
-                    ViewTab::Settings.label(),
-                );
-                ui.selectable_value(&mut self.active_tab, ViewTab::About, ViewTab::About.label());
-            });
+            if let Some(requested) = draw_tab_bar(ui, self.active_tab) {
+                self.try_switch_tab(requested);
+            }
             if self.active_tab == ViewTab::Spectrum && previous_tab != ViewTab::Spectrum {
                 self.enter_spectrum_tab();
             }
@@ -823,6 +867,9 @@ impl App for SpectrumApp {
             }
             if self.active_tab == ViewTab::Analysis && previous_tab != ViewTab::Analysis {
                 self.enter_analysis_tab();
+            }
+            if self.active_tab == ViewTab::Catalogue && previous_tab != ViewTab::Catalogue {
+                self.enter_catalogue_tab();
             }
             if self.active_tab == ViewTab::Monitor && previous_tab != ViewTab::Monitor {
                 self.enter_monitor_tab();

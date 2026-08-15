@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::analysis::compare::Comparison;
 use crate::analysis::selection::{rebuild_samples, selection_status};
 use crate::analysis::spectrum::{CollapsedSpectrum, collapse_series};
+use crate::smooth::DEFAULT_SMOOTHING_WINDOW;
 use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::storage::{list_recordings, load_recording};
 
@@ -22,8 +23,11 @@ pub struct AnalysisState {
     pub smooth_window: usize,
     pub outline_only: bool,
     pub subtract_background: bool,
+    pub show_peaks: bool,
+    pub identify_isotopes: bool,
     pub status: String,
     pub error: String,
+    pub pane_open: bool,
 }
 
 impl AnalysisState {
@@ -35,11 +39,14 @@ impl AnalysisState {
             sample_paths: Vec::new(),
             background: None,
             samples: Vec::new(),
-            smooth_window: 1,
+            smooth_window: DEFAULT_SMOOTHING_WINDOW,
             outline_only: false,
             subtract_background: false,
+            show_peaks: false,
+            identify_isotopes: false,
             status: String::new(),
             error: String::new(),
+            pane_open: true,
         }
     }
 
@@ -97,13 +104,9 @@ impl AnalysisState {
         self.reload_selection();
     }
 
-    pub fn clear_selection(&mut self) {
+    pub fn clear_background(&mut self) {
         self.background_path = None;
-        self.sample_paths.clear();
-        self.background = None;
-        self.samples.clear();
-        self.error.clear();
-        self.status.clear();
+        self.reload_selection();
     }
 
     fn reload_selection(&mut self) {

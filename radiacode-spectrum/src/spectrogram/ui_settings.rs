@@ -1,4 +1,4 @@
-use egui::{CollapsingHeader, Response, RichText, Ui};
+use egui::{Response, RichText, Ui};
 
 use crate::spectrogram::color_scheme::ColorScheme;
 use crate::spectrogram::settings::{
@@ -7,24 +7,6 @@ use crate::spectrogram::settings::{
 };
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
-
-pub fn draw_spectrogram_settings(ui: &mut Ui, state: &mut SpectrogramState) -> bool {
-    let mut changed = false;
-    let recording = state.is_recording();
-    CollapsingHeader::new(RichText::new("Capture").strong())
-        .default_open(false)
-        .show(ui, |ui| {
-            changed |= draw_capture_controls(ui, &mut state.settings, recording);
-        });
-    ui.add_space(2.0);
-    CollapsingHeader::new(RichText::new("Display").strong())
-        .default_open(false)
-        .show(ui, |ui| {
-            changed |= draw_display_controls(ui, &mut state.settings);
-            changed |= draw_overlay_controls(ui, state);
-        });
-    changed
-}
 
 pub fn draw_capture_settings(
     ui: &mut Ui,
@@ -90,16 +72,17 @@ pub fn draw_display_controls(ui: &mut Ui, settings: &mut SpectrogramSettings) ->
     changed
 }
 
-fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool {
-    ui.add_space(4.0);
-    ui.label(RichText::new("Overlays").small().color(MUTED));
+pub fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool {
     let mut changed = false;
     changed |= ui.checkbox(&mut state.show_grid, "Grid").changed();
     changed |= ui
         .checkbox(&mut state.show_count_rate, "Count rate")
         .changed();
     changed |= ui
-        .checkbox(&mut state.show_isotopes, "Isotope lines")
+        .checkbox(&mut state.show_isotopes, "Identify isotopes")
+        .changed();
+    changed |= ui
+        .checkbox(&mut state.show_peaks, "Peak detection")
         .changed();
     changed
 }

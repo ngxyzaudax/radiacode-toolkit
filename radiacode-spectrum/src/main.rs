@@ -2,29 +2,36 @@ mod about;
 mod analysis;
 mod app;
 mod app_config;
+mod catalogue;
 mod device;
 mod dosimeter;
 mod energy;
 mod events;
 mod icon;
+mod identify;
+mod layout;
 mod logging;
 mod model;
 mod monitor;
+mod monitor_window;
 mod pc_alarm;
+mod peak_detect;
+mod peak_overlay;
+mod peak_profile;
 mod plot_style;
 mod scale;
 mod settings;
 mod smooth;
+mod synthetic_spectrum;
 mod spectrogram;
+mod tabs;
 mod theme;
 mod ui;
 mod ui_chrome;
-mod ui_controls;
 mod ui_device_status;
 mod ui_disconnected;
 mod ui_plot;
-mod ui_recording_library;
-mod ui_recording_search;
+mod ui_toolbar;
 mod usb_access;
 mod view_tab;
 mod window;
@@ -36,7 +43,7 @@ use std::process::ExitCode;
 use app::SpectrumApp;
 use icon::{APP_ID, app_icon};
 use tracing::{error, info};
-use window::{startup_inner_size, startup_viewport_builder};
+use window::{min_inner_size, startup_inner_size, startup_viewport_builder};
 
 fn main() -> ExitCode {
     logging::init();
@@ -49,7 +56,9 @@ fn main() -> ExitCode {
         centered: true,
         persist_window: false,
         window_builder: Some(Box::new(|builder| {
-            builder.with_inner_size(startup_inner_size())
+            builder
+                .with_inner_size(startup_inner_size())
+                .with_min_inner_size(min_inner_size())
         })),
         ..Default::default()
     };

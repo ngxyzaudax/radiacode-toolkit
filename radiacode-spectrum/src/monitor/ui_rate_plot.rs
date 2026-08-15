@@ -1,54 +1,48 @@
-use egui::{RichText, Ui, Vec2b};
+use egui::{Ui, Vec2b};
 use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
 
 use crate::monitor::plot_bounds::{PlotBounds, PlotSeries, plot_bounds, series_points};
 use crate::monitor::state::MonitorState;
 use crate::plot_style::styled_line;
 use crate::scale::HistogramStyle;
-use crate::theme::{ACCENT, MUTED};
+use crate::theme::ACCENT;
 
 pub fn draw_rate_plot(
     ui: &mut Ui,
     id: &str,
-    title: &str,
     monitor: &MonitorState,
     series: PlotSeries,
     unit: &str,
     style: HistogramStyle,
     smoothing_window: usize,
+    window_secs: f64,
+    plot_height: f32,
 ) {
-    let bounds = plot_bounds(monitor, series, smoothing_window);
-    let window_secs = (bounds.x_max - bounds.x_min).max(0.0);
-    ui.horizontal(|ui| {
-        ui.label(RichText::new(title).strong());
-        ui.label(
-            RichText::new(format!("Last {window_secs:.0}s window"))
-                .small()
-                .color(MUTED),
-        );
-    });
-    let plot_height = ui.available_height().max(1.0);
+    let bounds = plot_bounds(monitor, series, smoothing_window, window_secs);
     let points = series_points(monitor, series, bounds, smoothing_window);
     let unit_label = unit.to_string();
-    let series_title = title.to_string();
+    let series_title = series_label(series);
     let hover_title = series_title.clone();
     let hover_unit = unit_label.clone();
+    let x_label = x_axis_label(window_secs);
     Plot::new(id)
         .height(plot_height)
         .allow_zoom(false)
         .allow_drag(false)
         .allow_scroll(false)
         .auto_bounds(Vec2b::new(false, false))
-        .x_axis_label("Time (s)")
+        .x_axis_label(x_label)
         .y_axis_label(unit)
+        .x_axis_formatter(move |mark, _range| format_x_tick(mark.value, window_secs))
         .label_formatter(move |pos| match pos {
             HoverPosition::NearDataPoint {
                 plot_name,
                 position,
                 ..
             } if *plot_name == hover_title => Some(format!(
-                "Time: {:.1} s\n{hover_title}: {:.2} {hover_unit}",
-                position.x, position.y
+                "Time: {}\n{hover_title}: {:.2} {hover_unit}",
+                format_hover_time(position.x, window_secs),
+                position.y
             )),
             _ => None,
         })
@@ -76,6 +70,37 @@ pub fn draw_rate_plot(
                 draw_alarm_lines(plot_ui, bounds, alarm_one, alarm_two);
             }
         });
+}
+
+fn x_axis_label(window_secs: f64) -> &'static str {
+    if window_secs > 180.0 {
+        "Time (min)"
+    } else {
+        "Time (s)"
+    }
+}
+
+fn format_x_tick(value: f64, window_secs: f64) -> String {
+    if window_secs > 180.0 {
+        format!("{:.0}", value / 60.0)
+    } else {
+        format!("{:.0}", value)
+    }
+}
+
+fn format_hover_time(seconds: f64, window_secs: f64) -> String {
+    if window_secs > 180.0 {
+        format!("{:.1} min", seconds / 60.0)
+    } else {
+        format!("{:.1} s", seconds)
+    }
+}
+
+fn series_label(series: PlotSeries) -> String {
+    match series {
+        PlotSeries::Dose => "Dose rate".into(),
+        PlotSeries::Count => "Count rate".into(),
+    }
 }
 
 fn draw_alarm_lines(

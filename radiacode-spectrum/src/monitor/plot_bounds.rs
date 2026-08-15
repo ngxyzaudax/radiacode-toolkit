@@ -1,7 +1,6 @@
 use crate::monitor::state::{MonitorSample, MonitorState};
 use crate::smooth::{moving_average_f64, normalize_window};
 
-const WINDOW_SECS: f64 = 120.0;
 const Y_HEADROOM: f64 = 0.2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,15 +36,14 @@ pub fn plot_bounds(
     monitor: &MonitorState,
     series: PlotSeries,
     smoothing_window: usize,
+    window_secs: f64,
 ) -> PlotBounds {
-    let x_max = monitor
+    let latest = monitor
         .history
         .back()
         .map(elapsed_secs)
-        .unwrap_or(0.0)
-        .max(1.0);
-    let oldest = monitor.history.front().map(elapsed_secs).unwrap_or(0.0);
-    let x_min = window_x_min(oldest, x_max);
+        .unwrap_or(0.0);
+    let (x_min, x_max) = window_range(latest, window_secs);
     let bounds = PlotBounds {
         x_min,
         x_max,
@@ -68,6 +66,12 @@ pub fn plot_bounds(
     }
 }
 
+pub fn window_range(latest_secs: f64, window_secs: f64) -> (f64, f64) {
+    let window = window_secs.max(1.0);
+    let x_max = latest_secs.max(window);
+    (x_max - window, x_max)
+}
+
 fn apply_smoothing(points: Vec<[f64; 2]>, smoothing_window: usize) -> Vec<[f64; 2]> {
     let window = normalize_window(smoothing_window);
     if window <= 1 || points.len() < 2 {
@@ -77,11 +81,6 @@ fn apply_smoothing(points: Vec<[f64; 2]>, smoothing_window: usize) -> Vec<[f64; 
     let ys: Vec<f64> = points.iter().map(|point| point[1]).collect();
     let smoothed = moving_average_f64(&ys, window);
     xs.into_iter().zip(smoothed).map(|(x, y)| [x, y]).collect()
-}
-
-fn window_x_min(oldest: f64, x_max: f64) -> f64 {
-    let scrolled = (x_max - WINDOW_SECS).max(0.0);
-    if oldest > scrolled { oldest } else { scrolled }
 }
 
 fn alarm_ceiling(limits: radiacode_core::AlarmLimits, series: PlotSeries) -> f64 {
@@ -123,8 +122,10 @@ mod tests {
 
     use radiacode_core::{CountDisplayUnit, DeviceTicks, DoseDisplayUnit};
 
-    use super::{PlotSeries, plot_bounds};
+    use super::{PlotSeries, plot_bounds, window_range};
     use crate::monitor::state::{MonitorSample, MonitorState};
+
+    const WINDOW_SECS: f64 = 120.0;
 
     fn sample(seconds: f64, dose: f32, count: f32) -> MonitorSample {
         MonitorSample {
@@ -149,13 +150,37 @@ mod tests {
     }
 
     #[test]
+    fn window_is_full_width_with_one_sample() {
+        let mut monitor = MonitorState::default_for_tests();
+        monitor.history.push_back(sample(1.0, 1.0, 10.0));
+        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1, WINDOW_SECS);
+        assert!((bounds.x_min - 0.0).abs() < 0.01);
+        assert!((bounds.x_max - WINDOW_SECS).abs() < 0.01);
+    }
+
+    #[test]
+    fn window_is_full_width_with_no_samples() {
+        let monitor = MonitorState::default_for_tests();
+        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1, WINDOW_SECS);
+        assert!((bounds.x_min - 0.0).abs() < 0.01);
+        assert!((bounds.x_max - WINDOW_SECS).abs() < 0.01);
+    }
+
+    #[test]
     fn window_scrolls_with_latest_sample() {
         let mut monitor = MonitorState::default_for_tests();
         monitor.push_poll(&[timed(10.0, 1.0, 10.0)], 0, 0, &[]);
         monitor.push_poll(&[timed(150.0, 2.0, 20.0)], 0, 0, &[]);
-        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1);
+        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1, WINDOW_SECS);
         assert!((bounds.x_min - 20.0).abs() < 0.01);
         assert!((bounds.x_max - 140.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn window_range_pins_to_configured_width() {
+        let (x_min, x_max) = window_range(5.0, 120.0);
+        assert!((x_min - 0.0).abs() < 0.01);
+        assert!((x_max - 120.0).abs() < 0.01);
     }
 
     #[test]
@@ -163,7 +188,7 @@ mod tests {
         let mut monitor = MonitorState::default_for_tests();
         monitor.history.push_back(sample(1.0, 10.0, 100.0));
         monitor.history.push_back(sample(2.0, 12.0, 120.0));
-        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1);
+        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1, WINDOW_SECS);
         assert_eq!(bounds.y_min, 0.0);
         assert!(bounds.y_max > 12.0);
     }
@@ -183,7 +208,7 @@ mod tests {
         });
         monitor.history.push_back(sample(1.0, 0.09, 17.0));
         monitor.history.push_back(sample(2.0, 0.09, 17.0));
-        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1);
+        let bounds = plot_bounds(&monitor, PlotSeries::Dose, 1, WINDOW_SECS);
         assert_eq!(bounds.y_min, 0.0);
         assert!((bounds.y_max - 0.36).abs() < 0.001);
     }

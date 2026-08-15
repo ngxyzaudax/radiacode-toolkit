@@ -40,10 +40,12 @@ pub struct SpectrogramState {
     pub show_grid: bool,
     pub show_count_rate: bool,
     pub show_isotopes: bool,
+    pub show_peaks: bool,
     pub capture_enabled: bool,
     pub z_range: Option<ZScaleRange>,
     pub z_range_rows: usize,
     pub(crate) baseline: Option<IngestBaseline>,
+    pub pane_open: bool,
 }
 
 impl SpectrogramState {
@@ -77,10 +79,12 @@ impl SpectrogramState {
             show_grid: true,
             show_count_rate: false,
             show_isotopes: false,
+            show_peaks: false,
             capture_enabled: false,
             z_range: None,
             z_range_rows: 0,
             baseline: None,
+            pane_open: false,
         }
     }
 

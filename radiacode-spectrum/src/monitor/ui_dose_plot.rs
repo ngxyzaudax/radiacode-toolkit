@@ -1,4 +1,4 @@
-use egui::{RichText, Ui, Vec2b};
+use egui::{Ui, Vec2b};
 use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
 
 use crate::dosimeter::{DosimeterState, PlotBounds, dose_points, plot_bounds};
@@ -11,9 +11,8 @@ pub fn draw_cumulative_dose_plot(
     dosimeter: &DosimeterState,
     unit: &str,
     style: HistogramStyle,
+    plot_height: f32,
 ) {
-    ui.label(RichText::new("Cumulative dose").strong());
-    let plot_height = ui.available_height().max(1.0);
     let bounds = plot_bounds(dosimeter);
     let points = dose_points(dosimeter, bounds);
     let unit_label = unit.to_string();

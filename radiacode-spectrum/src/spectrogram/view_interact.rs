@@ -129,8 +129,8 @@ pub fn hover_details(
     if !image_rect.contains(hover) || visible.is_empty() || source_cols.is_empty() {
         return String::new();
     }
-    let rel_x = ((hover.x - image_rect.left()) / image_rect.width()).clamp(0.0, 1.0);
-    let rel_y = ((hover.y - image_rect.top()) / image_rect.height()).clamp(0.0, 1.0);
+    let rel_x = ((hover.x - image_rect.left()) / image_rect.width().max(1.0)).clamp(0.0, 1.0);
+    let rel_y = ((hover.y - image_rect.top()) / image_rect.height().max(1.0)).clamp(0.0, 1.0);
     let col = ((rel_x * source_cols.len() as f32) as usize).min(source_cols.len() - 1);
     let row_index = ((rel_y * visible.len() as f32) as usize).min(visible.len() - 1);
     let source_col = source_cols[col];
