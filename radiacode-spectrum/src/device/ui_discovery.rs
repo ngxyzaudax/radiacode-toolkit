@@ -1,9 +1,12 @@
-use egui::{RichText, Ui};
+use egui::{Button, RichText, Ui};
 
-use radiacode_core::TransportKind;
+use radiacode_core::{DeviceEndpoint, DiscoveredDevice, TransportKind};
 
-use crate::theme::MUTED;
+use crate::theme::{MUTED, SPACE_MD};
 
+use super::ui_common::draw_section_heading;
+use super::ui_device_row::{draw_device_row, draw_reconnect_card};
+use super::ui_empty::draw_empty_discovery;
 use super::DeviceAction;
 use super::DeviceViewProps;
 
@@ -13,91 +16,99 @@ pub fn draw_discovery(
     max_list_height: f32,
 ) -> Option<DeviceAction> {
     let mut action = None;
+    if let Some(next) = draw_discovery_header(ui, props) {
+        action = Some(next);
+    }
+    ui.add_space(SPACE_MD);
+    if let Some(next) = draw_discovery_body(ui, props, max_list_height) {
+        action = Some(next);
+    }
+    action
+}
+
+fn draw_discovery_header(ui: &mut Ui, props: &DeviceViewProps<'_>) -> Option<DeviceAction> {
+    let mut action = None;
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Nearby devices").size(18.0).strong());
+        ui.vertical(|ui| {
+            ui.label(RichText::new("Connect a detector").size(20.0).strong());
+            ui.label(
+                RichText::new("USB or Bluetooth RadiaCode devices on this computer.")
+                    .small()
+                    .color(MUTED),
+            );
+        });
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let label = if props.scanning {
-                "Scanning…"
-            } else {
-                "Scan"
-            };
-            if ui
-                .add_enabled(!props.busy && !props.scanning, egui::Button::new(label))
+            if props.scanning {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label(RichText::new("Scanning…").small().color(MUTED));
+                });
+            } else if ui
+                .add_enabled(!props.busy, Button::new("Scan again"))
                 .clicked()
             {
                 action = Some(DeviceAction::Scan);
             }
         });
     });
-    ui.add_space(12.0);
-
-    if props.scanning {
-        ui.horizontal(|ui| {
-            ui.spinner();
-            ui.label("Searching for RadiaCode over USB and Bluetooth…");
-        });
-        return action;
-    }
-
-    if props.devices.is_empty() {
-        draw_empty_discovery(ui, props.scanned_once);
-        return action;
-    }
-
-    egui::ScrollArea::vertical()
-        .max_height(max_list_height)
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            for device in props.devices {
-                ui.add_space(6.0);
-                egui::Frame::group(ui.style()).show(ui, |ui| {
-                    ui.set_min_width(ui.available_width());
-                    ui.horizontal(|ui| {
-                        ui.vertical(|ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new(device.display_label()).strong().size(16.0));
-                                ui.label(
-                                    RichText::new(device.transport_tag()).small().color(MUTED),
-                                );
-                            });
-                            if let Some(serial) = &device.serial {
-                                ui.label(RichText::new(serial).small());
-                            }
-                            ui.label(
-                                RichText::new(device.endpoint.address_label())
-                                    .monospace()
-                                    .small(),
-                            );
-                            if device.endpoint.transport() == TransportKind::Bluetooth {
-                                if let Some(rssi) = device.rssi {
-                                    ui.label(RichText::new(format!("{rssi} dBm")).weak().small());
-                                }
-                            }
-                        });
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui
-                                .add_enabled(!props.busy, egui::Button::new("Connect"))
-                                .clicked()
-                            {
-                                action = Some(DeviceAction::Connect(device.endpoint.clone()));
-                            }
-                        });
-                    });
-                });
-            }
-        });
     action
 }
 
-fn draw_empty_discovery(ui: &mut Ui, scanned_once: bool) {
-    if scanned_once {
-        ui.label(RichText::new("No detectors found.").size(16.0));
-        ui.label(
-            RichText::new("Plug in USB, power on Bluetooth, then scan again.")
-                .weak()
-                .small(),
-        );
-    } else {
-        ui.label(RichText::new("Starting USB and Bluetooth discovery…").weak());
+fn draw_discovery_body(
+    ui: &mut Ui,
+    props: &DeviceViewProps<'_>,
+    max_list_height: f32,
+) -> Option<DeviceAction> {
+    let mut action = None;
+    if let Some(endpoint) = props.remembered_endpoint {
+        draw_section_heading(ui, "Last used");
+        let device = props
+            .devices
+            .iter()
+            .find(|entry| &entry.endpoint == endpoint);
+        if let Some(next) = draw_reconnect_card(ui, endpoint, device, props.busy) {
+            action = Some(next);
+        }
+        ui.add_space(SPACE_MD);
     }
+    let available = available_devices(props.devices, props.remembered_endpoint);
+    if available.is_empty() && !props.scanning {
+        if let Some(next) = draw_empty_discovery(ui, props.scanned_once, !props.busy) {
+            action = Some(next);
+        }
+        return action;
+    }
+    if !available.is_empty() {
+        draw_section_heading(ui, &format!("Available devices ({})", available.len()));
+        egui::ScrollArea::vertical()
+            .max_height(max_list_height)
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                for device in available {
+                    if let Some(next) = draw_device_row(ui, device, props.busy) {
+                        action = Some(next);
+                    }
+                }
+            });
+    }
+    action
+}
+
+fn available_devices<'a>(
+    devices: &'a [DiscoveredDevice],
+    remembered: Option<&DeviceEndpoint>,
+) -> Vec<&'a DiscoveredDevice> {
+    let mut usb: Vec<_> = devices
+        .iter()
+        .filter(|device| device.endpoint.transport() == TransportKind::Usb)
+        .filter(|device| !remembered.is_some_and(|endpoint| endpoint == &device.endpoint))
+        .collect();
+    let mut bluetooth: Vec<_> = devices
+        .iter()
+        .filter(|device| device.endpoint.transport() == TransportKind::Bluetooth)
+        .filter(|device| !remembered.is_some_and(|endpoint| endpoint == &device.endpoint))
+        .collect();
+    bluetooth.sort_by_key(|device| std::cmp::Reverse(device.rssi));
+    usb.extend(bluetooth);
+    usb
 }

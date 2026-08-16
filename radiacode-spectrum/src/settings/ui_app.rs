@@ -118,6 +118,21 @@ pub fn draw_app_matching(ui: &mut Ui, state: &mut SettingsState) -> bool {
     let mut changed = false;
     changed |= ui
         .add(
+            egui::Slider::new(&mut state.app.peak_sensitivity_sigma, 2.0..=15.0)
+                .text("Peak sensitivity (σ)")
+                .fixed_decimals(1),
+        )
+        .changed();
+    changed |= ui
+        .add(
+            egui::Slider::new(&mut state.app.detector_fwhm_pct, 4.0..=15.0)
+                .text("Detector FWHM @ 662 keV")
+                .suffix("%")
+                .fixed_decimals(1),
+        )
+        .changed();
+    changed |= ui
+        .add(
             egui::Slider::new(&mut state.app.match_tolerance_frac, 0.001..=0.05)
                 .logarithmic(true)
                 .text("Relative tolerance"),
@@ -136,6 +151,9 @@ pub fn draw_app_matching(ui: &mut Ui, state: &mut SettingsState) -> bool {
                 .text("Min gamma intensity (%)"),
         )
         .changed();
+    if changed {
+        state.app.clamp();
+    }
     changed
 }
 

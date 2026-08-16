@@ -24,6 +24,10 @@ pub struct AppConfig {
     pub match_tolerance_floor_kev: f64,
     #[serde(default = "default_match_min_intensity_pct")]
     pub match_min_intensity_pct: f64,
+    #[serde(default = "default_peak_sensitivity_sigma")]
+    pub peak_sensitivity_sigma: f64,
+    #[serde(default = "default_detector_fwhm_pct")]
+    pub detector_fwhm_pct: f64,
     #[serde(default = "default_catalogue_fwhm_pct")]
     pub catalogue_fwhm_pct: f64,
     #[serde(default = "default_ui_scale")]
@@ -31,7 +35,7 @@ pub struct AppConfig {
 }
 
 fn default_match_tolerance_frac() -> f64 {
-    0.01
+    0.02
 }
 
 fn default_match_tolerance_floor_kev() -> f64 {
@@ -39,11 +43,19 @@ fn default_match_tolerance_floor_kev() -> f64 {
 }
 
 fn default_match_min_intensity_pct() -> f64 {
-    1.0
+    1.7
+}
+
+fn default_peak_sensitivity_sigma() -> f64 {
+    3.0
+}
+
+fn default_detector_fwhm_pct() -> f64 {
+    7.0
 }
 
 fn default_catalogue_fwhm_pct() -> f64 {
-    3.5
+    7.5
 }
 
 fn default_ui_scale() -> f32 {
@@ -68,6 +80,8 @@ impl Default for AppConfig {
             match_tolerance_frac: default_match_tolerance_frac(),
             match_tolerance_floor_kev: default_match_tolerance_floor_kev(),
             match_min_intensity_pct: default_match_min_intensity_pct(),
+            peak_sensitivity_sigma: default_peak_sensitivity_sigma(),
+            detector_fwhm_pct: default_detector_fwhm_pct(),
             catalogue_fwhm_pct: default_catalogue_fwhm_pct(),
             ui_scale: default_ui_scale(),
         }
@@ -85,6 +99,8 @@ impl AppConfig {
         self.match_tolerance_frac = self.match_tolerance_frac.clamp(0.001, 0.05);
         self.match_tolerance_floor_kev = self.match_tolerance_floor_kev.clamp(1.0, 20.0);
         self.match_min_intensity_pct = self.match_min_intensity_pct.clamp(0.1, 50.0);
+        self.peak_sensitivity_sigma = self.peak_sensitivity_sigma.clamp(2.0, 15.0);
+        self.detector_fwhm_pct = self.detector_fwhm_pct.clamp(4.0, 15.0);
         self.catalogue_fwhm_pct = self.catalogue_fwhm_pct.clamp(1.0, 20.0);
         self.ui_scale = self.ui_scale.clamp(0.75, 1.5);
     }

@@ -1,8 +1,9 @@
 use egui::Ui;
 use tracing::debug;
 
+use crate::plot_hover::spectrogram_hover_text;
 use crate::spectrogram::layout::SpectrogramLayout;
-use crate::spectrogram::model::{RowKind, SpectrogramSeries};
+use crate::spectrogram::model::SpectrogramSeries;
 use crate::spectrogram::state::SpectrogramState;
 
 pub fn handle_view_interaction(
@@ -136,35 +137,15 @@ pub fn hover_details(
     let source_col = source_cols[col];
     let row = &visible[row_index];
     let absolute = row_start + row_index;
-    let age_secs = series.age_secs_before(absolute);
-    let energy_kev = series.energies_kev.get(source_col).copied().unwrap_or(0.0);
-    let counts = row.counts.get(source_col).copied().unwrap_or(0);
-    let total = row.row_total();
-    let kind_line = row_kind_line(row.kind, total);
-    format!(
-        "channel {source_col}\n{energy_kev:.1} keV\nrow {absolute} / {total_rows}\n{age_secs:.0} s ago\ninterval {:.0} s\n{counts} counts\nrow total {total}\n{kind_line}",
-        row.interval_secs
+    spectrogram_hover_text(
+        series.energies_kev.get(source_col).copied().unwrap_or(0.0),
+        row.counts.get(source_col).copied().unwrap_or(0),
+        source_col,
+        absolute,
+        total_rows,
+        series.age_secs_before(absolute),
+        row.interval_secs,
+        row.row_total(),
+        row.kind,
     )
-}
-
-fn row_kind_line(kind: RowKind, total: u64) -> String {
-    match kind {
-        RowKind::Normal => "kind: normal".into(),
-        RowKind::GapRecovery {
-            offline_secs,
-            raw_total,
-        } => {
-            let rate = if offline_secs > 0.0 {
-                raw_total as f64 / offline_secs
-            } else {
-                0.0
-            };
-            format!(
-                "kind: gap recovery\noffline {offline_secs:.0} s\nraw total {raw_total}\n{rate:.1} counts/s"
-            )
-        }
-        RowKind::LiveSpike { rate_factor } => {
-            format!("kind: live spike\n{rate_factor:.1}× recent median\nrow total {total}")
-        }
-    }
 }

@@ -9,14 +9,18 @@ pub struct MatchParams {
     pub relative_frac: f64,
     pub floor_kev: f64,
     pub min_intensity_pct: f64,
+    pub detector_fwhm_pct: f64,
+    pub tolerance_fwhm_frac: f64,
 }
 
 impl Default for MatchParams {
     fn default() -> Self {
         Self {
-            relative_frac: 0.01,
+            relative_frac: 0.02,
             floor_kev: 3.0,
-            min_intensity_pct: 1.0,
+            min_intensity_pct: 1.7,
+            detector_fwhm_pct: 7.0,
+            tolerance_fwhm_frac: 0.5,
         }
     }
 }
@@ -45,23 +49,46 @@ pub struct PeakIdentification {
 }
 
 pub fn tolerance_kev(energy_kev: f64, params: MatchParams) -> f64 {
-    (energy_kev * params.relative_frac).max(params.floor_kev)
+    let fwhm = resolution_fwhm_kev(energy_kev, params.detector_fwhm_pct);
+    (params.tolerance_fwhm_frac * fwhm)
+        .max(energy_kev * params.relative_frac)
+        .max(params.floor_kev)
+}
+
+pub fn resolution_fwhm_kev(energy_kev: f64, fwhm_pct_at_662: f64) -> f64 {
+    if energy_kev <= 0.0 || fwhm_pct_at_662 <= 0.0 {
+        return 1.0;
+    }
+    const REFERENCE_ENERGY_KEV: f64 = 662.0;
+    let reference_fwhm = REFERENCE_ENERGY_KEV * fwhm_pct_at_662 / 100.0;
+    reference_fwhm * (energy_kev / REFERENCE_ENERGY_KEV).sqrt()
 }
 
 pub fn match_peaks(peaks: &[SpectrumPeak], params: MatchParams) -> Vec<PeakIdentification> {
     if peaks.is_empty() {
         return Vec::new();
     }
-    let per_peak = peaks
+    let max_counts = peaks
+        .iter()
+        .map(|peak| peak.counts)
+        .fold(1.0_f64, f64::max);
+    let normalized = peaks
+        .iter()
+        .map(|peak| SpectrumPeak {
+            energy_kev: peak.energy_kev,
+            counts: peak.counts / max_counts,
+        })
+        .collect::<Vec<_>>();
+    let per_peak = normalized
         .iter()
         .map(|peak| single_peak_candidates(*peak, params))
         .collect::<Vec<_>>();
-    let nuclide_scores = aggregate_nuclide_scores(&per_peak);
-    peaks
+    normalized
         .iter()
+        .zip(peaks.iter())
         .zip(per_peak)
-        .map(|(peak, candidates)| {
-            let ranked = rank_candidates(candidates, &nuclide_scores);
+        .map(|((_, peak), candidates)| {
+            let ranked = rank_candidates(candidates);
             PeakIdentification {
                 peak: *peak,
                 candidates: ranked,
@@ -89,8 +116,12 @@ fn line_match(peak: SpectrumPeak, line: &IndexedLine, tolerance: f64) -> Option<
         return None;
     }
     let closeness = 1.0 - delta / tolerance;
+    if closeness < 0.25 {
+        return None;
+    }
     let intensity_weight = (line.intensity_pct / 100.0).clamp(0.01, 1.0);
-    let score = closeness + intensity_weight * 0.001;
+    let count_weight = (peak.counts.max(1e-6).sqrt() + 0.1).min(2.0);
+    let score = closeness * closeness * (0.15 + 0.85 * intensity_weight) * count_weight;
     Some(NuclideMatch {
         nuclide_id: line.nuclide_id,
         display_name: nuclide.display_name.clone(),
@@ -102,37 +133,7 @@ fn line_match(peak: SpectrumPeak, line: &IndexedLine, tolerance: f64) -> Option<
     })
 }
 
-fn aggregate_nuclide_scores(
-    per_peak: &[Vec<NuclideMatch>],
-) -> HashMap<NuclideId, (f64, u32)> {
-    let mut totals = HashMap::new();
-    for candidates in per_peak {
-        let mut best_per_nuclide = HashMap::new();
-        for candidate in candidates {
-            best_per_nuclide
-                .entry(candidate.nuclide_id)
-                .and_modify(|existing: &mut NuclideMatch| {
-                    if candidate.score > existing.score {
-                        *existing = candidate.clone();
-                    }
-                })
-                .or_insert_with(|| candidate.clone());
-        }
-        for candidate in best_per_nuclide.into_values() {
-            let entry = totals
-                .entry(candidate.nuclide_id)
-                .or_insert((0.0_f64, 0_u32));
-            entry.0 += candidate.score;
-            entry.1 += 1;
-        }
-    }
-    totals
-}
-
-fn rank_candidates(
-    mut candidates: Vec<NuclideMatch>,
-    nuclide_scores: &HashMap<NuclideId, (f64, u32)>,
-) -> Vec<NuclideMatch> {
+fn rank_candidates(mut candidates: Vec<NuclideMatch>) -> Vec<NuclideMatch> {
     let mut best_by_nuclide = HashMap::new();
     for candidate in candidates.drain(..) {
         best_by_nuclide
@@ -145,18 +146,17 @@ fn rank_candidates(
             .or_insert(candidate);
     }
     let mut ranked = best_by_nuclide.into_values().collect::<Vec<_>>();
-    for candidate in &mut ranked {
-        if let Some((total, count)) = nuclide_scores.get(&candidate.nuclide_id) {
-            let boost = 1.0 + 0.5 * (*count as f64 - 1.0).max(0.0);
-            candidate.score = candidate.score * boost + total * 0.25;
-            candidate.matched_lines = *count;
-        }
-    }
     ranked.sort_by(|left, right| {
         right
             .score
             .partial_cmp(&left.score)
             .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                left.delta_kev
+                    .partial_cmp(&right.delta_kev)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| left.display_name.cmp(&right.display_name))
     });
     ranked
 }

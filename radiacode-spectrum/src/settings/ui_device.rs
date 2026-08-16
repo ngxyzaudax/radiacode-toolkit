@@ -29,6 +29,14 @@ pub fn draw_device_info(ui: &mut Ui, info: Option<&DeviceInfo>) {
         if let Some(rssi) = info.rssi_dbm {
             meta_chip(ui, "RSSI", &format!("{rssi} dBm"));
         }
+        meta_chip(
+            ui,
+            "Calibration",
+            &format!(
+                "a0={:.2} a1={:.3} a2={:.5}",
+                info.energy_calib[0], info.energy_calib[1], info.energy_calib[2]
+            ),
+        );
     });
 }
 

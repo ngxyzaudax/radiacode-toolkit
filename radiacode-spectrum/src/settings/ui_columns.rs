@@ -117,8 +117,8 @@ pub fn draw_application_column(
     );
     settings_section(
         ui,
-        "Isotope matching",
-        "Peak-to-nuclide identification tolerance.",
+        "Peak detection and identification",
+        "Sensitivity, detector resolution, and nuclide matching tolerance.",
         |ui| {
             if draw_app_matching(ui, state) {
                 *action = Some(SettingsAction::AppChanged);

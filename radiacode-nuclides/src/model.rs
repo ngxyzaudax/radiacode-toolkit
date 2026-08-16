@@ -31,7 +31,7 @@ pub enum DecayMode {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DecayBranch {
     pub mode: DecayMode,
     pub branching_pct: f64,
@@ -58,7 +58,7 @@ fn default_radiation_kind() -> RadiationKind {
     RadiationKind::Gamma
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GammaLine {
     pub energy_kev: f64,
     pub intensity_pct: f64,
@@ -83,4 +83,18 @@ pub struct Nuclide {
 pub struct Catalog {
     pub version: u32,
     pub nuclides: Vec<Nuclide>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TopologyEntry {
+    pub id: NuclideId,
+    pub display_name: String,
+    pub half_life_secs: Option<f64>,
+    pub decays: Vec<DecayBranch>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecayCatalog {
+    pub version: u32,
+    pub entries: Vec<TopologyEntry>,
 }

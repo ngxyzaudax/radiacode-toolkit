@@ -3,7 +3,9 @@ use egui::{RichText, Ui};
 use radiacode_nuclides::nuclide_count;
 
 use crate::app_config::AppConfig;
+use crate::catalogue::browse_mode::CatalogueMode;
 use crate::catalogue::state::CatalogueState;
+use crate::catalogue::ui_chain_detail::draw_chain_detail;
 use crate::catalogue::ui_detail::draw_catalogue_detail;
 use crate::catalogue::ui_pane::{draw_catalogue_pane, CatalogueAction};
 use crate::layout::{draw_master_detail, MasterDetailRegion};
@@ -35,11 +37,18 @@ pub fn draw_catalogue_view(
         |ui, region| match region {
             MasterDetailRegion::Pane => {
                 if let Some(CatalogueAction::FiltersChanged) = draw_catalogue_pane(ui, state) {
-                    state.refresh_results();
+                    match state.mode {
+                        CatalogueMode::Nuclides => state.refresh_results(),
+                        CatalogueMode::Chains => state.chains.refresh_results(),
+                    }
                 }
             }
             MasterDetailRegion::Detail => {
-                if draw_catalogue_detail(ui, state, config) {
+                let detail_changed = match state.mode {
+                    CatalogueMode::Nuclides => draw_catalogue_detail(ui, state, config),
+                    CatalogueMode::Chains => draw_chain_detail(ui, state, config),
+                };
+                if detail_changed {
                     changed = true;
                 }
             }

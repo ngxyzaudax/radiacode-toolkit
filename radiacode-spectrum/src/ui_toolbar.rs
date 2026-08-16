@@ -13,7 +13,6 @@ pub struct SpectrumToolbarProps<'a> {
     pub smooth_window: &'a mut usize,
     pub outline_only: &'a mut bool,
     pub show_peaks: &'a mut bool,
-    pub identify_isotopes: &'a mut bool,
 }
 
 pub enum SpectrumToolbarAction {
@@ -58,10 +57,7 @@ fn draw_spectrum_controls(ui: &mut Ui, props: SpectrumToolbarProps<'_>) {
     ui.selectable_value(props.y_scale, YScale::Linear, "Linear");
     ui.selectable_value(props.y_scale, YScale::Logarithmic, "Log");
     draw_plot_style_toggle(ui, props.outline_only);
-    ui.checkbox(props.show_peaks, "Peaks");
-    ui.add_enabled_ui(*props.show_peaks, |ui| {
-        ui.checkbox(props.identify_isotopes, "Identify");
-    });
+    ui.checkbox(props.show_peaks, "Peak detection");
     ui.label("Smoothing");
     let mut slider = (*props.smooth_window).clamp(1, 16) as i32;
     if ui

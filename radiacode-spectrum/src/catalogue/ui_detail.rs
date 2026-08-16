@@ -1,6 +1,6 @@
 use egui::{RichText, Ui};
 
-use radiacode_nuclides::{Nuclide, format_half_life, nuclide_by_id};
+use radiacode_nuclides::{Nuclide, format_half_life, nuclide_by_id, series_for_member};
 
 use crate::app_config::AppConfig;
 use crate::catalogue::state::CatalogueState;
@@ -31,6 +31,17 @@ pub fn draw_catalogue_detail(
         return false;
     };
     draw_nuclide_header(ui, nuclide);
+    if let Some(series) = series_for_member(id) {
+        ui.horizontal(|ui| {
+            if ui
+                .button(format!("View in {} series", series.name))
+                .clicked()
+            {
+                state.select_chain_by_head(series.head);
+            }
+        });
+        ui.add_space(SPACE_SM);
+    }
     draw_nuclide_stats(ui, nuclide);
     ui.add_space(SPACE_SM);
     let remaining = ui.available_height();

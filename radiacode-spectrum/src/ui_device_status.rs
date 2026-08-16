@@ -130,7 +130,7 @@ fn battery_color(percent: f32) -> Color32 {
     }
 }
 
-fn signal_color(rssi_dbm: i16) -> Color32 {
+pub(crate) fn signal_color(rssi_dbm: i16) -> Color32 {
     if rssi_dbm >= -55 {
         Color32::from_rgb(110, 190, 120)
     } else if rssi_dbm >= -75 {
@@ -205,7 +205,7 @@ fn paint_thermometer_icon(ui: &mut Ui) {
     );
 }
 
-fn paint_signal_icon(ui: &mut Ui, rssi_dbm: i16) {
+pub(crate) fn paint_signal_icon(ui: &mut Ui, rssi_dbm: i16) {
     let size = Vec2::new(18.0, 16.0);
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
     let painter = ui.painter();

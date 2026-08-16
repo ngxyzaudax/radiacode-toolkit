@@ -1,11 +1,11 @@
 use egui::{Color32, Context, Image, RichText, Sense, Ui};
 
 use crate::app_config::AppConfig;
-use crate::identify::identify_peaks;
+use crate::identify::{analyze_peaks, detection_params_from_config};
 use crate::layout::{draw_master_detail, safe_span, MasterDetailRegion};
 use crate::model::ConnectionState;
-use crate::peak_overlay::draw_identified_spectrogram_lines;
-use crate::peak_profile::peaks_from_spectrogram_view;
+use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips, draw_spectrogram_peaks};
+use crate::peaks::peaks_from_spectrogram_series;
 use crate::spectrogram::axes::{draw_header_line, draw_x_axis, x_axis_label, y_axis_label};
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::count_rate::draw_count_rate_overlay;
@@ -33,9 +33,10 @@ pub fn draw_spectrogram_view(
     state: &mut SpectrogramState,
     config: &AppConfig,
     connection: ConnectionState,
-) -> Option<SpectrogramControlsAction> {
+) -> (Option<SpectrogramControlsAction>, Option<SpectrumPlotAction>) {
     let mut action = draw_spectrogram_toolbar(ui, state, connection);
     let mut pane_open = state.pane_open;
+    let mut plot_action = None;
     draw_master_detail(
         ui,
         "spectrogram_library",
@@ -43,11 +44,13 @@ pub fn draw_spectrogram_view(
         &mut pane_open,
         |ui, region| match region {
             MasterDetailRegion::Pane => draw_library(ui, state, &mut action),
-            MasterDetailRegion::Detail => draw_spectrogram_plot(ui, ctx, state, config),
+            MasterDetailRegion::Detail => {
+                plot_action = draw_spectrogram_plot(ui, ctx, state, config);
+            }
         },
     );
     state.pane_open = pane_open;
-    action
+    (action, plot_action)
 }
 
 fn draw_spectrogram_plot(
@@ -55,7 +58,7 @@ fn draw_spectrogram_plot(
     ctx: &Context,
     state: &mut SpectrogramState,
     config: &AppConfig,
-) {
+) -> Option<SpectrumPlotAction> {
     let total_rows = state
         .active_series()
         .map(|series| series.row_count())
@@ -90,6 +93,7 @@ fn draw_spectrogram_plot(
         safe_span(available.x, AXIS_LEFT, PLOT_MIN),
         safe_span(available.y, AXIS_BOTTOM, PLOT_MIN),
     );
+    let mut peak_sources = None;
 
     ui.horizontal(|ui| {
         if !y_label.is_empty() {
@@ -151,25 +155,18 @@ fn draw_spectrogram_plot(
                 layout.display_cols,
             );
             let visible = series.row_window(row_start, layout.display_rows);
-            if state.show_isotopes {
-                let peaks = peaks_from_spectrogram_view(series, visible, &source_cols, 3);
-                let identifications = identify_peaks(&peaks, config);
-                draw_identified_spectrogram_lines(
+            if state.show_peaks {
+                let params = detection_params_from_config(config);
+                let peaks = peaks_from_spectrogram_series(series, params);
+                let analysis = analyze_peaks(&peaks, config);
+                draw_spectrogram_peaks(
                     &axis_painter,
                     layout.image_rect,
                     energy_min,
                     energy_max,
-                    &identifications,
+                    &analysis.identifications,
                 );
-            } else if state.show_peaks {
-                let peaks = peaks_from_spectrogram_view(series, visible, &source_cols, 3);
-                crate::peak_overlay::draw_spectrogram_peaks(
-                    &axis_painter,
-                    layout.image_rect,
-                    energy_min,
-                    energy_max,
-                    &peaks,
-                );
+                peak_sources = Some(analysis.sources);
             }
             draw_count_rate_overlay(
                 &axis_painter,
@@ -198,6 +195,7 @@ fn draw_spectrogram_plot(
         }
     });
     ui.label(RichText::new(x_label).small().color(MUTED));
+    peak_sources.and_then(|sources| draw_source_chips(ui, &sources))
 }
 
 fn channels_for_view(state: &SpectrogramState) -> usize {

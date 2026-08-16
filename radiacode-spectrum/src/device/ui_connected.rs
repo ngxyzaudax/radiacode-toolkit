@@ -1,36 +1,46 @@
-use egui::{RichText, Ui};
+use egui::{Button, Color32, RichText, Ui, Vec2};
 
 use crate::model::DeviceInfo;
-use crate::theme::ACCENT;
+use crate::theme::{MUTED, SPACE_MD, SPACE_SM};
 use crate::ui_device_status::draw_status_row;
 
+use super::icons::paint_transport_icon;
+use super::ui_common::draw_section_card;
 use super::DeviceAction;
+
+const DANGER: Color32 = Color32::from_rgb(220, 90, 90);
 
 pub fn draw_connected(ui: &mut Ui, info: &DeviceInfo) -> Option<DeviceAction> {
     let mut action = None;
-    ui.label(RichText::new("Connected").size(20.0).color(ACCENT).strong());
-    ui.add_space(12.0);
-    ui.horizontal(|ui| {
-        ui.vertical(|ui| {
-            ui.label(RichText::new(format!("Model {}", info.model)).size(16.0));
-            ui.label(RichText::new(&info.serial).size(28.0).strong());
+    draw_section_card(ui, |ui| {
+        ui.horizontal(|ui| {
+            paint_transport_icon(ui, info.transport);
+            ui.add_space(SPACE_SM);
+            ui.vertical(|ui| {
+                ui.label(RichText::new(format!("RadiaCode {}", info.model)).size(18.0).strong());
+                ui.label(RichText::new(&info.serial).monospace().size(20.0));
+            });
         });
+        ui.add_space(SPACE_MD);
+        draw_status_row(ui, info);
+        ui.add_space(SPACE_SM);
+        ui.label(
+            RichText::new(format!(
+                "Firmware {} · {} · {}",
+                info.firmware,
+                info.transport_label(),
+                info.address
+            ))
+            .small()
+            .color(MUTED),
+        );
     });
-    ui.add_space(12.0);
-    draw_status_row(ui, info);
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(8.0);
-    ui.label(format!("Transport {}", info.transport_label()));
-    ui.label(RichText::new(&info.address).monospace());
-    ui.label(format!("Firmware {}", info.firmware));
-    ui.label(format!(
-        "Calibration  a0={:.2}  a1={:.3}  a2={:.5}",
-        info.energy_calib[0], info.energy_calib[1], info.energy_calib[2]
-    ));
-    ui.add_space(16.0);
+    ui.add_space(SPACE_MD);
     if ui
-        .add(egui::Button::new("Disconnect").min_size([200.0, 36.0].into()))
+        .add(
+            Button::new(RichText::new("Disconnect").color(DANGER))
+                .min_size(Vec2::new(160.0, 34.0)),
+        )
         .clicked()
     {
         action = Some(DeviceAction::Disconnect);

@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use eframe::App;
 use egui::{CentralPanel, Context, Ui, ViewportCommand, ViewportId};
@@ -40,6 +40,15 @@ use crate::usb_access::{
 use crate::view_tab::ViewTab;
 use crate::worker::{WorkerCommand, WorkerEvent, WorkerHandle, spawn_worker};
 
+const SHUTDOWN_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CloseState {
+    None,
+    AwaitingDisconnect,
+    Closing,
+}
+
 pub struct SpectrumApp {
     worker: WorkerHandle,
     state: AppState,
@@ -53,7 +62,6 @@ pub struct SpectrumApp {
     smooth_window: usize,
     plot_outline_only: bool,
     show_spectrum_peaks: bool,
-    show_spectrum_isotopes: bool,
     theme_ready: bool,
     startup_scan_sent: bool,
     icon_sent: bool,
@@ -65,6 +73,9 @@ pub struct SpectrumApp {
     monitor_leave_open: bool,
     pending_tab: Option<ViewTab>,
     pending_tab_after_save: Option<ViewTab>,
+    close_state: CloseState,
+    close_started: Option<Instant>,
+    close_after_disconnect: bool,
 }
 
 impl SpectrumApp {
@@ -90,7 +101,6 @@ impl SpectrumApp {
             smooth_window: DEFAULT_SMOOTHING_WINDOW,
             plot_outline_only: false,
             show_spectrum_peaks: false,
-            show_spectrum_isotopes: false,
             theme_ready: false,
             startup_scan_sent: false,
             icon_sent: false,
@@ -102,7 +112,67 @@ impl SpectrumApp {
             monitor_leave_open: false,
             pending_tab: None,
             pending_tab_after_save: None,
+            close_state: CloseState::None,
+            close_started: None,
+            close_after_disconnect: false,
         }
+    }
+
+    fn device_link_active(&self) -> bool {
+        matches!(
+            self.state.connection,
+            ConnectionState::Connected | ConnectionState::Connecting
+        )
+    }
+
+    fn shutting_down(&self) -> bool {
+        self.close_state != CloseState::None
+    }
+
+    fn handle_close_request(&mut self, ctx: &Context) {
+        let close_requested = ctx.input(|input| input.viewport().close_requested());
+        if !close_requested || self.shutting_down() {
+            return;
+        }
+        ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+        if self.device_link_active() {
+            info!("application close requested; disconnecting device");
+            self.close_state = CloseState::AwaitingDisconnect;
+            self.close_started = Some(Instant::now());
+            self.disconnect_device();
+            return;
+        }
+        self.complete_close(ctx);
+    }
+
+    fn advance_close(&mut self, ctx: &Context) {
+        if self.close_after_disconnect {
+            self.close_after_disconnect = false;
+            self.complete_close(ctx);
+            return;
+        }
+        if self.close_state != CloseState::AwaitingDisconnect {
+            return;
+        }
+        let Some(started) = self.close_started else {
+            self.complete_close(ctx);
+            return;
+        };
+        if started.elapsed() >= SHUTDOWN_DISCONNECT_TIMEOUT {
+            warn!("device disconnect timed out during shutdown; closing anyway");
+            self.complete_close(ctx);
+        }
+    }
+
+    fn complete_close(&mut self, ctx: &Context) {
+        if self.close_state == CloseState::Closing {
+            return;
+        }
+        info!("application shutdown complete");
+        self.close_state = CloseState::Closing;
+        self.close_started = None;
+        self.close_after_disconnect = false;
+        ctx.send_viewport_cmd(ViewportCommand::Close);
     }
 
     fn apply_ui_scale(&self, ctx: &Context) {
@@ -184,6 +254,9 @@ impl SpectrumApp {
     }
 
     fn maybe_auto_connect(&mut self) {
+        if self.shutting_down() {
+            return;
+        }
         if self.auto_connect_attempted {
             return;
         }
@@ -265,6 +338,9 @@ impl SpectrumApp {
                     self.sync_monitor_poll_interval();
                     self.spectrogram.sync_from_capture();
                     self.remember_connected_device(info);
+                    if self.active_tab == ViewTab::Device {
+                        self.active_tab = ViewTab::Monitor;
+                    }
                     if matches!(self.active_tab, ViewTab::Settings | ViewTab::Monitor)
                         && !self.settings.draft_dirty()
                     {
@@ -276,6 +352,9 @@ impl SpectrumApp {
                     self.settings.on_disconnect();
                     self.session_blocked = false;
                     self.last_alarm_level = AlarmLevel::Normal;
+                    if self.close_state == CloseState::AwaitingDisconnect {
+                        self.close_after_disconnect = true;
+                    }
                 }
                 _ => {}
             }
@@ -291,7 +370,7 @@ impl SpectrumApp {
             if fetch_spectrum {
                 self.schedule_spectrum();
             }
-            if scan_finished {
+            if scan_finished && !self.shutting_down() {
                 self.maybe_auto_connect();
             }
         }
@@ -560,7 +639,11 @@ impl SpectrumApp {
     fn handle_spectrum_plot_action(&mut self, action: SpectrumPlotAction) {
         match action {
             SpectrumPlotAction::OpenCatalogue(id) => {
-                self.catalogue.select(id);
+                self.catalogue.reveal(id);
+                self.active_tab = ViewTab::Catalogue;
+            }
+            SpectrumPlotAction::OpenCatalogueChain(head) => {
+                self.catalogue.select_chain_by_head(head);
                 self.active_tab = ViewTab::Catalogue;
             }
         }
@@ -687,6 +770,9 @@ impl SpectrumApp {
     }
 
     fn maybe_live_refresh(&mut self) {
+        if self.shutting_down() {
+            return;
+        }
         if self.state.connection != ConnectionState::Connected {
             return;
         }
@@ -709,6 +795,7 @@ impl SpectrumApp {
                     connection: self.state.connection,
                     connecting_endpoint: self.state.connecting_endpoint.as_ref(),
                     device_info: self.state.device_info.as_ref(),
+                    remembered_endpoint: self.settings.app.last_endpoint.as_ref(),
                     scanning: self.state.scanning,
                     busy: self.state.busy,
                     scanned_once: self.state.scanned_once,
@@ -737,7 +824,7 @@ impl SpectrumApp {
         }
         if self.active_tab == ViewTab::Analysis {
             if let Some(action) =
-                draw_analysis_view(ui, &mut self.analysis, self.y_scale, &self.settings.app)
+                draw_analysis_view(ui, &mut self.analysis, &mut self.y_scale, &self.settings.app)
             {
                 self.handle_spectrum_plot_action(action);
             }
@@ -778,7 +865,6 @@ impl SpectrumApp {
                             smooth_window: &mut self.smooth_window,
                             outline_only: &mut self.plot_outline_only,
                             show_peaks: &mut self.show_spectrum_peaks,
-                            identify_isotopes: &mut self.show_spectrum_isotopes,
                         },
                     ) {
                         self.handle_spectrum_toolbar_action(action);
@@ -790,21 +876,24 @@ impl SpectrumApp {
                         self.smooth_window,
                         plot_style,
                         self.show_spectrum_peaks,
-                        self.show_spectrum_isotopes,
                         &self.settings.app,
                     ) {
                         self.handle_spectrum_plot_action(action);
                     }
                 }
                 ViewTab::Spectrogram => {
-                    if let Some(action) = draw_spectrogram_view(
+                    let (controls_action, plot_action) = draw_spectrogram_view(
                         ui,
                         ctx,
                         &mut self.spectrogram,
                         &self.settings.app,
                         self.state.connection,
-                    ) {
+                    );
+                    if let Some(action) = controls_action {
                         self.handle_spectrogram_action(action);
+                    }
+                    if let Some(action) = plot_action {
+                        self.handle_spectrum_plot_action(action);
                     }
                 }
                 ViewTab::Device
@@ -834,7 +923,9 @@ impl App for SpectrumApp {
             self.startup_scan_sent = true;
             self.start_scan();
         }
+        self.handle_close_request(ctx);
         self.poll_events();
+        self.advance_close(ctx);
         self.poll_usb_access();
         if self.state.connection == ConnectionState::Connected {
             self.spectrogram.sync_from_capture();

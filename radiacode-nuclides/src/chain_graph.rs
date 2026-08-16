@@ -1,8 +1,8 @@
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
-use crate::catalog::{catalog, nuclide_by_id};
-use crate::elements::nuclide_display_name;
+use crate::catalog::nuclide_by_id;
 use crate::model::{DecayMode, NuclideId};
+use crate::topology::{topology_decays, topology_display_name, topology_half_life_secs, topology_parents};
 
 const DEFAULT_UPSTREAM_STEPS: usize = 1;
 
@@ -64,10 +64,7 @@ fn collect_downstream(include: &mut BTreeSet<NuclideId>, focus: NuclideId, max_n
         if include.len() >= max_nodes {
             break;
         }
-        let Some(nuclide) = nuclide_by_id(id) else {
-            continue;
-        };
-        for branch in &nuclide.decays {
+        for branch in topology_decays(id) {
             if include.insert(branch.daughter) {
                 queue.push_back(branch.daughter);
             }
@@ -86,7 +83,7 @@ fn collect_upstream(
         if step >= upstream_steps || include.len() >= max_nodes {
             continue;
         }
-        for parent in find_parents(id) {
+        for &parent in topology_parents(id) {
             if include.insert(parent) {
                 queue.push_back((parent, step + 1));
             }
@@ -94,46 +91,20 @@ fn collect_upstream(
     }
 }
 
-fn find_parents(daughter: NuclideId) -> Vec<NuclideId> {
-    catalog()
-        .nuclides
-        .iter()
-        .filter(|nuclide| {
-            nuclide
-                .decays
-                .iter()
-                .any(|branch| branch.daughter == daughter)
-        })
-        .map(|nuclide| nuclide.id)
-        .collect()
-}
-
 fn build_node(id: NuclideId) -> ChainNode {
-    if let Some(nuclide) = nuclide_by_id(id) {
-        return ChainNode {
-            nuclide_id: id,
-            display_name: nuclide.display_name.clone(),
-            half_life_secs: nuclide.half_life_secs,
-            depth: 0,
-            in_catalogue: true,
-        };
-    }
     ChainNode {
         nuclide_id: id,
-        display_name: nuclide_display_name(id.z, id.mass_number()),
-        half_life_secs: None,
+        display_name: topology_display_name(id),
+        half_life_secs: topology_half_life_secs(id),
         depth: 0,
-        in_catalogue: false,
+        in_catalogue: nuclide_by_id(id).is_some(),
     }
 }
 
 fn build_edges(nodes: &[ChainNode], index_by_id: &HashMap<NuclideId, usize>) -> Vec<ChainEdge> {
     let mut edges = Vec::new();
     for (from_index, node) in nodes.iter().enumerate() {
-        let Some(nuclide) = nuclide_by_id(node.nuclide_id) else {
-            continue;
-        };
-        for branch in &nuclide.decays {
+        for branch in topology_decays(node.nuclide_id) {
             let Some(&to_index) = index_by_id.get(&branch.daughter) else {
                 continue;
             };
@@ -190,6 +161,22 @@ mod tests {
 
     fn pb206_id() -> NuclideId {
         NuclideId::new(82, 124, 0)
+    }
+
+    fn th232_id() -> NuclideId {
+        NuclideId::new(90, 142, 0)
+    }
+
+    #[test]
+    fn th232_graph_reaches_tl208() {
+        let graph = decay_graph(th232_id(), 64);
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.display_name == "Tl-208"),
+            "Th-232 chain should reach Tl-208 through Po-216"
+        );
     }
 
     #[test]

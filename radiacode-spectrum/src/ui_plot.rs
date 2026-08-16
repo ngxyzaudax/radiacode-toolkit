@@ -1,17 +1,15 @@
 use egui::{RichText, Ui, Vec2b};
-use egui_plot::{Bar, HoverPosition, Plot};
+use egui_plot::{Bar, Plot};
 
 use crate::app_config::AppConfig;
 use crate::energy::{
     ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range, energy_grid,
 };
-use crate::identify::identify_peaks;
+use crate::identify::{analyze_peaks, detection_params_from_config};
 use crate::model::SpectrumView;
-use crate::peak_detect::peaks_in_energy_range;
-use crate::peak_overlay::{
-    SpectrumPlotAction, draw_identification_chips, draw_identified_peaks, draw_spectrum_peaks,
-};
-use crate::peak_profile::peaks_from_values;
+use crate::peak_overlay::{SpectrumPlotAction, draw_peak_markers, draw_source_chips};
+use crate::peaks::{peaks_from_spectrum_view, sample_curve_y};
+use crate::plot_hover::counts_plot_hover;
 use crate::plot_style::styled_histogram_line;
 use crate::scale::{HistogramStyle, YScale, display_value, y_axis_top};
 use crate::smooth::moving_average_f64;
@@ -24,7 +22,6 @@ pub fn draw_spectrum_plot(
     smooth_window: usize,
     style: HistogramStyle,
     show_peaks: bool,
-    identify_isotopes: bool,
     config: &AppConfig,
 ) -> Option<SpectrumPlotAction> {
     let Some(spectrum) = spectrum else {
@@ -61,11 +58,15 @@ pub fn draw_spectrum_plot(
         .collect();
     let smoothed = moving_average_f64(&grid_counts, smooth_window);
     let bars = build_spectrum_bars(&grid.energies_kev, &smoothed, y_scale, spectrum.a1);
-    let peaks = peaks_from_values(&grid.energies_kev, &grid_counts, smooth_window);
     let peak = bars.iter().map(|bar| bar.value).fold(0.0_f64, f64::max);
     let y_top = y_axis_top(peak, y_scale);
-    let y_scale_for_hover = y_scale;
-    let mut plot_action = None;
+    let analysis = if show_peaks {
+        let params = detection_params_from_config(config);
+        let peaks = peaks_from_spectrum_view(spectrum, params);
+        Some(analyze_peaks(&peaks, config))
+    } else {
+        None
+    };
 
     Plot::new("spectrum_plot_kev")
         .allow_zoom(true)
@@ -76,13 +77,7 @@ pub fn draw_spectrum_plot(
         .include_y(0.0)
         .x_axis_label("Energy (keV)")
         .y_axis_label(y_axis_label(y_scale))
-        .label_formatter(move |pos| match pos {
-            HoverPosition::NearDataPoint { position, .. } => {
-                let counts = hover_counts(position.y, y_scale_for_hover);
-                Some(format!("{:.1} keV\n{counts} counts", position.x))
-            }
-            _ => None,
-        })
+        .label_formatter(move |pos| counts_plot_hover(pos, y_scale))
         .show(ui, |plot_ui| {
             let bounds = plot_ui.plot_bounds();
             let (min_x, max_x) = clamp_energy_range(bounds.min()[0], bounds.max()[0]);
@@ -96,37 +91,32 @@ pub fn draw_spectrum_plot(
                     style,
                 ));
             }
-            if show_peaks {
-                let visible = peaks_in_energy_range(&peaks, min_x, max_x);
-                if identify_isotopes {
-                    let identifications = identify_peaks(&visible, config);
-                    draw_identified_peaks(plot_ui, &identifications, y_scale);
-                } else {
-                    draw_spectrum_peaks(plot_ui, &visible, y_scale);
-                }
+            if let Some(analysis) = analysis.as_ref() {
+                let visible: Vec<_> = analysis
+                    .identifications
+                    .iter()
+                    .filter(|identification| {
+                        let energy = identification.peak.energy_kev;
+                        energy >= min_x && energy <= max_x
+                    })
+                    .cloned()
+                    .collect();
+                let energies = &grid.energies_kev;
+                let display = &smoothed;
+                draw_peak_markers(plot_ui, &visible, move |energy| {
+                    let raw = sample_curve_y(energies, display, energy);
+                    display_value(raw, y_scale)
+                });
             }
         });
 
-    if show_peaks && identify_isotopes {
-        let identifications = identify_peaks(&peaks, config);
-        if let Some(action) = draw_identification_chips(ui, &identifications) {
-            plot_action = Some(action);
-        }
-    }
-    plot_action
+    analysis.and_then(|analysis| draw_source_chips(ui, &analysis.sources))
 }
 
 fn y_axis_label(scale: YScale) -> &'static str {
     match scale {
         YScale::Linear => "Counts",
         YScale::Logarithmic => "Counts (log10)",
-    }
-}
-
-fn hover_counts(displayed: f64, y_scale: YScale) -> String {
-    match y_scale {
-        YScale::Linear => format!("{displayed:.1}"),
-        YScale::Logarithmic => format!("{:.1}", 10_f64.powf(displayed)),
     }
 }
 

@@ -3,12 +3,13 @@ use egui::{Align2, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Ui, Vec
 use crate::theme::ACCENT;
 
 pub const TABLE_ROW_HEIGHT: f32 = 22.0;
+pub const TABLE_ROW_ALLOC: f32 = TABLE_ROW_HEIGHT + 4.0;
 pub const TABLE_FONT: f32 = 12.0;
 
 const HEADER_FILL: Color32 = Color32::from_rgb(36, 40, 48);
 const STRIPE_EVEN: Color32 = Color32::from_rgb(26, 30, 38);
 const STRIPE_ODD: Color32 = Color32::from_rgb(22, 25, 31);
-const HOVER_FILL: Color32 = Color32::from_rgb(34, 40, 50);
+pub const HOVER_FILL: Color32 = Color32::from_rgb(34, 40, 50);
 const BAR_FILL: Color32 = Color32::from_rgb(72, 132, 196);
 const CELL_GAP: f32 = 8.0;
 const ROW_PADDING_X: f32 = 8.0;
@@ -66,6 +67,34 @@ pub fn nuclide_table_layout(width: f32) -> TableLayout {
     }
 }
 
+pub fn contributor_table_layout(width: f32) -> TableLayout {
+    let half_life_w = 88.0;
+    let share_w = 80.0;
+    let fixed = half_life_w + share_w + ROW_PADDING_X * 2.0 + CELL_GAP * 2.0;
+    let name_w = (width - fixed).max(72.0);
+    let row_width = ROW_PADDING_X * 2.0 + name_w + CELL_GAP + half_life_w + CELL_GAP + share_w;
+    TableLayout {
+        columns: vec![
+            TableColumn {
+                label: "Nuclide",
+                width: name_w,
+                align: ColumnAlign::Left,
+            },
+            TableColumn {
+                label: "Half-life",
+                width: half_life_w,
+                align: ColumnAlign::Left,
+            },
+            TableColumn {
+                label: "Share",
+                width: share_w,
+                align: ColumnAlign::Left,
+            },
+        ],
+        row_width,
+    }
+}
+
 pub fn radiation_tree_layout(width: f32) -> TableLayout {
     let type_w = 24.0;
     let intensity_w = 72.0;
@@ -98,7 +127,7 @@ const INTENSITY_TEXT_WIDTH: f32 = 46.0;
 const BAR_INSET: f32 = 3.0;
 
 impl TableLayout {
-    fn cell_rect(&self, row_rect: Rect, column_index: usize) -> Rect {
+    pub fn cell_rect(&self, row_rect: Rect, column_index: usize) -> Rect {
         let left = row_rect.left() + ROW_PADDING_X + column_offset(&self.columns, column_index);
         let column = &self.columns[column_index];
         Rect::from_min_size(Pos2::new(left, row_rect.top()), Vec2::new(column.width, row_rect.height()))
@@ -141,13 +170,12 @@ pub fn draw_table_row(
     selected: bool,
     clickable: bool,
 ) -> Response {
-    let row_height = TABLE_ROW_HEIGHT + 4.0;
     let sense = if clickable {
         Sense::click()
     } else {
         Sense::hover()
     };
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(layout.row_width, row_height), sense);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(layout.row_width, TABLE_ROW_ALLOC), sense);
     let fill = if response.hovered() && clickable {
         HOVER_FILL
     } else {

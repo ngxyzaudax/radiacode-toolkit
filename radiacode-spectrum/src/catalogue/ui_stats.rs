@@ -53,7 +53,7 @@ pub fn draw_nuclide_stats(ui: &mut Ui, nuclide: &Nuclide) {
     });
 }
 
-fn stat_chip(ui: &mut Ui, label: &str, value: String) {
+pub fn stat_chip(ui: &mut Ui, label: &str, value: String) {
     Frame::new()
         .fill(CHIP_FILL)
         .inner_margin(egui::Margin::symmetric(8, 4))

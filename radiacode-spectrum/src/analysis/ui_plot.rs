@@ -5,12 +5,11 @@ use crate::analysis::spectrum::CollapsedSpectrum;
 use crate::analysis::state::SampleAnalysis;
 use crate::analysis::ui_plot_bars::{PlotPeakOverlay, owned_series, shared_log_floor, show_owned_series};
 use crate::analysis::ui_plot_legend::draw_legend;
-use crate::analysis::ui_plot_values::{peak_source_values, smoothed_background, smoothed_net, smoothed_sample};
+use crate::analysis::ui_plot_values::{smoothed_background, smoothed_net, smoothed_sample};
 use crate::app_config::AppConfig;
-use crate::identify::identify_peaks;
-use crate::peak_detect::SpectrumPeak;
-use crate::peak_overlay::{SpectrumPlotAction, draw_identification_chips};
-use crate::peak_profile::peaks_from_values;
+use crate::identify::{analyze_peaks, detection_params_from_config};
+use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips};
+use crate::peaks::{detect_peaks, peaks_from_collapsed};
 use crate::scale::{HistogramStyle, YScale};
 use crate::theme::{ANALYSIS_BACKGROUND, MUTED, analysis_sample_color};
 
@@ -22,7 +21,6 @@ pub struct AnalysisPlotProps<'a> {
     pub style: HistogramStyle,
     pub subtract_background: bool,
     pub show_peaks: bool,
-    pub identify_isotopes: bool,
     pub config: &'a AppConfig,
 }
 
@@ -36,7 +34,7 @@ pub fn draw_analysis_plots(
     let Some(axis) = props
         .samples
         .first()
-        .map(|s| &s.spectrum)
+        .map(|sample| &sample.spectrum)
         .or(props.background)
     else {
         return None;
@@ -54,9 +52,7 @@ pub fn draw_analysis_plots(
         props.samples,
         props.background,
         props.subtract_background,
-        props.smooth_window,
         props.show_peaks,
-        props.identify_isotopes,
         props.config,
     );
     if show_net {
@@ -84,28 +80,24 @@ pub fn draw_analysis_plots(
             peak_overlay.as_ref(),
         );
     }
-    if let Some(overlay) = peak_overlay {
-        if let Some(identifications) = overlay.identifications.as_ref() {
-            return draw_identification_chips(ui, identifications);
-        }
-    }
-    None
+    peak_overlay.and_then(|overlay| draw_source_chips(ui, &overlay.sources))
 }
 
 struct BuiltPeakOverlay {
-    peaks: Vec<SpectrumPeak>,
-    identifications: Option<Vec<radiacode_nuclides::PeakIdentification>>,
+    identifications: Vec<radiacode_nuclides::PeakIdentification>,
+    sources: radiacode_nuclides::SourceSummary,
+    display_values: Vec<f64>,
+    energies: Vec<f64>,
 }
 
 impl BuiltPeakOverlay {
-    fn as_plot_overlay(&self, identify: bool) -> PlotPeakOverlay<'_> {
+    fn plot_overlay<'a>(&'a self, y_scale: YScale, log_floor: f64) -> PlotPeakOverlay<'a> {
         PlotPeakOverlay {
-            peaks: &self.peaks,
-            identifications: if identify {
-                self.identifications.as_deref()
-            } else {
-                None
-            },
+            identifications: &self.identifications,
+            display_values: &self.display_values,
+            energies: &self.energies,
+            y_scale,
+            log_floor,
         }
     }
 }
@@ -114,25 +106,51 @@ fn build_peak_overlay(
     samples: &[SampleAnalysis],
     background: Option<&CollapsedSpectrum>,
     subtract_background: bool,
-    smooth_window: usize,
     show_peaks: bool,
-    identify_isotopes: bool,
     config: &AppConfig,
 ) -> Option<BuiltPeakOverlay> {
     if !show_peaks {
         return None;
     }
-    let (energies, values) =
-        peak_source_values(samples, background, subtract_background, smooth_window)?;
-    let peaks = peaks_from_values(&energies, &values, smooth_window);
-    let identifications = if identify_isotopes {
-        Some(identify_peaks(&peaks, config))
+    let params = detection_params_from_config(config);
+    let (peaks, energies, display_values) = if subtract_background {
+        let sample = samples.first()?;
+        let comparison = sample.comparison.as_ref()?;
+        let energies = sample.spectrum.energies_kev.clone();
+        let counts: Vec<f64> = comparison
+            .net_counts
+            .iter()
+            .map(|value| value.max(0.0))
+            .collect();
+        let peaks = detect_peaks(&energies, &counts, params);
+        (peaks, energies, counts)
+    } else if let Some(sample) = samples.first() {
+        let peaks = peaks_from_collapsed(&sample.spectrum, params);
+        let energies = sample.spectrum.energies_kev.clone();
+        let display_values = sample
+            .spectrum
+            .counts
+            .iter()
+            .map(|&value| value as f64)
+            .collect();
+        (peaks, energies, display_values)
     } else {
-        None
+        let background = background?;
+        let peaks = peaks_from_collapsed(background, params);
+        let energies = background.energies_kev.clone();
+        let display_values = background
+            .counts
+            .iter()
+            .map(|&value| value as f64)
+            .collect();
+        (peaks, energies, display_values)
     };
+    let analysis = analyze_peaks(&peaks, config);
     Some(BuiltPeakOverlay {
-        peaks,
-        identifications,
+        identifications: analysis.identifications,
+        sources: analysis.sources,
+        display_values,
+        energies,
     })
 }
 
@@ -181,7 +199,7 @@ fn draw_overlay_plot(
             log_floor,
         ));
     }
-    let overlay = peak_overlay.map(|item| item.as_plot_overlay(item.identifications.is_some()));
+    let overlay = peak_overlay.map(|item| item.plot_overlay(y_scale, log_floor));
     show_owned_series(
         ui,
         "analysis_plot",
@@ -189,7 +207,7 @@ fn draw_overlay_plot(
         y_scale,
         style,
         log_floor,
-        overlay,
+        overlay.as_ref(),
     );
 }
 
@@ -244,7 +262,7 @@ fn draw_net_plot(
             )
         })
         .collect();
-    let overlay = peak_overlay.map(|item| item.as_plot_overlay(item.identifications.is_some()));
+    let overlay = peak_overlay.map(|item| item.plot_overlay(y_scale, log_floor));
     show_owned_series(
         ui,
         "analysis_plot",
@@ -252,6 +270,6 @@ fn draw_net_plot(
         y_scale,
         style,
         log_floor,
-        overlay,
+        overlay.as_ref(),
     );
 }

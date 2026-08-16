@@ -55,7 +55,7 @@ pub fn draw_chain_graph(
     let content_rect = grid.content_rect().translate(origin.to_vec2());
     let focus_rect = grid.focus_rect.translate(origin.to_vec2());
     if let Some(id) = selected_id {
-        state.select(id);
+        state.reveal(id);
     }
     ChainGraphOutput {
         content_rect,

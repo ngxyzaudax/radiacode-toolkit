@@ -13,11 +13,10 @@ use crate::theme::{MUTED, analysis_sample_color};
 pub fn draw_analysis_view(
     ui: &mut Ui,
     state: &mut AnalysisState,
-    y_scale: YScale,
+    y_scale: &mut YScale,
     config: &AppConfig,
 ) -> Option<SpectrumPlotAction> {
-    let mut y_scale = y_scale;
-    draw_analysis_toolbar(ui, state, &mut y_scale);
+    draw_analysis_toolbar(ui, state, y_scale);
     ui.add_space(8.0);
     let mut plot_action = None;
     let mut pane_open = state.pane_open;
@@ -29,7 +28,7 @@ pub fn draw_analysis_view(
         |ui, region| match region {
             MasterDetailRegion::Pane => draw_analysis_library_pane(ui, state),
             MasterDetailRegion::Detail => {
-                plot_action = draw_analysis_plot(ui, state, y_scale, config);
+                plot_action = draw_analysis_plot(ui, state, *y_scale, config);
             }
         },
     );
@@ -67,7 +66,6 @@ fn draw_analysis_plot(
             style,
             subtract_background: state.subtract_background,
             show_peaks: state.show_peaks,
-            identify_isotopes: state.identify_isotopes,
             config,
         },
     );

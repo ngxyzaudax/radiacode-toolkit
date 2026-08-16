@@ -3,8 +3,8 @@ use egui_plot::{Bar, Plot};
 use radiacode_nuclides::PeakIdentification;
 
 use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range};
-use crate::peak_detect::{SpectrumPeak, peaks_in_energy_range};
-use crate::peak_overlay::{draw_identified_rate_peaks, draw_rate_peaks};
+use crate::peak_overlay::draw_peak_markers;
+use crate::peaks::sample_curve_y;
 use crate::plot_style::styled_histogram_line;
 use crate::scale::{HistogramStyle, YScale, display_rate, rate_log_floor, y_axis_top};
 
@@ -12,6 +12,14 @@ pub struct PlotSeries<'a> {
     pub id: &'a str,
     pub bars: &'a [Bar],
     pub color: Color32,
+}
+
+pub struct PlotPeakOverlay<'a> {
+    pub identifications: &'a [PeakIdentification],
+    pub display_values: &'a [f64],
+    pub energies: &'a [f64],
+    pub y_scale: YScale,
+    pub log_floor: f64,
 }
 
 pub fn owned_series(
@@ -44,11 +52,6 @@ pub fn shared_log_floor(value_sets: &[&[f64]]) -> f64 {
     rate_log_floor(&rates)
 }
 
-pub struct PlotPeakOverlay<'a> {
-    pub peaks: &'a [SpectrumPeak],
-    pub identifications: Option<&'a [PeakIdentification]>,
-}
-
 pub fn show_owned_series(
     ui: &mut Ui,
     id: &str,
@@ -56,7 +59,7 @@ pub fn show_owned_series(
     y_scale: YScale,
     style: HistogramStyle,
     log_floor: f64,
-    peak_overlay: Option<PlotPeakOverlay<'_>>,
+    peak_overlay: Option<&PlotPeakOverlay<'_>>,
 ) {
     let series: Vec<PlotSeries<'_>> = owned
         .iter()
@@ -88,7 +91,7 @@ fn plot_series(
     y_top: f64,
     style: HistogramStyle,
     log_floor: f64,
-    peak_overlay: Option<PlotPeakOverlay<'_>>,
+    peak_overlay: Option<&PlotPeakOverlay<'_>>,
 ) {
     let plot_id = format!("{id}_{y_scale:?}");
     Plot::new(plot_id)
@@ -100,6 +103,9 @@ fn plot_series(
         .include_y(0.0)
         .x_axis_label("Energy (keV)")
         .y_axis_label(y_axis_label(y_scale))
+        .label_formatter(move |pos| {
+            crate::plot_hover::rate_plot_hover(pos, y_scale, log_floor)
+        })
         .show(ui, |plot_ui| {
             let bounds = plot_ui.plot_bounds();
             let (min_x, max_x) = clamp_energy_range(bounds.min()[0], bounds.max()[0]);
@@ -112,19 +118,14 @@ fn plot_series(
                 plot_ui.line(styled_histogram_line(item.id, item.bars, item.color, style));
             }
             if let Some(overlay) = peak_overlay {
-                let visible = peaks_in_energy_range(overlay.peaks, min_x, max_x);
-                if let Some(identifications) = overlay.identifications {
-                    let visible_ids: Vec<_> = identifications
-                        .iter()
-                        .filter(|id| {
-                            id.peak.energy_kev >= min_x && id.peak.energy_kev <= max_x
-                        })
-                        .cloned()
-                        .collect();
-                    draw_identified_rate_peaks(plot_ui, &visible_ids, y_scale, log_floor);
-                } else {
-                    draw_rate_peaks(plot_ui, &visible, y_scale, log_floor);
-                }
+                let y_scale = overlay.y_scale;
+                let log_floor = overlay.log_floor;
+                let display_values = overlay.display_values;
+                let energies = overlay.energies;
+                draw_peak_markers(plot_ui, overlay.identifications, move |energy| {
+                    let raw = sample_curve_y(energies, display_values, energy);
+                    display_rate(raw, y_scale, log_floor)
+                });
             }
         });
 }

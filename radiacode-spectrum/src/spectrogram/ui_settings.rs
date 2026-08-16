@@ -78,12 +78,7 @@ pub fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool 
     changed |= ui
         .checkbox(&mut state.show_count_rate, "Count rate")
         .changed();
-    changed |= ui
-        .checkbox(&mut state.show_isotopes, "Identify isotopes")
-        .changed();
-    changed |= ui
-        .checkbox(&mut state.show_peaks, "Peak detection")
-        .changed();
+    changed |= ui.checkbox(&mut state.show_peaks, "Peak detection").changed();
     changed
 }
 

@@ -5,7 +5,8 @@ use std::thread;
 use std::time::Duration;
 
 use radiacode_nuclides::{
-    Catalog, DecayBranch, DecayMode, GammaLine, Nuclide, NuclideId, RadiationKind,
+    Catalog, DecayBranch, DecayCatalog, DecayMode, GammaLine, Nuclide, NuclideId, RadiationKind,
+    TopologyEntry,
 };
 
 const API_BASE: &str = "https://nds.iaea.org/relnsd/v1/data";
@@ -16,6 +17,9 @@ const MAX_GAMMA_ENERGY: f64 = 4000.0;
 const REQUEST_DELAY_MS: u64 = 60;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if structure_only_mode() {
+        return import_structure_only();
+    }
     let limit = import_limit();
     let output = data_path();
     println!("Fetching ground states from IAEA Livechart...");
@@ -74,6 +78,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn data_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/nuclides.json")
+}
+
+fn decays_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/decays.json")
+}
+
+fn structure_only_mode() -> bool {
+    std::env::args().skip(1).any(|arg| arg == "--structure-only")
+}
+
+fn import_structure_only() -> Result<(), Box<dyn std::error::Error>> {
+    let output = decays_path();
+    println!("Fetching ground states from IAEA Livechart...");
+    let ground_rows = fetch_csv(&format!("{API_BASE}?fields=ground_states&nuclides=all"))?;
+    let candidates = parse_ground_states(&ground_rows);
+    println!("Parsed {} ground-state rows", candidates.len());
+    let entries = candidates
+        .into_iter()
+        .map(|candidate| TopologyEntry {
+            id: candidate.id,
+            display_name: format!("{}-{}", candidate.symbol, candidate.mass_number),
+            half_life_secs: candidate.half_life_secs,
+            decays: candidate.decays,
+        })
+        .collect::<Vec<_>>();
+    let catalog = DecayCatalog {
+        version: 1,
+        entries,
+    };
+    fs::write(&output, serde_json::to_vec_pretty(&catalog)?)?;
+    println!(
+        "Wrote {} topology entries to {}",
+        catalog.entries.len(),
+        output.display()
+    );
+    Ok(())
 }
 
 fn import_limit() -> Option<usize> {
@@ -316,8 +356,8 @@ fn chain_seed_ids() -> HashSet<NuclideId> {
     [
         (92, 146),
         (92, 143),
-        (90, 144),
-        (91, 143),
+        (90, 142),
+        (93, 144),
         (55, 82),
         (19, 21),
         (27, 33),

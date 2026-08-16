@@ -1,6 +1,6 @@
 mod compare;
 mod selection;
-mod spectrum;
+pub mod spectrum;
 mod state;
 mod ui_pane;
 mod ui_plot;
