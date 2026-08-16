@@ -12,6 +12,8 @@ pub const MIN_CAPTURE_INTERVAL_SECS: f64 = 1.0;
 pub const MAX_CAPTURE_INTERVAL_SECS: f64 = 20.0;
 pub const MIN_MAX_SAMPLES: usize = 100;
 pub const MAX_MAX_SAMPLES: usize = 10_000;
+pub const MIN_Z: f32 = 0.0;
+pub const MAX_Z: f32 = 100.0;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpectrogramSettings {
@@ -48,8 +50,10 @@ impl SpectrogramSettings {
             .clamp(MIN_CAPTURE_INTERVAL_SECS, MAX_CAPTURE_INTERVAL_SECS)
             .round();
         self.max_samples = self.max_samples.clamp(MIN_MAX_SAMPLES, MAX_MAX_SAMPLES);
+        self.z_min = self.z_min.clamp(MIN_Z, MAX_Z);
+        self.z_max = self.z_max.clamp(MIN_Z, MAX_Z);
         if self.z_max <= self.z_min {
-            self.z_max = self.z_min + 1.0;
+            self.z_max = (self.z_min + 1.0).min(MAX_Z);
         }
     }
 

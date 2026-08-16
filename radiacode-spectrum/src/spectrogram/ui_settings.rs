@@ -2,8 +2,8 @@ use egui::{Response, RichText, Ui};
 
 use crate::spectrogram::color_scheme::ColorScheme;
 use crate::spectrogram::settings::{
-    MAX_CAPTURE_INTERVAL_SECS, MAX_MAX_SAMPLES, MIN_CAPTURE_INTERVAL_SECS, MIN_MAX_SAMPLES,
-    SpectrogramSettings,
+    MAX_CAPTURE_INTERVAL_SECS, MAX_MAX_SAMPLES, MAX_Z, MIN_CAPTURE_INTERVAL_SECS, MIN_MAX_SAMPLES,
+    MIN_Z, SpectrogramSettings,
 };
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
@@ -56,10 +56,19 @@ pub fn draw_display_controls(ui: &mut Ui, settings: &mut SpectrogramSettings) ->
         .checkbox(&mut settings.auto_brightness, "Auto brightness")
         .changed();
     if !settings.auto_brightness {
-        let z_min = ui.add(egui::Slider::new(&mut settings.z_min, 0.0..=10_000.0).text("Z min"));
+        let z_min_upper = (settings.z_max - 1.0).clamp(MIN_Z, MAX_Z);
+        let z_min = ui.add(
+            egui::Slider::new(&mut settings.z_min, MIN_Z..=z_min_upper.max(MIN_Z)).text("Z min"),
+        );
         changed |= slider_committed(&z_min);
-        let z_max = ui.add(egui::Slider::new(&mut settings.z_max, 1.0..=50_000.0).text("Z max"));
+        let z_max_lower = (settings.z_min + 1.0).clamp(MIN_Z, MAX_Z);
+        let z_max = ui.add(
+            egui::Slider::new(&mut settings.z_max, z_max_lower..=MAX_Z).text("Z max"),
+        );
         changed |= slider_committed(&z_max);
+        if changed {
+            settings.clamp();
+        }
     }
     ui.horizontal(|ui| {
         ui.label(RichText::new("Palette").small().color(MUTED));

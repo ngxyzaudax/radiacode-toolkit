@@ -9,7 +9,7 @@
 <p align="center">
   Linux-first desktop software for <a href="https://www.radiacode.com/">RadiaCode</a> radiation detectors and spectrometers.
   <br />
-  Connect over USB or Bluetooth LE — live readings, spectra, recordings, and device settings in one place.
+  Connect over USB or Bluetooth LE — live readings, spectra, recordings, nuclide identification, and device settings in one place.
 </p>
 
 <p align="center">
@@ -26,6 +26,8 @@
   ·
   <a href="./docs/PROTOCOL.md"><strong>Protocol</strong></a>
   ·
+  <a href="./docs/NUCLIDES.md"><strong>Nuclides</strong></a>
+  ·
   <a href="#quick-start"><strong>Quick start</strong></a>
   ·
   <a href="#architecture"><strong>Architecture</strong></a>
@@ -38,18 +40,20 @@
 ## Demo
 
 <p align="center">
-  <img src="./docs/demo/radiacode_demo.gif" width="900" alt="Radiacode Toolkit demo — live Monitor, Spectrum, Spectrogram, Analysis, and Settings" />
+  <img src="./docs/demo/radiacode_demo.gif" width="900" alt="Radiacode Toolkit — application tour" />
 </p>
 
 | Tab | What it does |
 | --- | --- |
+| [Device](./docs/device/README.md) | USB / Bluetooth discovery, connect, and disconnect |
 | [Monitor](./docs/monitor/README.md) | Live dose rate, count rate, and session dose |
-| [Spectrum](./docs/spectrum/README.md) | Live 1024-channel energy histogram |
+| [Spectrum](./docs/spectrum/README.md) | Live 1024-channel energy histogram with peak detection |
 | [Spectrogram](./docs/spectrogram/README.md) | Time–energy waterfall and recordings |
 | [Analysis](./docs/analysis/README.md) | Offline comparison of saved spectra |
+| [Catalogue](./docs/catalogue/README.md) | Nuclide reference, decay chains, and synthetic previews |
 | [Settings](./docs/settings/README.md) | Device and application configuration |
 
-Per-tab notes and screenshots: [`docs/`](./docs/README.md). Wire format reference: [`docs/PROTOCOL.md`](./docs/PROTOCOL.md).
+Per-tab demos and notes: [`docs/`](./docs/README.md). Wire format: [`docs/PROTOCOL.md`](./docs/PROTOCOL.md). Nuclear data: [`docs/NUCLIDES.md`](./docs/NUCLIDES.md).
 
 ---
 
@@ -60,6 +64,14 @@ Per-tab notes and screenshots: [`docs/`](./docs/README.md). Wire format referenc
 - Rust **1.85+**
 - Linux with USB and/or Bluetooth as needed
 - Build dependencies: `libusb` headers and OpenGL/EGL for the GUI
+
+On Debian/Ubuntu:
+
+```bash
+sudo apt-get install libudev-dev libusb-1.0-0-dev pkg-config \
+  libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+  libxkbcommon-dev libssl-dev libdbus-1-dev
+```
 
 ### Build and run
 
@@ -82,19 +94,26 @@ Optional desktop entry:
 cp radiacode-spectrum/radiacode-spectrum.desktop ~/.local/share/applications/
 ```
 
+### Tests
+
+```bash
+cargo test --workspace
+```
+
 ---
 
 ## Architecture
 
-Shared Rust crates sit behind the desktop app and handle protocol, transport, and device configuration.
+Shared Rust crates sit behind the desktop app and handle protocol, transport, nuclear data, and device configuration.
 
 | Crate | Role |
 | --- | --- |
-| `radiacode-spectrum` | Desktop application (egui) |
-| `radiacode-protocol` | Wire protocol — framing, opcodes, payload decoders, `Transport` trait ([reference](./docs/PROTOCOL.md)) |
-| `radiacode-core` | Device client (`RadiaCode`) and domain models |
-| `radiacode-usb` | USB transport |
-| `radiacode-bluetooth` | Bluetooth LE transport |
+| [`radiacode-spectrum`](./radiacode-spectrum/README.md) | Desktop application (egui) |
+| [`radiacode-nuclides`](./radiacode-nuclides/README.md) | Bundled nuclide catalogue, decay chains, peak matching |
+| [`radiacode-protocol`](./radiacode-protocol/README.md) | Wire protocol — framing, opcodes, payload decoders, `Transport` trait ([reference](./docs/PROTOCOL.md)) |
+| [`radiacode-core`](./radiacode-core/README.md) | Device client (`RadiaCode`) and domain models |
+| [`radiacode-usb`](./radiacode-usb/README.md) | USB transport |
+| [`radiacode-bluetooth`](./radiacode-bluetooth/README.md) | Bluetooth LE transport |
 
 ---
 

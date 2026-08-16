@@ -33,6 +33,16 @@ Optional cap for development:
 cargo run -p radiacode-nuclides --bin nuclide-import --features import -- --limit=500
 ```
 
+## Peak detection
+
+Spectrum, Spectrogram, and Analysis share one detection pipeline (`radiacode-spectrum/src/peaks/`):
+
+1. SNIP continuum estimation
+2. Matched-filter peak finding
+3. Poisson significance threshold (configurable σ)
+
+Toggle **Peak detection** on each view's toolbar or settings panel.
+
 ## Peak identification
 
 Detected peaks are matched against catalogue gamma lines using energy-dependent tolerance:
@@ -41,24 +51,33 @@ Detected peaks are matched against catalogue gamma lines using energy-dependent 
 tolerance_kev = max(energy_kev × relative_frac, floor_kev)
 ```
 
-Default parameters (Settings → Application → Isotope matching):
+Default parameters (Settings → Application → Peak detection and identification):
 
 | Parameter | Default |
-|-----------|---------|
-| Relative tolerance | 1% |
+| --- | --- |
+| Peak sensitivity (σ) | 3.0 |
+| Detector FWHM @ 662 keV | 7.0% |
+| Relative tolerance | 2% |
 | Floor | 3 keV |
-| Min gamma intensity | 1% |
+| Min gamma intensity | 1.7% |
+| Catalogue preview FWHM | 7.5% |
 
-Scoring combines line intensity, energy closeness, and multi-line confirmation across all detected peaks in the current view.
+Matching uses half the detector FWHM at each energy as the effective tolerance. Scoring weights line intensity, energy closeness, and normalized peak counts across the current view.
 
 ## Crate layout
 
 ```
 radiacode-nuclides/
-  data/nuclides.json     bundled dataset
-  src/catalog.rs         lazy JSON parse
-  src/index.rs           energy-sorted lookup
-  src/match_peaks.rs     identification scoring
-  src/chain.rs           decay chain traversal
-  src/search.rs          catalogue browser filters
+  data/nuclides.json       bundled nuclide dataset
+  data/decays.json         decay topology / branching
+  src/catalog.rs           lazy JSON parse
+  src/index.rs             energy-sorted lookup
+  src/match_peaks.rs       identification scoring
+  src/chain_graph.rs       decay graph layout
+  src/series.rs            natural decay series
+  src/equilibrium.rs       secular equilibrium weights
+  src/source_summary.rs    group matches into sources
+  src/topology.rs          chain membership index
 ```
+
+See also [radiacode-nuclides/README.md](../radiacode-nuclides/README.md) and [docs/catalogue/README.md](./catalogue/README.md).
