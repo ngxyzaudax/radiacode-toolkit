@@ -10,7 +10,7 @@ The Spectrogram view captures how the energy spectrum changes over time. Each ro
 
 - Time–energy waterfall with configurable capture interval and row limit
 - **Spectrum preview strip** above the heatmap — whole-series sum aligned to visible energy columns, with **Lin/Log** scale and **Peaks** toggles in the left gutter
-- Colormap selection (Viridis, Inferno, Turbo); auto brightness, grid, count-rate overlays
+- Colormap selection (Viridis, Inferno, Turbo); auto brightness; always-on grid and count-rate sparkline (time labels left, count rate right)
 - Recording transport: record, pause, play, stop; session info on preview-strip hover
 - Searchable recording library with metadata, comments, import, export, and replay
 - **Peak detection** on the collapsed spectrum (all rows summed); markers and preview strip share column-aligned energy mapping

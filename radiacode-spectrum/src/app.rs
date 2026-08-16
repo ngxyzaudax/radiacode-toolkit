@@ -26,6 +26,7 @@ use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::ui_view::draw_spectrogram_view;
 use crate::spectrum::{
     CloseAction, ShutdownSequence, SpectrumViewState, StartupChrome, TabNavigation,
+    quit_hotkey_pressed,
 };
 use crate::tabs::draw_tab_bar;
 use crate::theme;
@@ -96,17 +97,27 @@ impl SpectrumApp {
     }
 
     fn handle_close_request(&mut self, ctx: &Context) {
-        let close_requested = ctx.input(|input| input.viewport().close_requested());
-        if close_requested {
-            ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+        let window_close = ctx.input(|input| input.viewport().close_requested());
+        let hotkey_quit = quit_hotkey_pressed(ctx);
+        if !window_close && !hotkey_quit {
+            return;
         }
         match self
             .shutdown
-            .on_close_request(close_requested, self.device_link_active())
+            .on_close_request(true, self.device_link_active())
         {
             CloseAction::None => {}
-            CloseAction::DisconnectDevice => self.disconnect_device(),
-            CloseAction::CompleteClose => self.shutdown.send_close_viewport(ctx),
+            CloseAction::DisconnectDevice => {
+                if window_close {
+                    ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+                }
+                self.disconnect_device();
+            }
+            CloseAction::CompleteClose => {
+                if !window_close {
+                    self.shutdown.send_close_viewport(ctx);
+                }
+            }
         }
     }
 
@@ -811,6 +822,9 @@ impl App for SpectrumApp {
         self.maybe_device_config_auto_load();
         if self.shutting_down() {
             ctx.request_repaint_after(Duration::from_millis(16));
+            if self.shutdown.closing() {
+                self.shutdown.send_close_viewport(ctx);
+            }
         } else if self.state.connection == ConnectionState::Connected
             || self.spectrogram.is_recording()
         {

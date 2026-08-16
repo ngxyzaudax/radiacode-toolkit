@@ -88,6 +88,8 @@ Install to your PATH:
 cargo install --path radiacode-spectrum
 ```
 
+Press **Q** to quit (disconnects cleanly when a device is connected). The window close button and Alt+F4 use the same shutdown path.
+
 Optional desktop entry:
 
 ```bash

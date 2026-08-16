@@ -5,7 +5,6 @@ use crate::spectrogram::settings::{
     MAX_CAPTURE_INTERVAL_SECS, MAX_MAX_SAMPLES, MAX_Z, MIN_CAPTURE_INTERVAL_SECS, MIN_MAX_SAMPLES,
     MIN_Z, SpectrogramSettings,
 };
-use crate::spectrogram::state::SpectrogramState;
 use crate::theme::MUTED;
 
 pub fn draw_capture_settings(
@@ -77,15 +76,6 @@ pub fn draw_display_controls(ui: &mut Ui, settings: &mut SpectrogramSettings) ->
                 .changed();
         }
     });
-    changed
-}
-
-pub fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool {
-    let mut changed = false;
-    changed |= ui.checkbox(&mut state.show_grid, "Grid").changed();
-    changed |= ui
-        .checkbox(&mut state.show_count_rate, "Count rate")
-        .changed();
     changed
 }
 

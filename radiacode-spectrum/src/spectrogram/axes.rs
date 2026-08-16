@@ -38,6 +38,10 @@ pub fn y_axis_label() -> &'static str {
     "Time"
 }
 
+pub fn count_rate_axis_label() -> &'static str {
+    "Count rate"
+}
+
 pub fn x_axis_label() -> &'static str {
     "Energy (keV)"
 }

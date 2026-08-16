@@ -7,7 +7,7 @@ use crate::identify::{PeakAnalysis, analyze_peaks};
 use crate::layout::safe_span;
 use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips, draw_spectrogram_peaks};
 use crate::peaks::{DetectionParams, peaks_from_channel_totals, spectrogram_series_peak_token};
-use crate::spectrogram::axes::{draw_x_axis, x_axis_label, y_axis_label};
+use crate::spectrogram::axes::{count_rate_axis_label, draw_x_axis, x_axis_label, y_axis_label};
 use crate::spectrogram::count_rate::draw_count_rate_overlay;
 use crate::spectrogram::layout::{
     DEFAULT_EMPTY_CHANNELS, channels_in_energy_range, compute_layout,
@@ -26,6 +26,7 @@ use crate::spectrogram::view_interact::{handle_view_interaction, hover_details};
 use crate::theme::MUTED;
 
 pub const AXIS_LEFT: f32 = 56.0;
+pub const AXIS_RIGHT: f32 = 56.0;
 pub const AXIS_BOTTOM: f32 = 40.0;
 pub const PLOT_MIN: f32 = 80.0;
 
@@ -49,7 +50,7 @@ pub fn draw_spectrogram_plot_area(
     let x_label = x_axis_label();
     let available = ui.available_size();
     let plot_size = egui::vec2(
-        safe_span(available.x, AXIS_LEFT, PLOT_MIN),
+        safe_span(available.x, AXIS_LEFT + AXIS_RIGHT, PLOT_MIN),
         safe_span(available.y, AXIS_BOTTOM, PLOT_MIN),
     );
     let peak_analysis = peak_analysis_for_view(state, config);
@@ -68,6 +69,15 @@ pub fn draw_spectrogram_plot_area(
             },
         );
         let (rect, response) = ui.allocate_exact_size(plot_size, Sense::click_and_drag());
+        ui.allocate_ui_with_layout(
+            egui::vec2(safe_span(AXIS_RIGHT, 4.0, 40.0), plot_size.y),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                ui.with_layout(egui::Layout::top_down(egui::Align::Max), |ui| {
+                    ui.label(RichText::new(count_rate_axis_label()).small().color(MUTED));
+                });
+            },
+        );
         let (preview_rect, grid_rect) = split_preview_area(rect);
         let channels_before = channels_for_view(state);
         let layout_before = compute_layout(
@@ -111,7 +121,7 @@ pub fn draw_spectrogram_plot_area(
             .view_range
             .visible_start(total_rows, layout.display_rows);
         let axis_painter = ui.painter().clone();
-        draw_grid(&axis_painter, layout.image_rect, layout, state.show_grid);
+        draw_grid(&axis_painter, layout.image_rect, layout, true);
         let series_for_totals = series_for_peak_data(state);
         let totals = series_for_totals.as_ref().map(|active| {
             let token = spectrogram_series_peak_token(active);
@@ -158,13 +168,7 @@ pub fn draw_spectrogram_plot_area(
                 );
                 peak_sources = Some(analysis.sources.clone());
             }
-            draw_count_rate_overlay(
-                &axis_painter,
-                layout.image_rect,
-                layout,
-                visible,
-                state.show_count_rate,
-            );
+            draw_count_rate_overlay(&axis_painter, layout.image_rect, layout, visible);
             if let Some(hover) = response.hover_pos() {
                 draw_crosshair(&axis_painter, hover, layout.image_rect, Some(preview_area));
             }

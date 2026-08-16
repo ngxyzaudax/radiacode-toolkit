@@ -4,9 +4,7 @@ use crate::layout::draw_toolbar;
 use crate::model::ConnectionState;
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::state::SpectrogramState;
-use crate::spectrogram::ui_settings::{
-    draw_capture_controls, draw_display_controls, draw_overlay_controls,
-};
+use crate::spectrogram::ui_settings::{draw_capture_controls, draw_display_controls};
 use crate::spectrogram::ui_transport::draw_transport;
 use crate::theme::MUTED;
 use crate::ui::{SPECTROGRAM_RESET, draw_reset_confirm};
@@ -44,11 +42,6 @@ pub fn draw_spectrogram_toolbar(
         let mut changed = draw_capture_controls(ui, &mut state.settings, recording);
         changed |= draw_display_controls(ui, &mut state.settings);
         if changed {
-            action = Some(SpectrogramControlsAction::SettingsChanged);
-        }
-    });
-    draw_toolbar(ui, |ui| {
-        if draw_overlay_controls(ui, state) {
             action = Some(SpectrogramControlsAction::SettingsChanged);
         }
     });

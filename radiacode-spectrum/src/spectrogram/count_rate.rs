@@ -4,14 +4,16 @@ use crate::spectrogram::layout::SpectrogramLayout;
 use crate::spectrogram::model::SpectrogramRow;
 use crate::theme::ACCENT;
 
+const SPARKLINE_WIDTH: f32 = 28.0;
+const SPARKLINE_GAP: f32 = 4.0;
+
 pub fn draw_count_rate_overlay(
     painter: &egui::Painter,
     image_rect: Rect,
     layout: SpectrogramLayout,
     visible: &[SpectrogramRow],
-    enabled: bool,
 ) {
-    if !enabled || visible.is_empty() {
+    if visible.is_empty() {
         return;
     }
     let totals: Vec<f32> = visible
@@ -19,14 +21,13 @@ pub fn draw_count_rate_overlay(
         .map(|row| row.counts.iter().map(|&value| value as f32).sum())
         .collect();
     let peak = totals.iter().copied().fold(0.0_f32, f32::max).max(1.0);
-    let width = 28.0;
-    let left = image_rect.left() - width - 4.0;
+    let origin = image_rect.right() + SPARKLINE_GAP;
     let points: Vec<Pos2> = totals
         .iter()
         .enumerate()
         .map(|(index, total)| {
             let y = count_rate_row_y(image_rect, layout, totals.len(), index);
-            let x = left + (total / peak) * width;
+            let x = origin + (total / peak) * SPARKLINE_WIDTH;
             Pos2::new(x, y)
         })
         .collect();
@@ -49,7 +50,7 @@ fn count_rate_row_y(
 mod tests {
     use egui::{Rect, pos2};
 
-    use super::count_rate_row_y;
+    use super::{SPARKLINE_GAP, SPARKLINE_WIDTH, count_rate_row_y};
     use crate::spectrogram::layout::SpectrogramLayout;
 
     fn layout(display_rows: usize, cell_px: f32) -> SpectrogramLayout {
@@ -82,5 +83,15 @@ mod tests {
         let y3 = count_rate_row_y(image, layout, 4, 3);
         assert!((y0 - 5.0).abs() < 0.01);
         assert!((y3 - 35.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn sparkline_extends_into_right_gutter() {
+        let layout = layout(2, 10.0);
+        let image = layout.image_rect;
+        let origin = image.right() + SPARKLINE_GAP;
+        let peak_x = origin + SPARKLINE_WIDTH;
+        assert!(peak_x > image.right());
+        assert!(origin > image.right());
     }
 }
