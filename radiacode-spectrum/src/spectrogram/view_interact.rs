@@ -1,7 +1,7 @@
 use egui::Ui;
 use tracing::debug;
 
-use crate::plot_hover::spectrogram_hover_text;
+use crate::plot_hover::{SpectrogramHoverInfo, spectrogram_hover_text};
 use crate::spectrogram::layout::SpectrogramLayout;
 use crate::spectrogram::model::SpectrogramSeries;
 use crate::spectrogram::state::SpectrogramState;
@@ -9,6 +9,7 @@ use crate::spectrogram::state::SpectrogramState;
 pub fn handle_view_interaction(
     ui: &Ui,
     response: &egui::Response,
+    grid_rect: egui::Rect,
     image_rect: egui::Rect,
     layout: SpectrogramLayout,
     state: &mut SpectrogramState,
@@ -26,6 +27,9 @@ pub fn handle_view_interaction(
             input.modifiers.shift,
         )
     });
+    let pointer_in_grid = response
+        .hover_pos()
+        .is_some_and(|position| grid_rect.contains(position));
 
     let mut changed = false;
     if response.hovered() && (zoom_delta - 1.0).abs() > 0.001 {
@@ -35,13 +39,13 @@ pub fn handle_view_interaction(
     }
 
     if response.hovered() && scroll.y.abs() > 0.0 {
-        if shift {
+        if shift && pointer_in_grid {
             let row_delta = if scroll.y > 0.0 { -1 } else { 1 };
             state
                 .view_range
                 .scroll_history(row_delta, total_rows, layout.display_rows);
             debug!(row_delta, "spectrogram history scroll");
-        } else {
+        } else if !shift {
             let factor = if scroll.y > 0.0 { 0.85 } else { 1.18 };
             zoom_at_pointer(response, image_rect, state, factor);
             debug!(
@@ -79,7 +83,7 @@ pub fn handle_view_interaction(
             let width = image_rect.width().max(1.0) as f64;
             let delta_kev = -(delta.x as f64 / width) * span;
             state.view_range.pan_energy(delta_kev);
-        } else if layout.cell_px > 0.0 {
+        } else if pointer_in_grid && layout.cell_px > 0.0 {
             let row_delta = (-delta.y / layout.cell_px).round() as i32;
             if row_delta != 0 {
                 state
@@ -137,15 +141,15 @@ pub fn hover_details(
     let source_col = source_cols[col];
     let row = &visible[row_index];
     let absolute = row_start + row_index;
-    spectrogram_hover_text(
-        series.energies_kev.get(source_col).copied().unwrap_or(0.0),
-        row.counts.get(source_col).copied().unwrap_or(0),
-        source_col,
-        absolute,
+    spectrogram_hover_text(&SpectrogramHoverInfo {
+        energy_kev: series.energies_kev.get(source_col).copied().unwrap_or(0.0),
+        counts: row.counts.get(source_col).copied().unwrap_or(0),
+        channel: source_col,
+        absolute_row: absolute,
         total_rows,
-        series.age_secs_before(absolute),
-        row.interval_secs,
-        row.row_total(),
-        row.kind,
-    )
+        age_secs: series.age_secs_before(absolute),
+        interval_secs: row.interval_secs,
+        row_total: row.row_total(),
+        kind: row.kind,
+    })
 }

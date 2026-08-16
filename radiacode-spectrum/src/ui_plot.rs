@@ -5,15 +5,22 @@ use crate::app_config::AppConfig;
 use crate::energy::{
     ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range, energy_grid,
 };
-use crate::identify::{analyze_peaks, detection_params_from_config};
+use crate::identify::analyze_peaks;
 use crate::model::SpectrumView;
 use crate::peak_overlay::{SpectrumPlotAction, draw_peak_markers, draw_source_chips};
-use crate::peaks::{peaks_from_spectrum_view, sample_curve_y};
+use crate::peaks::DetectionParams;
+use crate::peaks::{PeakMemo, PeakMemoKey, peaks_from_spectrum_view, sample_curve_y};
 use crate::plot_hover::counts_plot_hover;
 use crate::plot_style::styled_histogram_line;
 use crate::scale::{HistogramStyle, YScale, display_value, y_axis_top};
 use crate::smooth::moving_average_f64;
 use crate::theme::{MUTED, SPECTRUM_BAR};
+
+pub struct SpectrumPlotDrawContext<'a> {
+    pub config: &'a AppConfig,
+    pub spectrum_sequence: u64,
+    pub peak_memo: &'a mut PeakMemo,
+}
 
 pub fn draw_spectrum_plot(
     ui: &mut Ui,
@@ -22,7 +29,7 @@ pub fn draw_spectrum_plot(
     smooth_window: usize,
     style: HistogramStyle,
     show_peaks: bool,
-    config: &AppConfig,
+    draw_context: SpectrumPlotDrawContext<'_>,
 ) -> Option<SpectrumPlotAction> {
     let Some(spectrum) = spectrum else {
         ui.add_space(12.0);
@@ -60,9 +67,17 @@ pub fn draw_spectrum_plot(
     let bars = build_spectrum_bars(&grid.energies_kev, &smoothed, y_scale, spectrum.a1);
     let peak = bars.iter().map(|bar| bar.value).fold(0.0_f64, f64::max);
     let y_top = y_axis_top(peak, y_scale);
+    let SpectrumPlotDrawContext {
+        config,
+        spectrum_sequence,
+        peak_memo,
+    } = draw_context;
     let analysis = if show_peaks {
-        let params = detection_params_from_config(config);
-        let peaks = peaks_from_spectrum_view(spectrum, params);
+        let params = DetectionParams::from_app_config(config);
+        let key = PeakMemoKey::new(spectrum_sequence, params);
+        let peaks = peak_memo
+            .get_or_compute(key, || peaks_from_spectrum_view(spectrum, params))
+            .to_vec();
         Some(analyze_peaks(&peaks, config))
     } else {
         None
@@ -120,7 +135,12 @@ fn y_axis_label(scale: YScale) -> &'static str {
     }
 }
 
-fn build_spectrum_bars(energies_kev: &[f64], smoothed: &[f64], y_scale: YScale, a1: f32) -> Vec<Bar> {
+fn build_spectrum_bars(
+    energies_kev: &[f64],
+    smoothed: &[f64],
+    y_scale: YScale,
+    a1: f32,
+) -> Vec<Bar> {
     energies_kev
         .iter()
         .enumerate()

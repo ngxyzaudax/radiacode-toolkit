@@ -20,10 +20,7 @@ pub fn decay_chain(head: NuclideId, max_steps: usize) -> Vec<ChainStep> {
         let Some(nuclide) = nuclide_by_id(id) else {
             break;
         };
-        if chain
-            .iter()
-            .any(|step: &ChainStep| step.nuclide_id == id)
-        {
+        if chain.iter().any(|step: &ChainStep| step.nuclide_id == id) {
             break;
         }
         let primary = primary_decay(nuclide.decays.as_slice());
@@ -42,16 +39,12 @@ pub fn decay_chain(head: NuclideId, max_steps: usize) -> Vec<ChainStep> {
     chain
 }
 
-fn primary_decay(
-    decays: &[crate::model::DecayBranch],
-) -> Option<&crate::model::DecayBranch> {
-    decays
-        .iter()
-        .max_by(|left, right| {
-            left.branching_pct
-                .partial_cmp(&right.branching_pct)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
+fn primary_decay(decays: &[crate::model::DecayBranch]) -> Option<&crate::model::DecayBranch> {
+    decays.iter().max_by(|left, right| {
+        left.branching_pct
+            .partial_cmp(&right.branching_pct)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })
 }
 
 pub fn decay_mode_label(mode: DecayMode) -> &'static str {

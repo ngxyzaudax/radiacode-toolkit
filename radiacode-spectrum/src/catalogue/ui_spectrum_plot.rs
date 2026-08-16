@@ -1,5 +1,5 @@
 use egui::{Color32, Ui, Vec2b};
-use egui_plot::{Plot, PlotPoint, PlotPoints, Points, PlotUi, Text, VLine};
+use egui_plot::{Plot, PlotPoint, PlotPoints, PlotUi, Points, Text, VLine};
 
 use radiacode_nuclides::GammaLine;
 
@@ -90,12 +90,9 @@ fn draw_markers(plot_ui: &mut PlotUi, markers: &[SpectrumMarker], hover_only: bo
                 .width(if marker.highlight { 2.0 } else { 1.0 }),
         );
         plot_ui.points(
-            Points::new(
-                "marker",
-                PlotPoints::from(vec![[marker.energy_kev, 0.0]]),
-            )
-            .color(color)
-            .radius(3.0),
+            Points::new("marker", PlotPoints::from(vec![[marker.energy_kev, 0.0]]))
+                .color(color)
+                .radius(3.0),
         );
         if marker.strongest || marker.highlight {
             plot_ui.text(
@@ -121,11 +118,7 @@ pub fn spectrum_max_energy(gammas: &[GammaLine]) -> f64 {
         * 1.1
 }
 
-pub fn spectrum_points(
-    grid: &[f64],
-    values: &[f64],
-    log_scale: bool,
-) -> Vec<[f64; 2]> {
+pub fn spectrum_points(grid: &[f64], values: &[f64], log_scale: bool) -> Vec<[f64; 2]> {
     let y_scale = if log_scale {
         YScale::Logarithmic
     } else {

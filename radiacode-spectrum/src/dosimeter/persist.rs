@@ -2,13 +2,13 @@ use std::collections::VecDeque;
 use std::fs;
 use std::path::PathBuf;
 
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
 use crate::dosimeter::point::DoseHistoryPoint;
+use crate::persist::json_store::{data_dir, load_json, save_json};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct StoredDosimeterHistory {
     pub serial: String,
     pub dose_unit_sv: bool,
@@ -16,12 +16,12 @@ pub struct StoredDosimeterHistory {
 }
 
 pub fn load_history(serial: &str) -> Option<StoredDosimeterHistory> {
-    let path = history_path(serial);
-    let bytes = fs::read(&path).ok()?;
-    let stored: StoredDosimeterHistory = serde_json::from_slice(&bytes).ok()?;
+    let relative_path = history_relative_path(serial);
+    let stored: StoredDosimeterHistory = load_json(&relative_path);
     if stored.serial != serial {
         return None;
     }
+    let path = data_dir().join(&relative_path);
     debug!(
         serial,
         points = stored.points.len(),
@@ -32,20 +32,15 @@ pub fn load_history(serial: &str) -> Option<StoredDosimeterHistory> {
 }
 
 pub fn save_history(stored: &StoredDosimeterHistory) -> std::io::Result<()> {
-    let path = history_path(&stored.serial);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let bytes = serde_json::to_vec(&stored)?;
-    fs::write(path, bytes)
+    save_json(&history_relative_path(&stored.serial), stored)
 }
 
 pub fn clear_history(serial: &str) {
     let path = history_path(serial);
-    if path.exists() {
-        if let Err(error) = fs::remove_file(&path) {
-            warn!(%error, path = %path.display(), "failed to clear dosimeter history");
-        }
+    if path.exists()
+        && let Err(error) = fs::remove_file(&path)
+    {
+        warn!(%error, path = %path.display(), "failed to clear dosimeter history");
     }
 }
 
@@ -61,15 +56,12 @@ pub fn history_from_points(
     }
 }
 
-fn history_path(serial: &str) -> PathBuf {
-    let safe = sanitize_serial(serial);
-    dosimeter_dir().join(format!("{safe}.json"))
+fn history_relative_path(serial: &str) -> String {
+    format!("dosimeter/{}.json", sanitize_serial(serial))
 }
 
-fn dosimeter_dir() -> PathBuf {
-    ProjectDirs::from("com", "radiacode", "radiacode-spectrum")
-        .map(|dirs| dirs.data_dir().join("dosimeter"))
-        .unwrap_or_else(|| PathBuf::from("dosimeter"))
+fn history_path(serial: &str) -> PathBuf {
+    data_dir().join(history_relative_path(serial))
 }
 
 fn sanitize_serial(serial: &str) -> String {

@@ -71,7 +71,18 @@ pub fn show_owned_series(
         .collect();
     let peak = series_peak(&series);
     let y_top = y_axis_top(peak, y_scale);
-    plot_series(ui, id, &series, y_scale, y_top, style, log_floor, peak_overlay);
+    plot_series(
+        ui,
+        id,
+        &series,
+        SeriesPlotConfig {
+            y_scale,
+            y_top,
+            style,
+            log_floor,
+        },
+        peak_overlay,
+    );
 }
 
 fn series_peak(series: &[PlotSeries<'_>]) -> f64 {
@@ -83,16 +94,24 @@ fn series_peak(series: &[PlotSeries<'_>]) -> f64 {
         .fold(0.0_f64, f64::max)
 }
 
-fn plot_series(
-    ui: &mut Ui,
-    id: &str,
-    series: &[PlotSeries<'_>],
+struct SeriesPlotConfig {
     y_scale: YScale,
     y_top: f64,
     style: HistogramStyle,
     log_floor: f64,
+}
+
+fn plot_series(
+    ui: &mut Ui,
+    id: &str,
+    series: &[PlotSeries<'_>],
+    config: SeriesPlotConfig,
     peak_overlay: Option<&PlotPeakOverlay<'_>>,
 ) {
+    let y_scale = config.y_scale;
+    let y_top = config.y_top;
+    let style = config.style;
+    let log_floor = config.log_floor;
     let plot_id = format!("{id}_{y_scale:?}");
     Plot::new(plot_id)
         .allow_zoom(true)
@@ -103,9 +122,7 @@ fn plot_series(
         .include_y(0.0)
         .x_axis_label("Energy (keV)")
         .y_axis_label(y_axis_label(y_scale))
-        .label_formatter(move |pos| {
-            crate::plot_hover::rate_plot_hover(pos, y_scale, log_floor)
-        })
+        .label_formatter(move |pos| crate::plot_hover::rate_plot_hover(pos, y_scale, log_floor))
         .show(ui, |plot_ui| {
             let bounds = plot_ui.plot_bounds();
             let (min_x, max_x) = clamp_energy_range(bounds.min()[0], bounds.max()[0]);

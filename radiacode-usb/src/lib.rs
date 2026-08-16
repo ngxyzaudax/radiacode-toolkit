@@ -9,3 +9,8 @@ pub use radiacode_core::{
 pub use transport::{UsbTransport, connect, reconnect_session, scan_usb_devices};
 pub use udev::{UsbAccessStatus, access_status, install_access_rule, rule_installed};
 pub use usb_error::is_connection_lost;
+
+#[cfg(test)]
+mod discovery_tests;
+#[cfg(test)]
+mod usb_error_tests;

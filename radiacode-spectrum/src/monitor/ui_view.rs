@@ -7,10 +7,10 @@ use crate::layout::page_scroll;
 use crate::model::ConnectionState;
 use crate::monitor::state::MonitorState;
 use crate::monitor::ui_plot_row::{
-    draw_accum_row, draw_count_rate_row, draw_dose_rate_row, plot_row_heights,
+    MonitorPlotRowProps, draw_accum_row, draw_count_rate_row, draw_dose_rate_row, plot_row_heights,
 };
 use crate::monitor::ui_plot_toolbar::PlotToolbarAction;
-use crate::monitor::ui_toolbar::{draw_monitor_toolbar, MonitorToolbarProps};
+use crate::monitor::ui_toolbar::{MonitorToolbarProps, draw_monitor_toolbar};
 use crate::scale::HistogramStyle;
 use crate::settings::{SettingsAction, SettingsState};
 use crate::theme::MUTED;
@@ -27,6 +27,19 @@ pub struct MonitorViewProps<'a> {
 pub enum MonitorViewAction {
     ResetDose,
     Settings(SettingsAction),
+}
+
+struct MonitorPlotStackProps<'a> {
+    monitor: &'a MonitorState,
+    dosimeter: &'a DosimeterState,
+    style: HistogramStyle,
+    smoothing_window: usize,
+    window_secs: f64,
+    dose_unit: &'a str,
+    count_unit: &'a str,
+    accum_unit: &'a str,
+    view_props: MonitorViewProps<'a>,
+    heights: [f32; PLOT_ROWS],
 }
 
 pub fn draw_monitor_view(
@@ -82,16 +95,18 @@ pub fn draw_monitor_view(
                     ui.spacing_mut().item_spacing.y = 0.0;
                     draw_plot_stack(
                         ui,
-                        monitor,
-                        dosimeter,
-                        style,
-                        smoothing_window,
-                        window_secs,
-                        dose_unit,
-                        count_unit,
-                        &accum_unit,
-                        props,
-                        [MIN_ROW_HEIGHT; PLOT_ROWS],
+                        MonitorPlotStackProps {
+                            monitor,
+                            dosimeter,
+                            style,
+                            smoothing_window,
+                            window_secs,
+                            dose_unit,
+                            count_unit,
+                            accum_unit,
+                            view_props: props,
+                            heights: [MIN_ROW_HEIGHT; PLOT_ROWS],
+                        },
                         &mut action,
                     );
                 });
@@ -99,16 +114,18 @@ pub fn draw_monitor_view(
             }
             draw_plot_stack(
                 ui,
-                monitor,
-                dosimeter,
-                style,
-                smoothing_window,
-                window_secs,
-                dose_unit,
-                count_unit,
-                &accum_unit,
-                props,
-                heights,
+                MonitorPlotStackProps {
+                    monitor,
+                    dosimeter,
+                    style,
+                    smoothing_window,
+                    window_secs,
+                    dose_unit,
+                    count_unit,
+                    accum_unit,
+                    view_props: props,
+                    heights,
+                },
                 &mut action,
             );
         },
@@ -118,52 +135,57 @@ pub fn draw_monitor_view(
 
 fn draw_plot_stack(
     ui: &mut Ui,
-    monitor: &MonitorState,
-    dosimeter: &DosimeterState,
-    style: HistogramStyle,
-    smoothing_window: usize,
-    window_secs: f64,
-    dose_unit: &str,
-    count_unit: &str,
-    accum_unit: &str,
-    props: MonitorViewProps<'_>,
-    heights: [f32; PLOT_ROWS],
+    props: MonitorPlotStackProps<'_>,
     action: &mut Option<MonitorViewAction>,
 ) {
+    let monitor = props.monitor;
+    let dosimeter = props.dosimeter;
+    let style = props.style;
+    let smoothing_window = props.smoothing_window;
+    let window_secs = props.window_secs;
+    let dose_unit = props.dose_unit;
+    let count_unit = props.count_unit;
+    let accum_unit = props.accum_unit;
+    let view_props = props.view_props;
+    let heights = props.heights;
     merge_plot_action(
         action,
         draw_dose_rate_row(
             ui,
-            props.settings,
-            props.connection,
-            monitor,
-            dose_unit,
-            style,
-            smoothing_window,
-            window_secs,
-            heights[0],
+            MonitorPlotRowProps {
+                settings: view_props.settings,
+                connection: view_props.connection,
+                monitor,
+                unit: dose_unit,
+                style,
+                smoothing_window,
+                window_secs,
+                row_height: heights[0],
+            },
         ),
     );
     merge_plot_action(
         action,
         draw_count_rate_row(
             ui,
-            props.settings,
-            props.connection,
-            monitor,
-            count_unit,
-            style,
-            smoothing_window,
-            window_secs,
-            heights[1],
+            MonitorPlotRowProps {
+                settings: view_props.settings,
+                connection: view_props.connection,
+                monitor,
+                unit: count_unit,
+                style,
+                smoothing_window,
+                window_secs,
+                row_height: heights[1],
+            },
         ),
     );
     merge_plot_action(
         action,
         draw_accum_row(
             ui,
-            props.settings,
-            props.connection,
+            view_props.settings,
+            view_props.connection,
             dosimeter,
             accum_unit,
             style,

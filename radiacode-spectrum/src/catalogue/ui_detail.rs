@@ -3,11 +3,11 @@ use egui::{RichText, Ui};
 use radiacode_nuclides::{Nuclide, format_half_life, nuclide_by_id, series_for_member};
 
 use crate::app_config::AppConfig;
+use crate::catalogue::detail_layout::{DetailLayoutConfig, detail_layout, is_tight_layout};
 use crate::catalogue::state::CatalogueState;
 use crate::catalogue::ui_chain::draw_decay_chain;
 use crate::catalogue::ui_preview::draw_peak_preview;
 use crate::catalogue::ui_stats::draw_nuclide_stats;
-use crate::layout::safe_span;
 use crate::theme::{MUTED, SPACE_SM};
 
 const PREVIEW_MIN_HEIGHT: f32 = 100.0;
@@ -45,31 +45,26 @@ pub fn draw_catalogue_detail(
     draw_nuclide_stats(ui, nuclide);
     ui.add_space(SPACE_SM);
     let remaining = ui.available_height();
-    let tight = remaining < TIGHT_HEIGHT;
-    if tight {
+    if is_tight_layout(remaining, TIGHT_HEIGHT) {
         state.chain_collapsed = true;
     }
-    let chain_fraction = if state.chain_collapsed {
-        0.0
-    } else {
-        CHAIN_SHARE
-    };
-    let chain_height = if state.chain_collapsed {
-        0.0
-    } else {
-        safe_span(remaining * chain_fraction, 0.0, CHAIN_MIN_HEIGHT).min(remaining * CHAIN_MAX_SHARE)
-    };
-    let preview_height = safe_span(
-        remaining - chain_height - if state.chain_collapsed { 0.0 } else { SECTION_GAP },
-        0.0,
-        PREVIEW_MIN_HEIGHT,
+    let layout = detail_layout(
+        remaining,
+        state.chain_collapsed,
+        DetailLayoutConfig {
+            chain_share: CHAIN_SHARE,
+            chain_max_share: CHAIN_MAX_SHARE,
+            preview_min_height: PREVIEW_MIN_HEIGHT,
+            chain_min_height: CHAIN_MIN_HEIGHT,
+            section_gap: SECTION_GAP,
+        },
     );
-    let changed = draw_peak_preview(ui, nuclide, state, config, preview_height);
+    let changed = draw_peak_preview(ui, nuclide, state, config, layout.preview_height);
     if !state.chain_collapsed {
         ui.add_space(SPACE_SM);
         ui.separator();
         ui.add_space(SPACE_SM);
-        draw_decay_chain(ui, id, state, chain_height.max(CHAIN_MIN_HEIGHT));
+        draw_decay_chain(ui, id, state, layout.chain_height.max(CHAIN_MIN_HEIGHT));
     } else {
         ui.horizontal(|ui| {
             if ui.button("Show decay chain").clicked() {

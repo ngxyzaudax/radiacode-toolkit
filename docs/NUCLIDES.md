@@ -41,7 +41,7 @@ Spectrum, Spectrogram, and Analysis share one detection pipeline (`radiacode-spe
 2. Matched-filter peak finding
 3. Poisson significance threshold (configurable σ)
 
-Toggle **Peak detection** on each view's toolbar or settings panel.
+Toggle **Peak detection** on each view's toolbar or settings panel. On the Spectrogram tab, use the **Peaks** button in the preview-strip gutter (left of the heatmap).
 
 ## Peak identification
 

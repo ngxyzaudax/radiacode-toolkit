@@ -3,11 +3,12 @@ use egui::{RichText, Ui};
 use radiacode_nuclides::{catalog, format_half_life};
 
 use crate::catalogue::state::CatalogueState;
-use crate::catalogue::ui_list_radiations::{draw_radiation_tree_placeholder, draw_radiation_tree_rows};
-use crate::catalogue::ui_table::{
-    TABLE_ROW_ALLOC, TableCellStyle, draw_table_header, draw_table_row, nuclide_table_layout,
+use crate::catalogue::ui_list_radiations::{
+    draw_radiation_tree_placeholder, draw_radiation_tree_rows,
 };
+use crate::catalogue::ui_table::nuclide_table_layout;
 use crate::theme::MUTED;
+use crate::ui::table::{TABLE_ROW_ALLOC, TableCellStyle, draw_table_header, draw_table_row};
 
 pub fn draw_catalogue_list(ui: &mut Ui, state: &mut CatalogueState) {
     ui.label(RichText::new("Nuclides").strong().size(14.0));
@@ -49,7 +50,7 @@ fn draw_nuclide_rows(
     ui: &mut Ui,
     state: &mut CatalogueState,
     table_width: f32,
-    layout: &crate::catalogue::ui_table::TableLayout,
+    layout: &crate::ui::table::TableLayout,
 ) {
     let results = state.results.clone();
     let mut row = 0usize;

@@ -1,16 +1,6 @@
 use std::f64::consts::PI;
 
-use radiacode_nuclides::GammaLine;
-
-const REFERENCE_ENERGY_KEV: f64 = 662.0;
-
-pub fn resolution_fwhm_kev(energy_kev: f64, fwhm_pct_at_662: f64) -> f64 {
-    if energy_kev <= 0.0 || fwhm_pct_at_662 <= 0.0 {
-        return 1.0;
-    }
-    let reference_fwhm = REFERENCE_ENERGY_KEV * fwhm_pct_at_662 / 100.0;
-    reference_fwhm * (energy_kev / REFERENCE_ENERGY_KEV).sqrt()
-}
+use radiacode_nuclides::{GammaLine, resolution_fwhm_kev};
 
 pub fn synthesize(lines: &[GammaLine], fwhm_pct: f64, grid: &[f64]) -> Vec<f64> {
     if grid.len() < 2 || lines.is_empty() {
@@ -18,7 +8,13 @@ pub fn synthesize(lines: &[GammaLine], fwhm_pct: f64, grid: &[f64]) -> Vec<f64> 
     }
     let mut values = vec![0.0; grid.len()];
     for line in lines {
-        add_gaussian(&mut values, grid, line.energy_kev, line.intensity_pct, fwhm_pct);
+        add_gaussian(
+            &mut values,
+            grid,
+            line.energy_kev,
+            line.intensity_pct,
+            fwhm_pct,
+        );
     }
     normalize_peak(&mut values, 100.0);
     values
@@ -32,7 +28,13 @@ pub fn synthesize_grid(max_energy_kev: f64, points: usize) -> Vec<f64> {
     (0..points).map(|index| index as f64 * step).collect()
 }
 
-fn add_gaussian(values: &mut [f64], grid: &[f64], energy_kev: f64, intensity_pct: f64, fwhm_pct: f64) {
+fn add_gaussian(
+    values: &mut [f64],
+    grid: &[f64],
+    energy_kev: f64,
+    intensity_pct: f64,
+    fwhm_pct: f64,
+) {
     let sigma = resolution_fwhm_kev(energy_kev, fwhm_pct) / (2.0 * (2.0_f64.ln()).sqrt());
     if sigma <= 0.0 || intensity_pct <= 0.0 {
         return;
@@ -57,7 +59,8 @@ fn normalize_peak(values: &mut [f64], peak: f64) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{synthesize, synthesize_grid};
+    use radiacode_nuclides::resolution_fwhm_kev;
 
     #[test]
     fn fwhm_at_reference_energy() {

@@ -30,9 +30,13 @@ fn topology_contains_thorium_gap_members() {
 #[test]
 fn th232_graph_reaches_high_energy_daughters() {
     let graph = decay_graph(th232_id(), 64);
-    let names: Vec<_> = graph.nodes.iter().map(|node| node.display_name.as_str()).collect();
-    assert!(names.iter().any(|name| *name == "Pb-212"));
-    assert!(names.iter().any(|name| *name == "Tl-208"));
+    let names: Vec<_> = graph
+        .nodes
+        .iter()
+        .map(|node| node.display_name.as_str())
+        .collect();
+    assert!(names.contains(&"Pb-212"));
+    assert!(names.contains(&"Tl-208"));
 }
 
 #[test]
@@ -43,14 +47,20 @@ fn th232_series_has_equilibrium_line_near_2614_kev() {
     let weights = equilibrium_weights(series);
     let lines = chain_lines(&weights);
     assert!(
-        lines.iter().any(|line| (line.line.energy_kev - 2614.5).abs() < 5.0),
+        lines
+            .iter()
+            .any(|line| (line.line.energy_kev - 2614.5).abs() < 5.0),
         "expected Tl-208 line near 2614 keV"
     );
-    let th232_lines = lines.iter().filter(|line| line.source == th232_id()).count();
+    let th232_lines = lines
+        .iter()
+        .filter(|line| line.source == th232_id())
+        .count();
     assert!(
-        th232_lines == 0 || lines.iter().all(|line| {
-            line.source != th232_id() || line.line.energy_kev < 300.0
-        })
+        th232_lines == 0
+            || lines
+                .iter()
+                .all(|line| { line.source != th232_id() || line.line.energy_kev < 300.0 })
     );
 }
 

@@ -71,7 +71,10 @@ fn parent_is_left_of_focus() {
     }
     let grid = layout_chain_grid(&graph);
     let focus = &grid.nodes[graph.focus_index];
-    let parent = grid.nodes.iter().find(|node| node.role == crate::catalogue::chain_grid_model::NodeRole::Parent);
+    let parent = grid
+        .nodes
+        .iter()
+        .find(|node| node.role == crate::catalogue::chain_grid_model::NodeRole::Parent);
     if let Some(parent) = parent {
         assert!(parent.rect.right() < focus.rect.left());
     }
@@ -83,7 +86,10 @@ fn po218_branches_have_labels() {
     if graph.nodes.is_empty() {
         return;
     }
-    let po218 = graph.nodes.iter().position(|node| node.display_name == "Po-218");
+    let po218 = graph
+        .nodes
+        .iter()
+        .position(|node| node.display_name == "Po-218");
     let Some(po218) = po218 else {
         return;
     };
@@ -92,7 +98,11 @@ fn po218_branches_have_labels() {
         return;
     }
     let grid = layout_chain_grid(&graph);
-    let labeled = grid.edges.iter().filter(|edge| edge.label.is_some()).count();
+    let labeled = grid
+        .edges
+        .iter()
+        .filter(|edge| edge.label.is_some())
+        .count();
     assert!(labeled >= branches);
 }
 

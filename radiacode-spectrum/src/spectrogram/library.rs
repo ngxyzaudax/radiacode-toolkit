@@ -63,6 +63,8 @@ pub fn import_rcspg(source: &Path, recordings_dir: &str) -> Result<PathBuf, Stri
     Ok(path)
 }
 
+const AUTOSAVE_RETAIN: usize = 3;
+
 pub fn auto_save_snapshot(
     series: &SpectrogramSeries,
     writer: Option<&RecordingWriter>,
@@ -70,6 +72,7 @@ pub fn auto_save_snapshot(
 ) -> std::io::Result<PathBuf> {
     let dir = spectrograms_dir(recordings_dir).join("autosave");
     fs::create_dir_all(&dir)?;
+    trim_autosave_dir(&dir, AUTOSAVE_RETAIN)?;
     let path = dir.join(format!("autosave_{}", timestamp_filename()));
     write_recording(&path, series)?;
     if let Some(writer) = writer {
@@ -87,4 +90,20 @@ pub fn auto_save_snapshot(
         );
     }
     Ok(path)
+}
+
+fn trim_autosave_dir(dir: &Path, keep: usize) -> std::io::Result<()> {
+    let mut entries: Vec<_> = fs::read_dir(dir)?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_file())
+        .collect();
+    if entries.len() <= keep {
+        return Ok(());
+    }
+    entries.sort_by_key(|entry| entry.metadata().and_then(|meta| meta.modified()).ok());
+    let remove_count = entries.len().saturating_sub(keep);
+    for entry in entries.into_iter().take(remove_count) {
+        let _ = fs::remove_file(entry.path());
+    }
+    Ok(())
 }

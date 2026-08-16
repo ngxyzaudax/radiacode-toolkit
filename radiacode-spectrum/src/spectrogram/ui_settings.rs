@@ -62,9 +62,8 @@ pub fn draw_display_controls(ui: &mut Ui, settings: &mut SpectrogramSettings) ->
         );
         changed |= slider_committed(&z_min);
         let z_max_lower = (settings.z_min + 1.0).clamp(MIN_Z, MAX_Z);
-        let z_max = ui.add(
-            egui::Slider::new(&mut settings.z_max, z_max_lower..=MAX_Z).text("Z max"),
-        );
+        let z_max =
+            ui.add(egui::Slider::new(&mut settings.z_max, z_max_lower..=MAX_Z).text("Z max"));
         changed |= slider_committed(&z_max);
         if changed {
             settings.clamp();
@@ -87,7 +86,6 @@ pub fn draw_overlay_controls(ui: &mut Ui, state: &mut SpectrogramState) -> bool 
     changed |= ui
         .checkbox(&mut state.show_count_rate, "Count rate")
         .changed();
-    changed |= ui.checkbox(&mut state.show_peaks, "Peak detection").changed();
     changed
 }
 

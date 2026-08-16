@@ -1,49 +1,54 @@
-use std::time::{Duration, Instant};
-
 use tracing::{debug, warn};
 
 use crate::energy::{energy_grid, sample_indices};
 use crate::model::SpectrumView;
-use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::capture::SpectrogramCapture;
-use crate::spectrogram::gap::{self, ClassifiedRow, classify_row};
-use crate::spectrogram::library;
-use crate::spectrogram::model::SpectrogramSeries;
+use crate::spectrogram::gap::{self, classify_row};
+use crate::spectrogram::ingest_append::append_classified_row_capture;
+use crate::spectrogram::ingest_baseline::{ensure_live_series, store_baseline_capture};
 
 pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView, sequence: u64) {
-    if sequence <= capture.last_ingested_sequence {
+    let mut progress = match capture.progress.lock() {
+        Ok(guard) => guard,
+        Err(error) => {
+            warn!("capture progress mutex poisoned during ingest, recovering");
+            error.into_inner()
+        }
+    };
+    if sequence <= progress.last_ingested_sequence {
         return;
     }
-    if !capture.capture_enabled {
-        capture.last_ingested_sequence = sequence;
+    if !progress.capture_enabled {
+        progress.last_ingested_sequence = sequence;
         return;
     }
     let grid = energy_grid(spectrum);
     if grid.indices.is_empty() {
         warn!(sequence, "spectrogram ingest skipped: empty energy range");
-        capture.status = "No channels in selected energy range.".into();
-        capture.last_ingested_sequence = sequence;
-        capture.mark_dirty();
+        progress.status = "No channels in selected energy range.".into();
+        progress.last_ingested_sequence = sequence;
+        progress.mark_dirty();
         return;
     }
     let device_serial = capture.device_serial.clone();
     ensure_live_series(
-        capture,
+        &capture.settings,
+        &mut progress,
         spectrum,
         device_serial.as_deref(),
         &grid.energies_kev,
     );
     let cumulative = sample_indices(&grid, &spectrum.counts);
     let device_duration_secs = spectrum.duration.as_secs_f64();
-    if capture.skip_next_sample || capture.reconnect_baseline_pending {
-        store_baseline_capture(capture, sequence, cumulative, device_duration_secs);
+    if progress.skip_next_sample || progress.reconnect_baseline_pending {
+        store_baseline_capture(&mut progress, sequence, cumulative, device_duration_secs);
         return;
     }
-    let Some(baseline) = capture.baseline.clone() else {
-        store_baseline_capture(capture, sequence, cumulative, device_duration_secs);
+    let Some(baseline) = progress.baseline.clone() else {
+        store_baseline_capture(&mut progress, sequence, cumulative, device_duration_secs);
         return;
     };
-    let recent_totals = capture
+    let recent_totals = progress
         .live_series
         .as_ref()
         .map(|series| series.recent_row_totals(5))
@@ -56,8 +61,8 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
             sequence,
             device_duration_delta, "spectrogram device timeline regressed, re-baselining"
         );
-        store_baseline_capture(capture, sequence, cumulative, device_duration_secs);
-        capture.status =
+        store_baseline_capture(&mut progress, sequence, cumulative, device_duration_secs);
+        progress.status =
             "Device spectrum reset detected. Re-synced baseline; rows resume on next interval."
                 .into();
         return;
@@ -72,7 +77,7 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
             capture_interval,
             "spectrogram ingest skipped: interval not elapsed"
         );
-        capture.last_ingested_sequence = sequence;
+        progress.last_ingested_sequence = sequence;
         return;
     }
     let classified = classify_row(
@@ -82,8 +87,11 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
         capture_interval,
         &recent_totals,
     );
+    let settings = capture.settings.clone();
     append_classified_row_capture(
-        capture,
+        &mut capture.recording,
+        &settings,
+        &mut progress,
         sequence,
         cumulative,
         device_duration_secs,
@@ -91,117 +99,7 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
     );
 }
 
-fn ensure_live_series(
-    capture: &mut SpectrogramCapture,
-    spectrum: &SpectrumView,
-    device_serial: Option<&str>,
-    energies_kev: &[f64],
-) {
-    if capture.live_series.is_some() {
-        return;
-    }
-    let header = crate::spectrogram::storage::header_now(
-        spectrum.a0,
-        spectrum.a1,
-        spectrum.a2,
-        energies_kev.len() as u32,
-        capture.settings.capture_interval(),
-        device_serial.map(str::to_string),
-        energies_kev.to_vec(),
-    );
-    capture.live_series = Some(SpectrogramSeries::new(header, energies_kev.to_vec()));
-}
-
-fn store_baseline_capture(
-    capture: &mut SpectrogramCapture,
-    sequence: u64,
-    cumulative: Vec<u32>,
-    device_duration_secs: f64,
-) {
-    debug!(sequence, "spectrogram baseline sample stored");
-    capture.skip_next_sample = false;
-    capture.reconnect_baseline_pending = false;
-    capture.baseline = Some(IngestBaseline::new(cumulative, device_duration_secs));
-    capture.last_ingested_sequence = sequence;
-    capture.last_ingest_at = Some(Instant::now());
-    capture.status = "Synced. Adding rows on each spectrum refresh.".into();
-    capture.mark_dirty();
-}
-
-fn append_classified_row_capture(
-    capture: &mut SpectrogramCapture,
-    sequence: u64,
-    cumulative: Vec<u32>,
-    device_duration_secs: f64,
-    classified: ClassifiedRow,
-) {
-    let max_samples = capture.settings.max_samples;
-    let row_total: u64 = classified.counts.iter().map(|&value| value as u64).sum();
-    if let Some(series) = capture.live_series.as_mut() {
-        series.push_row(
-            classified.counts.clone(),
-            classified.interval_secs,
-            classified.kind,
-            max_samples,
-        );
-        debug!(
-            sequence,
-            rows = series.row_count(),
-            row_total,
-            interval_secs = classified.interval_secs,
-            ?classified.kind,
-            "spectrogram row appended"
-        );
-    }
-    if let Some(writer) = capture.recording.as_mut() {
-        if let Some(row) = capture
-            .live_series
-            .as_ref()
-            .and_then(|series| series.rows.last())
-        {
-            if let Err(error) = writer.append_row(row) {
-                warn!(%error, "spectrogram recording write failed");
-                capture.status = format!("Recording write failed: {error}");
-            }
-        }
-    }
-    capture.baseline = Some(IngestBaseline::new(cumulative, device_duration_secs));
-    capture.last_ingested_sequence = sequence;
-    capture.last_ingest_at = Some(Instant::now());
-    capture.status = if let Some(series) = capture.live_series.as_ref() {
-        format!("{} ({} row(s))", classified.status, series.row_count())
-    } else {
-        classified.status
-    };
-    capture.mark_dirty();
-}
-
-pub fn maybe_auto_save_capture(capture: &mut SpectrogramCapture) {
-    if capture.recording.is_none() {
-        return;
-    }
-    let due = capture
-        .last_auto_save
-        .map(|t| t.elapsed() >= Duration::from_secs(60))
-        .unwrap_or(true);
-    if !due {
-        return;
-    }
-    let Some(series) = capture.live_series.as_ref() else {
-        return;
-    };
-    match library::auto_save_snapshot(
-        series,
-        capture.recording.as_ref(),
-        &capture.settings.recordings_dir,
-    ) {
-        Ok(path) => {
-            capture.last_auto_save = Some(Instant::now());
-            debug!(path = %path.display(), "spectrogram auto-saved");
-        }
-        Err(error) => warn!(%error, "spectrogram auto-save failed"),
-    }
-}
+pub use super::ingest_append::maybe_auto_save_capture;
 
 #[cfg(test)]
 pub fn ingest_spectrum(

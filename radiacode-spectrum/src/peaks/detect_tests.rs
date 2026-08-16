@@ -1,9 +1,9 @@
 use serde::Deserialize;
 
+use crate::app_config::AppConfig;
+use crate::identify::{analyze_peaks, match_params_from_config};
 use crate::peaks::resolution::fwhm_kev;
 use crate::peaks::{DetectionParams, detect_peaks};
-use crate::identify::{analyze_peaks, detection_params_from_config, match_params_from_config};
-use crate::app_config::AppConfig;
 use radiacode_nuclides::tolerance_kev;
 
 #[derive(Debug, Deserialize)]
@@ -38,11 +38,7 @@ fn has_peak_near(peaks: &[crate::peaks::DetectedPeak], energy_kev: f64, fwhm_pct
 fn thoriated_rods_finds_thorium_lines() {
     let fixture = load_fixture("thoriated_rods");
     let params = DetectionParams::default();
-    let peaks = detect_peaks(
-        &fixture.energies_kev,
-        &fixture_counts(&fixture),
-        params,
-    );
+    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
     for energy in [238.6, 338.3, 583.2, 727.3, 911.2, 2614.5] {
         assert!(
             has_peak_near(&peaks, energy, params.detector_fwhm_pct),
@@ -55,11 +51,7 @@ fn thoriated_rods_finds_thorium_lines() {
 fn background_finds_potassium() {
     let fixture = load_fixture("background_indoor_outdoor");
     let params = DetectionParams::default();
-    let peaks = detect_peaks(
-        &fixture.energies_kev,
-        &fixture_counts(&fixture),
-        params,
-    );
+    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
     assert!(
         has_peak_near(&peaks, 1460.8, params.detector_fwhm_pct),
         "missing K-40 peak in {peaks:?}"
@@ -70,11 +62,7 @@ fn background_finds_potassium() {
 fn thoriated_rods_identifies_thorium_series() {
     let fixture = load_fixture("thoriated_rods");
     let params = DetectionParams::default();
-    let peaks = detect_peaks(
-        &fixture.energies_kev,
-        &fixture_counts(&fixture),
-        params,
-    );
+    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
     let config = AppConfig::default();
     let analysis = analyze_peaks(&peaks, &config);
     assert!(
@@ -98,12 +86,14 @@ fn flat_noise_has_no_peaks() {
 
 #[test]
 fn detection_params_follow_app_config() {
-    let mut config = AppConfig::default();
-    config.peak_sensitivity_sigma = 5.7;
-    config.detector_fwhm_pct = 8.5;
-    config.match_tolerance_frac = 0.02;
-    config.match_min_intensity_pct = 1.7;
-    let params = detection_params_from_config(&config);
+    let config = AppConfig {
+        peak_sensitivity_sigma: 5.7,
+        detector_fwhm_pct: 8.5,
+        match_tolerance_frac: 0.02,
+        match_min_intensity_pct: 1.7,
+        ..Default::default()
+    };
+    let params = DetectionParams::from_app_config(&config);
     assert_eq!(params.sigma_min, 5.7);
     assert_eq!(params.detector_fwhm_pct, 8.5);
     let match_params = match_params_from_config(&config);
@@ -116,19 +106,23 @@ fn detection_params_follow_app_config() {
 fn sensitivity_slider_changes_peak_count() {
     let fixture = load_fixture("thoriated_rods");
     let counts = fixture_counts(&fixture);
-    let mut strict = AppConfig::default();
-    strict.peak_sensitivity_sigma = 15.0;
-    let mut sensitive = AppConfig::default();
-    sensitive.peak_sensitivity_sigma = 2.0;
+    let strict = AppConfig {
+        peak_sensitivity_sigma: 15.0,
+        ..Default::default()
+    };
+    let sensitive = AppConfig {
+        peak_sensitivity_sigma: 2.0,
+        ..Default::default()
+    };
     let strict_peaks = detect_peaks(
         &fixture.energies_kev,
         &counts,
-        detection_params_from_config(&strict),
+        DetectionParams::from_app_config(&strict),
     );
     let sensitive_peaks = detect_peaks(
         &fixture.energies_kev,
         &counts,
-        detection_params_from_config(&sensitive),
+        DetectionParams::from_app_config(&sensitive),
     );
     assert!(
         sensitive_peaks.len() > strict_peaks.len(),
@@ -140,10 +134,14 @@ fn sensitivity_slider_changes_peak_count() {
 
 #[test]
 fn detector_fwhm_slider_changes_match_tolerance() {
-    let mut narrow = AppConfig::default();
-    narrow.detector_fwhm_pct = 4.0;
-    let mut wide = AppConfig::default();
-    wide.detector_fwhm_pct = 15.0;
+    let narrow = AppConfig {
+        detector_fwhm_pct: 4.0,
+        ..Default::default()
+    };
+    let wide = AppConfig {
+        detector_fwhm_pct: 15.0,
+        ..Default::default()
+    };
     let narrow_tol = tolerance_kev(727.0, match_params_from_config(&narrow));
     let wide_tol = tolerance_kev(727.0, match_params_from_config(&wide));
     assert!(wide_tol > narrow_tol);
@@ -152,18 +150,16 @@ fn detector_fwhm_slider_changes_match_tolerance() {
 #[test]
 fn tuned_settings_find_thorium_lines() {
     let fixture = load_fixture("thoriated_rods");
-    let mut config = AppConfig::default();
-    config.peak_sensitivity_sigma = 5.7;
-    config.detector_fwhm_pct = 8.5;
-    config.match_tolerance_frac = 0.02;
-    config.match_tolerance_floor_kev = 3.0;
-    config.match_min_intensity_pct = 1.7;
-    let params = detection_params_from_config(&config);
-    let peaks = detect_peaks(
-        &fixture.energies_kev,
-        &fixture_counts(&fixture),
-        params,
-    );
+    let config = AppConfig {
+        peak_sensitivity_sigma: 5.7,
+        detector_fwhm_pct: 8.5,
+        match_tolerance_frac: 0.02,
+        match_tolerance_floor_kev: 3.0,
+        match_min_intensity_pct: 1.7,
+        ..Default::default()
+    };
+    let params = DetectionParams::from_app_config(&config);
+    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
     for energy in [238.6, 338.3, 583.2, 727.3, 911.2, 2614.5] {
         assert!(
             has_peak_near(&peaks, energy, params.detector_fwhm_pct),

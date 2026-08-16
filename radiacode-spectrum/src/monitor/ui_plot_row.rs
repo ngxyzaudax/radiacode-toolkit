@@ -4,12 +4,12 @@ use crate::dosimeter::DosimeterState;
 use crate::model::ConnectionState;
 use crate::monitor::plot_bounds::PlotSeries;
 use crate::monitor::state::MonitorState;
-use crate::monitor::ui_dose_plot::draw_cumulative_dose_plot;
 use crate::monitor::ui_accum_toolbar::draw_accum_plot_toolbar;
+use crate::monitor::ui_dose_plot::draw_cumulative_dose_plot;
 use crate::monitor::ui_plot_toolbar::{
-    draw_count_rate_plot_toolbar, draw_dose_rate_plot_toolbar, PlotToolbarAction,
+    PlotToolbarAction, draw_count_rate_plot_toolbar, draw_dose_rate_plot_toolbar,
 };
-use crate::monitor::ui_rate_plot::draw_rate_plot;
+use crate::monitor::ui_rate_plot::{RatePlotOptions, draw_rate_plot};
 use crate::monitor::ui_toolbar_row::toolbar_height_after;
 use crate::scale::HistogramStyle;
 use crate::settings::SettingsState;
@@ -25,32 +25,46 @@ pub fn plot_row_heights(available: f32) -> [f32; PLOT_ROWS] {
     [even, even, last]
 }
 
+pub struct MonitorPlotRowProps<'a> {
+    pub settings: &'a mut SettingsState,
+    pub connection: ConnectionState,
+    pub monitor: &'a MonitorState,
+    pub unit: &'a str,
+    pub style: HistogramStyle,
+    pub smoothing_window: usize,
+    pub window_secs: f64,
+    pub row_height: f32,
+}
+
 pub fn draw_dose_rate_row(
     ui: &mut Ui,
-    settings: &mut SettingsState,
-    connection: ConnectionState,
-    monitor: &MonitorState,
-    unit: &str,
-    style: HistogramStyle,
-    smoothing_window: usize,
-    window_secs: f64,
-    row_height: f32,
+    props: MonitorPlotRowProps<'_>,
 ) -> Option<PlotToolbarAction> {
     draw_plot_row(
         ui,
-        row_height,
-        |ui| draw_dose_rate_plot_toolbar(ui, settings, connection, monitor, unit),
+        props.row_height,
+        |ui| {
+            draw_dose_rate_plot_toolbar(
+                ui,
+                props.settings,
+                props.connection,
+                props.monitor,
+                props.unit,
+            )
+        },
         |ui, plot_height| {
             draw_rate_plot(
                 ui,
                 "monitor_dose_plot",
-                monitor,
-                PlotSeries::Dose,
-                unit,
-                style,
-                smoothing_window,
-                window_secs,
-                plot_height,
+                props.monitor,
+                RatePlotOptions {
+                    series: PlotSeries::Dose,
+                    unit: props.unit,
+                    style: props.style,
+                    smoothing_window: props.smoothing_window,
+                    window_secs: props.window_secs,
+                    plot_height,
+                },
             );
         },
     )
@@ -58,30 +72,33 @@ pub fn draw_dose_rate_row(
 
 pub fn draw_count_rate_row(
     ui: &mut Ui,
-    settings: &mut SettingsState,
-    connection: ConnectionState,
-    monitor: &MonitorState,
-    unit: &str,
-    style: HistogramStyle,
-    smoothing_window: usize,
-    window_secs: f64,
-    row_height: f32,
+    props: MonitorPlotRowProps<'_>,
 ) -> Option<PlotToolbarAction> {
     draw_plot_row(
         ui,
-        row_height,
-        |ui| draw_count_rate_plot_toolbar(ui, settings, connection, monitor, unit),
+        props.row_height,
+        |ui| {
+            draw_count_rate_plot_toolbar(
+                ui,
+                props.settings,
+                props.connection,
+                props.monitor,
+                props.unit,
+            )
+        },
         |ui, plot_height| {
             draw_rate_plot(
                 ui,
                 "monitor_count_plot",
-                monitor,
-                PlotSeries::Count,
-                unit,
-                style,
-                smoothing_window,
-                window_secs,
-                plot_height,
+                props.monitor,
+                RatePlotOptions {
+                    series: PlotSeries::Count,
+                    unit: props.unit,
+                    style: props.style,
+                    smoothing_window: props.smoothing_window,
+                    window_secs: props.window_secs,
+                    plot_height,
+                },
             );
         },
     )

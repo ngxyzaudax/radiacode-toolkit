@@ -18,6 +18,25 @@ pub const INNER_WIDTH: f32 =
     LABEL_WIDTH + VALUE_WIDTH + UNIT_WIDTH + CHECK_WIDTH + CHECK_WIDTH + COL_SPACING * 4.0;
 const ROW_COUNT: f32 = 4.0;
 
+struct AlarmSignalControls<'a> {
+    sound_warn: &'a mut bool,
+    vibro_warn: &'a mut bool,
+    sound_danger: &'a mut bool,
+    vibro_danger: &'a mut bool,
+    sound_oos: &'a mut bool,
+    vibro_oos: &'a mut bool,
+}
+
+struct AlarmGridProps<'a> {
+    title: &'a str,
+    warning: &'a mut f32,
+    danger: &'a mut f32,
+    unit: &'a str,
+    speed: f64,
+    signals: AlarmSignalControls<'a>,
+    compact: bool,
+}
+
 pub fn alarm_card(
     ui: &mut Ui,
     title: &str,
@@ -43,7 +62,23 @@ pub fn alarm_card(
                 ui.set_min_size(Vec2::new(INNER_WIDTH, size.y - PAD_Y));
                 ui.set_max_width(INNER_WIDTH);
                 draw_alarm_grid(
-                    ui, title, warning, danger, unit, speed, sw, vw, sd, vd, so, vo, false,
+                    ui,
+                    AlarmGridProps {
+                        title,
+                        warning,
+                        danger,
+                        unit,
+                        speed,
+                        signals: AlarmSignalControls {
+                            sound_warn: sw,
+                            vibro_warn: vw,
+                            sound_danger: sd,
+                            vibro_danger: vd,
+                            sound_oos: so,
+                            vibro_oos: vo,
+                        },
+                        compact: false,
+                    },
                 );
             });
     });
@@ -63,26 +98,40 @@ pub fn compact_alarm_card(
         .inner_margin(egui::Margin::same(COMPACT_FRAME_MARGIN as i8))
         .show(ui, |ui| {
             draw_alarm_grid(
-                ui, title, warning, danger, unit, speed, sw, vw, sd, vd, so, vo, true,
+                ui,
+                AlarmGridProps {
+                    title,
+                    warning,
+                    danger,
+                    unit,
+                    speed,
+                    signals: AlarmSignalControls {
+                        sound_warn: sw,
+                        vibro_warn: vw,
+                        sound_danger: sd,
+                        vibro_danger: vd,
+                        sound_oos: so,
+                        vibro_oos: vo,
+                    },
+                    compact: true,
+                },
             );
         });
 }
 
-fn draw_alarm_grid(
-    ui: &mut Ui,
-    title: &str,
-    warning: &mut f32,
-    danger: &mut f32,
-    unit: &str,
-    speed: f64,
-    sw: &mut bool,
-    vw: &mut bool,
-    sd: &mut bool,
-    vd: &mut bool,
-    so: &mut bool,
-    vo: &mut bool,
-    compact: bool,
-) {
+fn draw_alarm_grid(ui: &mut Ui, props: AlarmGridProps<'_>) {
+    let title = props.title;
+    let warning = props.warning;
+    let danger = props.danger;
+    let unit = props.unit;
+    let speed = props.speed;
+    let sw = props.signals.sound_warn;
+    let vw = props.signals.vibro_warn;
+    let sd = props.signals.sound_danger;
+    let vd = props.signals.vibro_danger;
+    let so = props.signals.sound_oos;
+    let vo = props.signals.vibro_oos;
+    let compact = props.compact;
     let col_spacing = if compact {
         COMPACT_COL_SPACING
     } else {

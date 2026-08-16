@@ -4,10 +4,10 @@ use radiacode_core::{AccumulatedDose, AlarmLimits, DoseDisplayUnit};
 use tracing::info;
 
 use crate::dosimeter::append::{MAX_SAMPLES, session_restarted, should_append, unit_mismatch};
-use crate::dosimeter::format::alarm_level;
 use crate::dosimeter::persist::{clear_history, history_from_points, load_history, save_history};
 use crate::dosimeter::point::DoseHistoryPoint;
 use crate::monitor::AlarmLevel;
+use crate::monitor::alarm_level;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DosimeterState {

@@ -28,25 +28,22 @@ pub fn draw_spectrum_toolbar(
     }
     let mut action = None;
     let ctx = ui.ctx().clone();
-    Sides::new()
-        .spacing(SPACE_SM)
-        .shrink_left()
-        .show(
-            ui,
-            |ui| draw_spectrum_controls(ui, props),
-            |ui| {
-                if draw_reset_confirm(
-                    ui,
-                    &ctx,
-                    "spectrum_reset",
-                    true,
-                    "Reset spectrum accumulation",
-                    SPECTRUM_RESET,
-                ) {
-                    action = Some(SpectrumToolbarAction::Reset);
-                }
-            },
-        );
+    Sides::new().spacing(SPACE_SM).shrink_left().show(
+        ui,
+        |ui| draw_spectrum_controls(ui, props),
+        |ui| {
+            if draw_reset_confirm(
+                ui,
+                &ctx,
+                "spectrum_reset",
+                true,
+                "Reset spectrum accumulation",
+                SPECTRUM_RESET,
+            ) {
+                action = Some(SpectrumToolbarAction::Reset);
+            }
+        },
+    );
     ui.add_space(SPACE_SM);
     ui.add_space(SPACE_XS);
     action

@@ -17,22 +17,18 @@ pub fn draw_settings_view(
     device_info: Option<&DeviceInfo>,
     recording: bool,
 ) -> Option<SettingsAction> {
-    if state.show_load_confirm {
-        if let Some(next) = draw_load_confirm_dialog(ui.ctx(), state) {
-            return Some(next);
-        }
+    if state.show_load_confirm
+        && let Some(next) = draw_load_confirm_dialog(ui.ctx(), state)
+    {
+        return Some(next);
     }
     draw_settings_nav(ui, state);
     ui.add_space(SPACE_XS);
     ui.separator();
     ui.add_space(SPACE_SM);
     match state.section {
-        SettingsSection::Device => {
-            draw_device_settings(ui, state, connection, device_info)
-        }
-        SettingsSection::Application => {
-            draw_application_settings(ui, state, recording)
-        }
+        SettingsSection::Device => draw_device_settings(ui, state, connection, device_info),
+        SettingsSection::Application => draw_application_settings(ui, state, recording),
     }
 }
 

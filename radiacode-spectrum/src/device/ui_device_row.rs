@@ -2,12 +2,13 @@ use egui::{Button, Color32, RichText, Sense, Ui, Vec2};
 
 use radiacode_core::{DeviceEndpoint, DiscoveredDevice, TransportKind};
 
+use crate::device::LinkQuality;
 use crate::theme::{ACCENT, MUTED, SPACE_SM, SPACE_XS};
 use crate::ui_device_status::{paint_signal_icon, signal_color};
 
+use super::DeviceAction;
 use super::icons::paint_transport_icon;
 use super::ui_common::{draw_accent_card, draw_muted_card};
-use super::DeviceAction;
 
 const ROW_HEIGHT: f32 = 44.0;
 const HOVER_FILL: Color32 = Color32::from_rgb(36, 40, 48);
@@ -55,15 +56,10 @@ pub fn draw_reconnect_card(
     action
 }
 
-pub fn draw_device_row(
-    ui: &mut Ui,
-    device: &DiscoveredDevice,
-    busy: bool,
-) -> Option<DeviceAction> {
+pub fn draw_device_row(ui: &mut Ui, device: &DiscoveredDevice, busy: bool) -> Option<DeviceAction> {
     let mut action = None;
     let width = ui.available_width();
-    let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click());
     let fill = if response.hovered() && !busy {
         HOVER_FILL
     } else {
@@ -83,22 +79,25 @@ pub fn draw_device_row(
                             .small()
                             .color(MUTED),
                     );
-                    if device.endpoint.transport() == TransportKind::Bluetooth {
-                        if let Some(rssi) = device.rssi {
-                            ui.add_space(SPACE_XS);
-                            paint_signal_icon(ui, rssi);
-                            ui.label(
-                                RichText::new(format!("{rssi} dBm"))
-                                    .small()
-                                    .color(signal_color(rssi)),
-                            );
-                        }
+                    if device.endpoint.transport() == TransportKind::Bluetooth
+                        && let Some(rssi) = device.rssi
+                    {
+                        ui.add_space(SPACE_XS);
+                        paint_signal_icon(ui, LinkQuality::from_rssi(rssi));
+                        ui.label(
+                            RichText::new(format!("{rssi} dBm"))
+                                .small()
+                                .color(signal_color(rssi)),
+                        );
                     }
                 });
             });
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
-                    .add_enabled(!busy, Button::new("Connect").min_size(Vec2::new(88.0, 28.0)))
+                    .add_enabled(
+                        !busy,
+                        Button::new("Connect").min_size(Vec2::new(88.0, 28.0)),
+                    )
                     .clicked()
                 {
                     action = Some(DeviceAction::Connect(device.endpoint.clone()));

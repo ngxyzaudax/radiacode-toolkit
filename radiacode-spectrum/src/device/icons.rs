@@ -23,7 +23,12 @@ pub fn paint_usb_icon(ui: &mut Ui) {
         Pos2::new(rect.left() + 4.0, plug.bottom()),
         Pos2::new(rect.right() - 4.0, rect.bottom() - 1.0),
     );
-    painter.rect_stroke(plug, 2.0, Stroke::new(1.5, ACCENT), egui::StrokeKind::Outside);
+    painter.rect_stroke(
+        plug,
+        2.0,
+        Stroke::new(1.5, ACCENT),
+        egui::StrokeKind::Outside,
+    );
     painter.rect_filled(body, 2.0, ACCENT.gamma_multiply(0.35));
     painter.line_segment(
         [
@@ -59,11 +64,17 @@ pub fn paint_bluetooth_icon(ui: &mut Ui) {
         Stroke::new(1.5, color),
     );
     painter.line_segment(
-        [Pos2::new(cx - 4.0, mid - 3.0), Pos2::new(cx + 4.0, mid + 3.0)],
+        [
+            Pos2::new(cx - 4.0, mid - 3.0),
+            Pos2::new(cx + 4.0, mid + 3.0),
+        ],
         Stroke::new(1.5, color),
     );
     painter.line_segment(
-        [Pos2::new(cx + 4.0, mid - 3.0), Pos2::new(cx - 4.0, mid + 3.0)],
+        [
+            Pos2::new(cx + 4.0, mid - 3.0),
+            Pos2::new(cx - 4.0, mid + 3.0),
+        ],
         Stroke::new(1.5, color),
     );
     painter.line_segment(

@@ -1,8 +1,8 @@
 use egui::{RichText, Ui};
 
 use radiacode_nuclides::{
-    AttributedLine, ChainSeries, format_half_life, strongest_chain_line,
-    time_to_equilibrium_secs, bottleneck_member, equilibrium_weights,
+    AttributedLine, ChainSeries, bottleneck_member, equilibrium_weights, format_half_life,
+    strongest_chain_line, time_to_equilibrium_secs,
 };
 
 use crate::catalogue::ui_stats::stat_chip;

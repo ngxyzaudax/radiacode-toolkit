@@ -4,7 +4,7 @@ mod rssi_linux;
 
 #[cfg(target_os = "linux")]
 #[path = "rssi_mgmt.rs"]
-pub mod rssi_mgmt;
+mod rssi_mgmt;
 
 pub async fn read_connected_rssi_dbm(mac: &str) -> Option<i16> {
     #[cfg(target_os = "linux")]

@@ -33,20 +33,19 @@ pub fn draw_chain_graph(
     paint_grid_nodes(&painter, origin, &grid.nodes);
     let pointer = response.hover_pos();
     let hovered_index = pointer.and_then(|pos| grid.node_at(pos, origin));
-    state.hovered_chain_node = hovered_index.and_then(|idx| {
-        grid.nodes.get(idx).map(|node| node.nuclide_id)
-    });
-    if let (Some(pointer), Some(idx)) = (pointer, hovered_index) {
-        if let Some(node) = grid.nodes.get(idx) {
-            draw_chain_tooltip(ui, pointer, node, graph);
-        }
+    state.hovered_chain_node =
+        hovered_index.and_then(|idx| grid.nodes.get(idx).map(|node| node.nuclide_id));
+    if let (Some(pointer), Some(idx)) = (pointer, hovered_index)
+        && let Some(node) = grid.nodes.get(idx)
+    {
+        draw_chain_tooltip(ui, pointer, node, graph);
     }
     let selected_id = if response.clicked() {
         response.interact_pointer_pos().and_then(|pos| {
             grid.node_at(pos, origin).and_then(|idx| {
-                grid.nodes.get(idx).and_then(|node| {
-                    node.in_catalogue.then_some(node.nuclide_id)
-                })
+                grid.nodes
+                    .get(idx)
+                    .and_then(|node| node.in_catalogue.then_some(node.nuclide_id))
             })
         })
     } else {
@@ -69,6 +68,5 @@ pub fn fit_zoom(content_size: Vec2, viewport_size: Vec2) -> f32 {
     }
     (viewport_size.x / content_size.x)
         .min(viewport_size.y / content_size.y)
-        .min(1.0)
-        .max(0.15)
+        .clamp(0.15, 1.0)
 }

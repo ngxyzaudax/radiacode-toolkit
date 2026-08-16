@@ -16,7 +16,12 @@ pub enum PlotToolbarAction {
     ResetDose,
 }
 
-type AlarmFields<'a> = (&'a mut f32, &'a mut f32, f64, [(&'a mut bool, &'a mut bool); 3]);
+type AlarmFields<'a> = (
+    &'a mut f32,
+    &'a mut f32,
+    f64,
+    [(&'a mut bool, &'a mut bool); 3],
+);
 
 pub fn draw_dose_rate_plot_toolbar(
     ui: &mut Ui,

@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use eframe::App;
-use egui::{CentralPanel, Context, Ui, ViewportCommand, ViewportId};
+use egui::{CentralPanel, Context, Ui, ViewportCommand};
 use radiacode_core::{DeviceEndpoint, TransportKind, merge_discovered, resolve_usb_endpoint};
 use tracing::{debug, info, warn};
 
@@ -10,24 +10,23 @@ use crate::about::draw_about_view;
 use crate::analysis::{AnalysisState, draw_analysis_view};
 use crate::catalogue::{CatalogueState, draw_catalogue_view};
 use crate::device::{DeviceAction, DeviceViewProps, draw_device_view};
-use crate::events::AppState;
-use crate::icon::app_icon;
+use crate::events::{AppState, EventRouter};
 use crate::layout::page_scroll;
 use crate::model::{ConnectionState, DeviceInfo};
 use crate::monitor::{
-    draw_monitor_leave_confirm, AlarmLevel, MonitorLeaveChoice, MonitorViewAction,
-    MonitorViewProps, draw_monitor_view,
+    AlarmLevel, MonitorLeaveChoice, MonitorViewAction, MonitorViewProps,
+    draw_monitor_leave_confirm, draw_monitor_view,
 };
-use crate::pc_alarm::maybe_beep_alarm;
 use crate::peak_overlay::SpectrumPlotAction;
 use crate::plot_style::histogram_style;
-use crate::scale::YScale;
-use crate::settings::{SettingsAction, SettingsDeviceOp, SettingsState, draw_settings_view};
-use crate::smooth::DEFAULT_SMOOTHING_WINDOW;
+use crate::settings::{SettingsAction, SettingsState, draw_settings_view};
 use crate::spectrogram::SpectrogramState;
 use crate::spectrogram::capture::SpectrogramCapture;
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::ui_view::draw_spectrogram_view;
+use crate::spectrum::{
+    CloseAction, ShutdownSequence, SpectrumViewState, StartupChrome, TabNavigation,
+};
 use crate::tabs::draw_tab_bar;
 use crate::theme;
 use crate::ui_chrome::{tab_uses_page_inset, tab_uses_plot_pad, with_page_inset, with_plot_pad};
@@ -40,15 +39,6 @@ use crate::usb_access::{
 use crate::view_tab::ViewTab;
 use crate::worker::{WorkerCommand, WorkerEvent, WorkerHandle, spawn_worker};
 
-const SHUTDOWN_DISCONNECT_TIMEOUT: Duration = Duration::from_secs(5);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CloseState {
-    None,
-    AwaitingDisconnect,
-    Closing,
-}
-
 pub struct SpectrumApp {
     worker: WorkerHandle,
     state: AppState,
@@ -56,26 +46,14 @@ pub struct SpectrumApp {
     spectrogram: SpectrogramState,
     analysis: AnalysisState,
     catalogue: CatalogueState,
-    active_tab: ViewTab,
-    previous_tab: ViewTab,
-    y_scale: YScale,
-    smooth_window: usize,
-    plot_outline_only: bool,
-    show_spectrum_peaks: bool,
-    theme_ready: bool,
-    startup_scan_sent: bool,
-    icon_sent: bool,
-    window_size_frames: u8,
+    tabs: TabNavigation,
+    view: SpectrumViewState,
+    chrome: StartupChrome,
+    shutdown: ShutdownSequence,
     session_blocked: bool,
     usb_access_prompt: Option<UsbAccessPrompt>,
     last_alarm_level: AlarmLevel,
     auto_connect_attempted: bool,
-    monitor_leave_open: bool,
-    pending_tab: Option<ViewTab>,
-    pending_tab_after_save: Option<ViewTab>,
-    close_state: CloseState,
-    close_started: Option<Instant>,
-    close_after_disconnect: bool,
 }
 
 impl SpectrumApp {
@@ -95,26 +73,14 @@ impl SpectrumApp {
             spectrogram,
             analysis,
             catalogue: CatalogueState::new(),
-            active_tab: ViewTab::Device,
-            previous_tab: ViewTab::Device,
-            y_scale: YScale::Linear,
-            smooth_window: DEFAULT_SMOOTHING_WINDOW,
-            plot_outline_only: false,
-            show_spectrum_peaks: false,
-            theme_ready: false,
-            startup_scan_sent: false,
-            icon_sent: false,
-            window_size_frames: 0,
+            tabs: TabNavigation::new(),
+            view: SpectrumViewState::new(),
+            chrome: StartupChrome::new(),
+            shutdown: ShutdownSequence::new(),
             session_blocked: false,
             usb_access_prompt: None,
             last_alarm_level: AlarmLevel::Normal,
             auto_connect_attempted: false,
-            monitor_leave_open: false,
-            pending_tab: None,
-            pending_tab_after_save: None,
-            close_state: CloseState::None,
-            close_started: None,
-            close_after_disconnect: false,
         }
     }
 
@@ -126,53 +92,28 @@ impl SpectrumApp {
     }
 
     fn shutting_down(&self) -> bool {
-        self.close_state != CloseState::None
+        self.shutdown.active()
     }
 
     fn handle_close_request(&mut self, ctx: &Context) {
         let close_requested = ctx.input(|input| input.viewport().close_requested());
-        if !close_requested || self.shutting_down() {
-            return;
+        if close_requested {
+            ctx.send_viewport_cmd(ViewportCommand::CancelClose);
         }
-        ctx.send_viewport_cmd(ViewportCommand::CancelClose);
-        if self.device_link_active() {
-            info!("application close requested; disconnecting device");
-            self.close_state = CloseState::AwaitingDisconnect;
-            self.close_started = Some(Instant::now());
-            self.disconnect_device();
-            return;
+        match self
+            .shutdown
+            .on_close_request(close_requested, self.device_link_active())
+        {
+            CloseAction::None => {}
+            CloseAction::DisconnectDevice => self.disconnect_device(),
+            CloseAction::CompleteClose => self.shutdown.send_close_viewport(ctx),
         }
-        self.complete_close(ctx);
     }
 
     fn advance_close(&mut self, ctx: &Context) {
-        if self.close_after_disconnect {
-            self.close_after_disconnect = false;
-            self.complete_close(ctx);
-            return;
+        if matches!(self.shutdown.advance_close(), CloseAction::CompleteClose) {
+            self.shutdown.send_close_viewport(ctx);
         }
-        if self.close_state != CloseState::AwaitingDisconnect {
-            return;
-        }
-        let Some(started) = self.close_started else {
-            self.complete_close(ctx);
-            return;
-        };
-        if started.elapsed() >= SHUTDOWN_DISCONNECT_TIMEOUT {
-            warn!("device disconnect timed out during shutdown; closing anyway");
-            self.complete_close(ctx);
-        }
-    }
-
-    fn complete_close(&mut self, ctx: &Context) {
-        if self.close_state == CloseState::Closing {
-            return;
-        }
-        info!("application shutdown complete");
-        self.close_state = CloseState::Closing;
-        self.close_started = None;
-        self.close_after_disconnect = false;
-        ctx.send_viewport_cmd(ViewportCommand::Close);
     }
 
     fn apply_ui_scale(&self, ctx: &Context) {
@@ -183,23 +124,11 @@ impl SpectrumApp {
     }
 
     fn ensure_window_icon(&mut self, ctx: &Context) {
-        if self.icon_sent {
-            return;
-        }
-        ctx.send_viewport_cmd_to(ViewportId::ROOT, ViewportCommand::Icon(Some(app_icon())));
-        self.icon_sent = true;
+        self.chrome.ensure_window_icon(ctx);
     }
 
     fn ensure_startup_window_size(&mut self, ctx: &Context) {
-        let frames = crate::window::startup_resize_frames();
-        if self.window_size_frames >= frames {
-            return;
-        }
-        ctx.send_viewport_cmd_to(
-            ViewportId::ROOT,
-            ViewportCommand::InnerSize(crate::window::startup_inner_vec()),
-        );
-        self.window_size_frames += 1;
+        self.chrome.ensure_startup_window_size(ctx);
     }
 
     fn send(&mut self, command: WorkerCommand) {
@@ -288,103 +217,51 @@ impl SpectrumApp {
 
     fn poll_events(&mut self) {
         while let Ok(event) = self.worker.events.try_recv() {
-            if let WorkerEvent::UsbPermissionRequired { endpoint } = &event {
-                if let Some(status) = usb_access_required(endpoint) {
-                    self.usb_access_prompt = Some(UsbAccessPrompt::new(endpoint.clone(), status));
-                }
-            }
-            if let WorkerEvent::DeviceConfig(config) = &event {
-                if !self.session_blocked {
-                    let saving = self.settings.device_op == SettingsDeviceOp::Saving;
-                    match self.settings.device_op {
-                        SettingsDeviceOp::Loading => self.settings.on_loaded(*config),
-                        SettingsDeviceOp::Saving => self.settings.on_saved(*config),
-                        SettingsDeviceOp::Idle => {}
-                    }
-                    self.state.monitor.apply_limits(config.alarms);
-                    self.state.dosimeter.apply_limits(config.alarms);
-                    if saving {
-                        if let Some(tab) = self.pending_tab_after_save.take() {
-                            self.active_tab = tab;
-                        }
-                    }
-                }
-            }
-            if let WorkerEvent::Error(message) = &event {
-                if self.settings.device_op == SettingsDeviceOp::Loading
-                    || self.settings.device_op == SettingsDeviceOp::Saving
-                {
-                    self.settings.on_device_op_failed(message.clone());
-                    if self.pending_tab_after_save.is_some() {
-                        self.pending_tab = self.pending_tab_after_save.take();
-                        self.monitor_leave_open = true;
-                    }
-                } else if self.settings.status == "Saved to device" {
-                    self.settings.status = message.clone();
-                }
-            }
-            let fetch_spectrum =
-                matches!(&event, WorkerEvent::Connected(_)) && !self.session_blocked;
-            let initial_connect = matches!(&event, WorkerEvent::Connected(_))
-                && self.state.connection == ConnectionState::Connecting;
-            let scan_finished = matches!(&event, WorkerEvent::ScanFinished(_));
-            let monitor_sample = matches!(&event, WorkerEvent::MonitorSample(_));
-            match &event {
-                WorkerEvent::Reconnecting if !self.session_blocked => {
-                    self.spectrogram.on_reconnect();
-                }
-                WorkerEvent::Connected(info) if !self.session_blocked && initial_connect => {
-                    self.sync_capture_interval();
-                    self.sync_monitor_poll_interval();
-                    self.spectrogram.sync_from_capture();
-                    self.remember_connected_device(info);
-                    if self.active_tab == ViewTab::Device {
-                        self.active_tab = ViewTab::Monitor;
-                    }
-                    if matches!(self.active_tab, ViewTab::Settings | ViewTab::Monitor)
-                        && !self.settings.draft_dirty()
-                    {
-                        self.start_device_load();
-                    }
-                }
-                WorkerEvent::Disconnected => {
-                    self.spectrogram.on_disconnect();
-                    self.settings.on_disconnect();
-                    self.session_blocked = false;
-                    self.last_alarm_level = AlarmLevel::Normal;
-                    if self.close_state == CloseState::AwaitingDisconnect {
-                        self.close_after_disconnect = true;
-                    }
-                }
-                _ => {}
-            }
-            if let Some(command) = self.state.apply_event(event, !self.session_blocked) {
+            let disconnected = matches!(&event, WorkerEvent::Disconnected);
+            let mut pending_commands = Vec::new();
+            let pc_alarm_repeat = self.settings.app.pc_alarm_repeat;
+            let mut router = EventRouter {
+                state: &mut self.state,
+                settings: &mut self.settings,
+                spectrogram: &mut self.spectrogram,
+                usb_prompt: &mut self.usb_access_prompt,
+                session_blocked: self.session_blocked,
+                active_tab: self.tabs.active,
+                pending_tab_after_save: &mut self.tabs.pending_after_save,
+                pending_tab: &mut self.tabs.pending,
+                monitor_leave_open: &mut self.tabs.monitor_leave_open,
+                last_alarm_level: &mut self.last_alarm_level,
+                pc_alarm_repeat,
+            };
+            let outcome = router.dispatch(event, &mut |command| pending_commands.push(command));
+            for command in pending_commands {
                 match command {
                     WorkerCommand::FetchMonitor => self.schedule_monitor(),
                     other => self.send(other),
                 }
             }
-            if monitor_sample && !self.session_blocked {
-                self.check_pc_alarm();
+            if disconnected {
+                self.session_blocked = false;
+                self.shutdown.on_disconnected();
             }
-            if fetch_spectrum {
+            if let Some(tab) = outcome.switch_tab {
+                self.tabs.active = tab;
+            }
+            if outcome.sync_capture_interval {
+                self.sync_capture_interval();
+            }
+            if outcome.sync_monitor_poll_interval {
+                self.sync_monitor_poll_interval();
+            }
+            if let Some(info) = outcome.remember_device {
+                self.remember_connected_device(&info);
+            }
+            if outcome.fetch_spectrum {
                 self.schedule_spectrum();
             }
-            if scan_finished && !self.shutting_down() {
+            if outcome.scan_finished && !self.shutting_down() {
                 self.maybe_auto_connect();
             }
-        }
-    }
-
-    fn check_pc_alarm(&mut self) {
-        let dose = self.state.monitor.dose_alarm_level();
-        let count = self.state.monitor.count_alarm_level();
-        let accum = self.state.dosimeter.dose_alarm_level();
-        let current = dose.max(count).max(accum);
-        let rising = current > self.last_alarm_level && current > AlarmLevel::Normal;
-        self.last_alarm_level = current;
-        if rising {
-            maybe_beep_alarm(self.settings.app.pc_alarm_repeat);
         }
     }
 
@@ -419,16 +296,14 @@ impl SpectrumApp {
 
     fn start_connect_internal(&mut self, endpoint: DeviceEndpoint, force_usb: bool) {
         let endpoint = resolve_usb_endpoint(&self.state.devices, &endpoint);
-        if !force_usb {
-            if let Some(status) = usb_access_required(&endpoint) {
-                info!(?endpoint, ?status, "usb access required before connect");
-                self.session_blocked = false;
-                self.state.connection = ConnectionState::Disconnected;
-                self.state.connecting_endpoint = Some(endpoint.clone());
-                self.state.status = "USB access required.".into();
-                self.usb_access_prompt = Some(UsbAccessPrompt::new(endpoint, status));
-                return;
-            }
+        if !force_usb && let Some(status) = usb_access_required(&endpoint) {
+            info!(?endpoint, ?status, "usb access required before connect");
+            self.session_blocked = false;
+            self.state.connection = ConnectionState::Disconnected;
+            self.state.connecting_endpoint = Some(endpoint.clone());
+            self.state.status = "USB access required.".into();
+            self.usb_access_prompt = Some(UsbAccessPrompt::new(endpoint, status));
+            return;
         }
         let address = endpoint.address_label().to_string();
         info!(%address, ?endpoint, force_usb, "ui starting connect");
@@ -489,36 +364,27 @@ impl SpectrumApp {
     }
 
     fn try_switch_tab(&mut self, tab: ViewTab) -> bool {
-        if self.active_tab == ViewTab::Monitor
-            && tab != ViewTab::Monitor
-            && self.settings.draft_dirty()
-        {
-            self.pending_tab = Some(tab);
-            self.monitor_leave_open = true;
-            return false;
-        }
-        self.active_tab = tab;
-        true
+        self.tabs.try_switch(tab, self.settings.draft_dirty())
     }
 
     fn handle_monitor_leave_choice(&mut self, choice: MonitorLeaveChoice) {
         match choice {
             MonitorLeaveChoice::Save => {
-                self.pending_tab_after_save = self.pending_tab.take();
-                self.monitor_leave_open = false;
+                self.tabs.pending_after_save = self.tabs.pending.take();
+                self.tabs.monitor_leave_open = false;
                 self.handle_settings_action(SettingsAction::SaveDevice);
             }
             MonitorLeaveChoice::Discard => {
                 self.settings.discard();
                 self.sync_draft_alarm_limits();
-                if let Some(tab) = self.pending_tab.take() {
-                    self.active_tab = tab;
+                if let Some(tab) = self.tabs.pending.take() {
+                    self.tabs.active = tab;
                 }
-                self.monitor_leave_open = false;
+                self.tabs.monitor_leave_open = false;
             }
             MonitorLeaveChoice::Stay => {
-                self.pending_tab = None;
-                self.monitor_leave_open = false;
+                self.tabs.pending = None;
+                self.tabs.monitor_leave_open = false;
             }
         }
     }
@@ -587,7 +453,7 @@ impl SpectrumApp {
     }
 
     fn maybe_device_config_auto_load(&mut self) {
-        if !matches!(self.active_tab, ViewTab::Settings | ViewTab::Monitor) {
+        if !matches!(self.tabs.active, ViewTab::Settings | ViewTab::Monitor) {
             return;
         }
         if self.state.connection != ConnectionState::Connected {
@@ -614,8 +480,7 @@ impl SpectrumApp {
         let Some(draft) = self.settings.draft.as_ref() else {
             return;
         };
-        self.state.monitor.apply_limits(draft.alarms);
-        self.state.dosimeter.apply_limits(draft.alarms);
+        self.state.apply_alarm_limits(draft.alarms);
     }
 
     fn enter_settings_tab(&mut self) {
@@ -627,6 +492,7 @@ impl SpectrumApp {
             return;
         }
         if self.settings.draft_dirty() {
+            self.sync_draft_alarm_limits();
             return;
         }
         self.start_device_load();
@@ -640,11 +506,11 @@ impl SpectrumApp {
         match action {
             SpectrumPlotAction::OpenCatalogue(id) => {
                 self.catalogue.reveal(id);
-                self.active_tab = ViewTab::Catalogue;
+                self.tabs.active = ViewTab::Catalogue;
             }
             SpectrumPlotAction::OpenCatalogueChain(head) => {
                 self.catalogue.select_chain_by_head(head);
-                self.active_tab = ViewTab::Catalogue;
+                self.tabs.active = ViewTab::Catalogue;
             }
         }
     }
@@ -704,11 +570,13 @@ impl SpectrumApp {
                     self.sync_capture_interval();
                 }
             }
-            SpectrogramControlsAction::LibraryChanged => {}
+            SpectrogramControlsAction::LibraryChanged => {
+                self.spectrogram.refresh_history();
+                self.analysis
+                    .refresh_library(&self.spectrogram.settings.recordings_dir);
+            }
         }
     }
-
-    fn enter_spectrum_tab(&mut self) {}
 
     fn enter_spectrogram_tab(&mut self) {
         info!("entered spectrogram tab");
@@ -776,7 +644,7 @@ impl SpectrumApp {
         if self.state.connection != ConnectionState::Connected {
             return;
         }
-        if self.active_tab == ViewTab::Spectrum
+        if self.tabs.active == ViewTab::Spectrum
             && self
                 .state
                 .live_refresh_due(true, self.settings.app.spectrum_refresh_secs)
@@ -787,7 +655,7 @@ impl SpectrumApp {
     }
 
     fn draw_central_content(&mut self, ui: &mut Ui, ctx: &Context) {
-        if self.active_tab == ViewTab::Device {
+        if self.tabs.active == ViewTab::Device {
             if let Some(action) = draw_device_view(
                 ui,
                 DeviceViewProps {
@@ -800,13 +668,16 @@ impl SpectrumApp {
                     busy: self.state.busy,
                     scanned_once: self.state.scanned_once,
                     status: &self.state.status,
+                    link_health: self.state.monitor.link_health(),
+                    last_spectrum_fetch: self.state.last_fetch,
+                    last_monitor_fetch: self.state.last_monitor_fetch,
                 },
             ) {
                 self.handle_device_action(action);
             }
             return;
         }
-        if self.active_tab == ViewTab::Settings {
+        if self.tabs.active == ViewTab::Settings {
             if let Some(action) = draw_settings_view(
                 ui,
                 &mut self.settings,
@@ -818,27 +689,30 @@ impl SpectrumApp {
             }
             return;
         }
-        if self.active_tab == ViewTab::About {
+        if self.tabs.active == ViewTab::About {
             page_scroll(ui, "about_page", draw_about_view);
             return;
         }
-        if self.active_tab == ViewTab::Analysis {
-            if let Some(action) =
-                draw_analysis_view(ui, &mut self.analysis, &mut self.y_scale, &self.settings.app)
-            {
+        if self.tabs.active == ViewTab::Analysis {
+            if let Some(action) = draw_analysis_view(
+                ui,
+                &mut self.analysis,
+                &mut self.view.y_scale,
+                &self.settings.app,
+            ) {
                 self.handle_spectrum_plot_action(action);
             }
             return;
         }
-        if self.active_tab == ViewTab::Catalogue {
+        if self.tabs.active == ViewTab::Catalogue {
             if draw_catalogue_view(ui, &mut self.catalogue, &mut self.settings.app) {
                 self.settings.persist_app();
             }
             return;
         }
         if shows_tab_content(self.state.connection) {
-            let plot_style = histogram_style(self.plot_outline_only);
-            match self.active_tab {
+            let plot_style = histogram_style(self.view.plot_outline_only);
+            match self.tabs.active {
                 ViewTab::Monitor => {
                     if let Some(action) = draw_monitor_view(
                         ui,
@@ -849,22 +723,21 @@ impl SpectrumApp {
                         MonitorViewProps {
                             settings: &mut self.settings,
                             connection: self.state.connection,
-                            outline_only: &mut self.plot_outline_only,
+                            outline_only: &mut self.view.plot_outline_only,
                         },
                     ) {
                         self.handle_monitor_view_action(action);
                     }
-                    self.sync_draft_alarm_limits();
                 }
                 ViewTab::Spectrum => {
                     if let Some(action) = draw_spectrum_toolbar(
                         ui,
                         SpectrumToolbarProps {
                             connection: self.state.connection,
-                            y_scale: &mut self.y_scale,
-                            smooth_window: &mut self.smooth_window,
-                            outline_only: &mut self.plot_outline_only,
-                            show_peaks: &mut self.show_spectrum_peaks,
+                            y_scale: &mut self.view.y_scale,
+                            smooth_window: &mut self.view.smooth_window,
+                            outline_only: &mut self.view.plot_outline_only,
+                            show_peaks: &mut self.view.show_spectrum_peaks,
                         },
                     ) {
                         self.handle_spectrum_toolbar_action(action);
@@ -872,11 +745,15 @@ impl SpectrumApp {
                     if let Some(action) = draw_spectrum_plot(
                         ui,
                         self.state.spectrum.as_ref(),
-                        self.y_scale,
-                        self.smooth_window,
+                        self.view.y_scale,
+                        self.view.smooth_window,
                         plot_style,
-                        self.show_spectrum_peaks,
-                        &self.settings.app,
+                        self.view.show_spectrum_peaks,
+                        crate::ui_plot::SpectrumPlotDrawContext {
+                            config: &self.settings.app,
+                            spectrum_sequence: self.state.spectrum_sequence,
+                            peak_memo: &mut self.view.peak_memo,
+                        },
                     ) {
                         self.handle_spectrum_plot_action(action);
                     }
@@ -913,14 +790,14 @@ impl App for SpectrumApp {
         self.ensure_window_icon(ctx);
         self.ensure_startup_window_size(ctx);
         self.apply_ui_scale(ctx);
-        if !self.theme_ready {
+        if !self.chrome.theme_ready {
             theme::apply(ctx);
-            self.theme_ready = true;
+            self.chrome.theme_ready = true;
             self.sync_monitor_poll_interval();
             self.sync_capture_interval();
         }
-        if !self.startup_scan_sent {
-            self.startup_scan_sent = true;
+        if !self.chrome.startup_scan_sent {
+            self.chrome.startup_scan_sent = true;
             self.start_scan();
         }
         self.handle_close_request(ctx);
@@ -932,53 +809,56 @@ impl App for SpectrumApp {
         }
         self.maybe_live_refresh();
         self.maybe_device_config_auto_load();
-        ctx.request_repaint_after(Duration::from_millis(200));
+        if self.shutting_down() {
+            ctx.request_repaint_after(Duration::from_millis(16));
+        } else if self.state.connection == ConnectionState::Connected
+            || self.spectrogram.is_recording()
+        {
+            ctx.request_repaint_after(Duration::from_millis(200));
+        }
     }
 
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        if let Some(prompt) = self.usb_access_prompt.as_mut() {
-            if let Some(action) = draw_usb_access_dialog(&ctx, prompt) {
-                self.handle_usb_access_action(action);
-            }
+        if let Some(prompt) = self.usb_access_prompt.as_mut()
+            && let Some(action) = draw_usb_access_dialog(&ctx, prompt)
+        {
+            self.handle_usb_access_action(action);
         }
-        if let Some(choice) = draw_monitor_leave_confirm(&ctx, self.monitor_leave_open) {
+        if let Some(choice) = draw_monitor_leave_confirm(&ctx, self.tabs.monitor_leave_open) {
             self.handle_monitor_leave_choice(choice);
         }
         CentralPanel::default().show(ui, |ui| {
-            let previous_tab = self.previous_tab;
-            if let Some(requested) = draw_tab_bar(ui, self.active_tab) {
+            let previous_tab = self.tabs.previous;
+            if let Some(requested) = draw_tab_bar(ui, self.tabs.active) {
                 self.try_switch_tab(requested);
             }
-            if self.active_tab == ViewTab::Spectrum && previous_tab != ViewTab::Spectrum {
-                self.enter_spectrum_tab();
-            }
-            if self.active_tab == ViewTab::Spectrogram && previous_tab != ViewTab::Spectrogram {
+            if self.tabs.active == ViewTab::Spectrogram && previous_tab != ViewTab::Spectrogram {
                 self.enter_spectrogram_tab();
             }
-            if self.active_tab == ViewTab::Analysis && previous_tab != ViewTab::Analysis {
+            if self.tabs.active == ViewTab::Analysis && previous_tab != ViewTab::Analysis {
                 self.enter_analysis_tab();
             }
-            if self.active_tab == ViewTab::Catalogue && previous_tab != ViewTab::Catalogue {
+            if self.tabs.active == ViewTab::Catalogue && previous_tab != ViewTab::Catalogue {
                 self.enter_catalogue_tab();
             }
-            if self.active_tab == ViewTab::Monitor && previous_tab != ViewTab::Monitor {
+            if self.tabs.active == ViewTab::Monitor && previous_tab != ViewTab::Monitor {
                 self.enter_monitor_tab();
             }
-            if self.active_tab == ViewTab::Settings && previous_tab != ViewTab::Settings {
+            if self.tabs.active == ViewTab::Settings && previous_tab != ViewTab::Settings {
                 self.enter_settings_tab();
             }
-            self.previous_tab = self.active_tab;
+            self.tabs.previous = self.tabs.active;
             ui.separator();
             let content_rect = ui.available_rect_before_wrap();
             ui.scope_builder(egui::UiBuilder::new().max_rect(content_rect), |ui| {
                 ui.set_clip_rect(content_rect);
                 let connected = shows_tab_content(self.state.connection);
-                let page_inset = tab_uses_page_inset(self.active_tab)
-                    || (!connected && !tab_works_offline(self.active_tab));
+                let page_inset = tab_uses_page_inset(self.tabs.active)
+                    || (!connected && !tab_works_offline(self.tabs.active));
                 let plot_pad = connected
-                    && tab_uses_plot_pad(self.active_tab)
-                    && self.active_tab != ViewTab::Monitor;
+                    && tab_uses_plot_pad(self.tabs.active)
+                    && self.tabs.active != ViewTab::Monitor;
                 if page_inset {
                     with_page_inset(ui, |ui| self.draw_central_content(ui, &ctx));
                 } else if plot_pad {

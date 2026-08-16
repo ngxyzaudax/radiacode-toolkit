@@ -5,14 +5,6 @@ use crate::model::{GammaLine, RadiationKind};
 const AVOGADRO: f64 = 6.022_140_76e23;
 const CI_PER_BQ: f64 = 1.0 / 3.7e10;
 
-pub fn decay_constant_per_sec(half_life_secs: Option<f64>) -> Option<f64> {
-    let secs = half_life_secs?;
-    if !secs.is_finite() || secs <= 0.0 {
-        return None;
-    }
-    Some(LN_2 / secs)
-}
-
 pub fn mean_lifetime_secs(half_life_secs: Option<f64>) -> Option<f64> {
     let secs = half_life_secs?;
     if !secs.is_finite() || secs <= 0.0 {

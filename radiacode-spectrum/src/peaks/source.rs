@@ -26,6 +26,25 @@ pub fn peaks_from_collapsed(
     detect_peaks(&spectrum.energies_kev, &counts, params)
 }
 
+pub fn spectrogram_series_peak_token(series: &SpectrogramSeries) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    series.row_count().hash(&mut hasher);
+    if let Some(row) = series.rows.last() {
+        row.row_total().hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+pub fn peaks_from_channel_totals(
+    energies: &[f64],
+    totals: &[f64],
+    params: DetectionParams,
+) -> Vec<DetectedPeak> {
+    detect_peaks(energies, totals, params)
+}
+
+#[allow(dead_code)]
 pub fn peaks_from_spectrogram_series(
     series: &SpectrogramSeries,
     params: DetectionParams,
@@ -34,18 +53,12 @@ pub fn peaks_from_spectrogram_series(
         return Vec::new();
     }
     let channel_count = series.header.channel_count as usize;
-    let mut counts = vec![0_u64; channel_count];
-    for row in &series.rows {
-        for (index, value) in row.counts.iter().enumerate().take(channel_count) {
-            counts[index] += u64::from(*value);
-        }
-    }
-    let spectrum_counts: Vec<f64> = counts.iter().map(|&value| value as f64).collect();
+    let totals = crate::spectrogram::preview::channel_totals(series);
     let energies: Vec<f64> = series
         .energies_kev
         .iter()
         .take(channel_count)
         .copied()
         .collect();
-    detect_peaks(&energies, &spectrum_counts, params)
+    peaks_from_channel_totals(&energies, &totals, params)
 }

@@ -3,7 +3,11 @@ use crate::peaks::matched_filter::gaussian_smooth;
 use crate::peaks::model::{DetectedPeak, DetectionParams};
 use crate::peaks::resolution::{fwhm_channels, fwhm_kev};
 
-pub fn detect_peaks(energies_kev: &[f64], counts: &[f64], params: DetectionParams) -> Vec<DetectedPeak> {
+pub fn detect_peaks(
+    energies_kev: &[f64],
+    counts: &[f64],
+    params: DetectionParams,
+) -> Vec<DetectedPeak> {
     if energies_kev.len() < 5 || energies_kev.len() != counts.len() {
         return Vec::new();
     }

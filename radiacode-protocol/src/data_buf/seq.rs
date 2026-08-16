@@ -18,11 +18,13 @@ impl Seq {
         self != other && self.0.wrapping_sub(other.0) < 128
     }
 
-    pub fn lost_since(self, expected: Seq) -> u8 {
+    pub fn lost_since(self, expected: Seq) -> Option<u32> {
         if self == expected {
-            0
-        } else {
-            self.0.wrapping_sub(expected.0)
+            return Some(0);
         }
+        if !self.is_newer_than(expected) {
+            return None;
+        }
+        Some(u32::from(self.0.wrapping_sub(expected.0)))
     }
 }

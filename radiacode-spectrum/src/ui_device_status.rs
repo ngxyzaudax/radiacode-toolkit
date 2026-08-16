@@ -1,5 +1,6 @@
 use egui::{Color32, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 
+use crate::device::LinkQuality;
 use crate::layout::draw_toolbar;
 use crate::model::DeviceInfo;
 use crate::theme::{ACCENT, MUTED};
@@ -85,39 +86,27 @@ fn draw_temperature_chip(ui: &mut Ui, celsius: f32) {
 }
 
 fn draw_link_quality_chip(ui: &mut Ui, rssi_dbm: i16) {
+    let quality = LinkQuality::from_rssi(rssi_dbm);
     ui.horizontal(|ui| {
-        paint_signal_icon(ui, rssi_dbm);
+        paint_signal_icon(ui, quality);
         ui.label(
-            egui::RichText::new(link_quality_label(rssi_dbm))
+            egui::RichText::new(quality.label())
                 .strong()
-                .color(signal_color(rssi_dbm)),
+                .color(quality.color()),
         );
     });
 }
 
 fn draw_signal_strength_chip(ui: &mut Ui, rssi_dbm: i16) {
+    let quality = LinkQuality::from_rssi(rssi_dbm);
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Signal").small().color(MUTED));
         ui.label(
             egui::RichText::new(format!("{rssi_dbm} dBm"))
                 .strong()
-                .color(signal_color(rssi_dbm)),
+                .color(quality.color()),
         );
     });
-}
-
-fn link_quality_label(rssi_dbm: i16) -> &'static str {
-    if rssi_dbm >= -55 {
-        "Excellent"
-    } else if rssi_dbm >= -65 {
-        "Good"
-    } else if rssi_dbm >= -75 {
-        "Fair"
-    } else if rssi_dbm >= -85 {
-        "Weak"
-    } else {
-        "Poor"
-    }
 }
 
 fn battery_color(percent: f32) -> Color32 {
@@ -131,29 +120,7 @@ fn battery_color(percent: f32) -> Color32 {
 }
 
 pub(crate) fn signal_color(rssi_dbm: i16) -> Color32 {
-    if rssi_dbm >= -55 {
-        Color32::from_rgb(110, 190, 120)
-    } else if rssi_dbm >= -75 {
-        ACCENT
-    } else if rssi_dbm >= -90 {
-        Color32::from_rgb(230, 170, 70)
-    } else {
-        Color32::from_rgb(220, 90, 90)
-    }
-}
-
-fn signal_bars(rssi_dbm: i16) -> u8 {
-    if rssi_dbm >= -55 {
-        4
-    } else if rssi_dbm >= -65 {
-        3
-    } else if rssi_dbm >= -75 {
-        2
-    } else if rssi_dbm >= -85 {
-        1
-    } else {
-        0
-    }
+    LinkQuality::from_rssi(rssi_dbm).color()
 }
 
 fn paint_battery_icon(ui: &mut Ui, percent: f32) {
@@ -205,12 +172,12 @@ fn paint_thermometer_icon(ui: &mut Ui) {
     );
 }
 
-pub(crate) fn paint_signal_icon(ui: &mut Ui, rssi_dbm: i16) {
+pub(crate) fn paint_signal_icon(ui: &mut Ui, quality: LinkQuality) {
     let size = Vec2::new(18.0, 16.0);
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
     let painter = ui.painter();
-    let active = signal_bars(rssi_dbm);
-    let color = signal_color(rssi_dbm);
+    let active = quality.bars();
+    let color = quality.color();
     let bar_width = 3.0;
     let gap = 2.0;
     let base_y = rect.bottom() - 1.0;

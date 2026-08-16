@@ -6,18 +6,13 @@ use radiacode_nuclides::{
 };
 
 use crate::catalogue::state::CatalogueState;
-use crate::catalogue::ui_table::{
-    TableCellStyle, contributor_table_layout, draw_table_header, draw_table_row,
-};
+use crate::catalogue::ui_table::contributor_table_layout;
 use crate::theme::SPACE_SM;
+use crate::ui::table::{TableCellStyle, draw_table_header, draw_table_row};
 
 const CONTRIBUTORS_MAX_HEIGHT: f32 = 220.0;
 
-pub fn draw_chain_members(
-    ui: &mut Ui,
-    series: &ChainSeries,
-    state: &mut CatalogueState,
-) {
+pub fn draw_chain_members(ui: &mut Ui, series: &ChainSeries, state: &mut CatalogueState) {
     ui.label(RichText::new("Contributors").strong().size(14.0));
     ui.add_space(SPACE_SM);
     let weights = equilibrium_weights(series);

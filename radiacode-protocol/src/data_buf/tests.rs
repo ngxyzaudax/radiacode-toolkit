@@ -1,5 +1,6 @@
 use super::{
-    DecodeWarningKind, RecordKind, Seq, decode_data_buf, latest_real_time_rates, latest_snapshot,
+    DataBufRecord, DecodeWarningKind, RecordKind, Seq, decode_data_buf, latest_real_time_rates,
+    latest_snapshot,
 };
 
 #[test]
@@ -90,4 +91,81 @@ fn seq_wrap_prefers_newer_record() {
     let rates = snapshot.rates.expect("rates");
     assert!((rates.count_rate_cps - 30.0).abs() < 0.001);
     assert_eq!(RecordKind::RawData.monitor_source_rank(), 1);
+}
+
+#[test]
+fn unknown_record_stops_decode_without_phantom_seq_jumps() {
+    let count_rate = 5.0f32.to_le_bytes();
+    let dose_rate = 0.001f32.to_le_bytes();
+    let mut bytes = vec![1u8, 99, 99, 0, 0, 0, 0];
+    bytes.extend_from_slice(&[0u8; 8]);
+    bytes.extend_from_slice(&[2u8, 0, 0, 0, 0, 0, 0]);
+    bytes.extend_from_slice(&count_rate);
+    bytes.extend_from_slice(&dose_rate);
+    bytes.extend_from_slice(&[0u8; 7]);
+    let frame = decode_data_buf(&bytes);
+    assert_eq!(
+        frame
+            .warnings
+            .iter()
+            .filter(|warning| matches!(warning.kind, DecodeWarningKind::UnknownRecord { .. }))
+            .count(),
+        1
+    );
+    assert!(
+        !frame
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning.kind, DecodeWarningKind::SeqJump { .. }))
+    );
+    assert_eq!(frame.records.len(), 0);
+}
+
+fn build_event_record(seq: u8, event: u8, param: u8, value: f32) -> Vec<u8> {
+    let flags = 0x1141_u16.to_le_bytes();
+    let value_bytes = value.to_le_bytes();
+    let mut bytes = vec![seq, 0, 7, 0x00, 0x00, 0x00, 0x00];
+    bytes.push(event);
+    bytes.push(param);
+    bytes.extend_from_slice(&flags);
+    bytes.extend_from_slice(&value_bytes);
+    bytes.extend_from_slice(&[0x33, 0x00]);
+    bytes
+}
+
+#[test]
+fn parses_event_record_with_ten_byte_payload() {
+    let bytes = build_event_record(1, 0x14, 0x03, 20.08);
+    let frame = decode_data_buf(&bytes);
+    assert_eq!(frame.warnings.len(), 0);
+    assert_eq!(frame.records.len(), 1);
+    let DataBufRecord::Event(record) = &frame.records[0] else {
+        panic!("expected event record");
+    };
+    assert!((record.value - 20.08).abs() < 0.01);
+}
+
+#[test]
+fn resyncs_after_garbage_without_phantom_seq_jumps() {
+    let count_rate = 5.0f32.to_le_bytes();
+    let dose_rate = 0.001f32.to_le_bytes();
+    let mut bytes = vec![1u8, 0, 0, 0, 0, 0, 0];
+    bytes.extend_from_slice(&count_rate);
+    bytes.extend_from_slice(&dose_rate);
+    bytes.extend_from_slice(&[0u8; 7]);
+    bytes.extend_from_slice(&[2, 99, 99, 0, 0, 0, 0]);
+    bytes.extend_from_slice(&[0xAA, 0xBB, 0xCC]);
+    bytes.extend_from_slice(&[2u8, 0, 0, 0, 0, 0, 0]);
+    bytes.extend_from_slice(&count_rate);
+    bytes.extend_from_slice(&dose_rate);
+    bytes.extend_from_slice(&[0u8; 7]);
+    let frame = decode_data_buf(&bytes);
+    assert_eq!(frame.records.len(), 2);
+    assert!(frame.resync_count >= 1);
+    assert!(
+        !frame
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning.kind, DecodeWarningKind::SeqJump { .. }))
+    );
 }

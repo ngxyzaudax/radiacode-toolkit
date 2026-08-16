@@ -1,13 +1,12 @@
-use egui::{RichText, Ui};
+use egui::Ui;
 
 use crate::layout::safe_span;
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::library;
-use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::state::SpectrogramState;
 use crate::theme::SPACE_XS;
 use crate::ui::recording::{
-    draw_empty_library, draw_manage_recording_list, draw_recording_search,
+    draw_empty_library, draw_manage_recording_list, draw_recording_library_header,
 };
 
 pub fn draw_library(
@@ -15,12 +14,15 @@ pub fn draw_library(
     state: &mut SpectrogramState,
     action: &mut Option<SpectrogramControlsAction>,
 ) {
-    ui.set_max_width(ui.available_width());
     let total_count = state.history.len();
-    let entries: Vec<RecordingEntry> = state.filtered_history();
-    ui.label(RichText::new("Recordings").strong());
-    ui.add_space(SPACE_XS);
-    draw_recording_search(ui, &mut state.library_filter, entries.len(), total_count);
+    let entries = state.filtered_history();
+    draw_recording_library_header(
+        ui,
+        &mut state.library_filter,
+        entries.len(),
+        total_count,
+        None,
+    );
     if ui.button("Import .rcspg").clicked() {
         import_rcspg(state, action);
     }

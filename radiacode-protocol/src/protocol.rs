@@ -22,7 +22,7 @@ impl Sequence {
         self.value
     }
 
-    pub fn next(&mut self) -> u8 {
+    pub fn advance(&mut self) -> u8 {
         let seq = 0x80 + self.value;
         self.value = (self.value + 1) % 32;
         seq

@@ -10,7 +10,8 @@ use radiacode_protocol::{
 
 use crate::error::{Error, Result};
 use crate::session_restore::SessionRestore;
-use radiacode_protocol::DeviceVersions;
+
+use super::RadiaCode;
 
 const CONNECT_ATTEMPTS: usize = 3;
 const RECONNECT_ATTEMPTS: usize = 2;
@@ -18,16 +19,9 @@ const CONNECT_RETRY_DELAY: Duration = Duration::from_millis(1500);
 const RECONNECT_RETRY_DELAY: Duration = Duration::from_millis(3000);
 const INIT_SETTLE: Duration = Duration::from_millis(250);
 
-struct OpenFailure {
-    error: Error,
-    transport: Box<dyn Transport>,
-}
-
-pub struct RadiaCode {
-    pub(crate) transport: Box<dyn Transport>,
-    pub(crate) sequence: Sequence,
-    pub(crate) spectrum_format_version: u32,
-    cached_versions: Option<DeviceVersions>,
+pub(crate) struct OpenFailure {
+    pub error: Error,
+    pub transport: Box<dyn Transport>,
 }
 
 impl RadiaCode {
@@ -154,16 +148,22 @@ impl RadiaCode {
         self.spectrum_format_version =
             radiacode_protocol::parse_configuration_ini(&configuration).spec_format_version;
         if self.spectrum_format_version == 0 {
-            self.spectrum_format_version = parse_spectrum_format_version(&configuration);
+            self.spectrum_format_version =
+                super::vsfr::parse_spectrum_format_version(&configuration);
         }
         if let Ok(sfr_file) = self.read_virt_string(VirtString::SfrFile).await {
             let sfr_text = String::from_utf8_lossy(sfr_file.data());
-            for drift in radiacode_protocol::validate_catalog(&sfr_text) {
-                warn!(
-                    register = ?drift.register,
-                    message = %drift.message,
-                    "protocol catalog drift from device SFR_FILE"
-                );
+            match radiacode_protocol::validate_catalog(&sfr_text) {
+                Some(drifts) => {
+                    for drift in drifts {
+                        warn!(
+                            register = ?drift.register,
+                            message = %drift.message,
+                            "protocol catalog drift from device SFR_FILE"
+                        );
+                    }
+                }
+                None => debug!("SFR_FILE validation skipped: no parseable entries"),
             }
         }
         info!(
@@ -174,143 +174,10 @@ impl RadiaCode {
     }
 
     pub async fn execute_raw(&mut self, command: Command, args: &[u8]) -> Result<BytesBuffer> {
-        let seq = self.sequence.next();
+        let seq = self.sequence.advance();
         debug!(?command, seq, args_len = args.len(), "execute command");
         let request = build_request(command, seq, args);
         let response = self.transport.execute(&request).await?;
         strip_echoed_header(response, request_header(command, seq)).map_err(Into::into)
-    }
-
-    pub async fn read_virt_string(&mut self, id: VirtString) -> Result<BytesBuffer> {
-        let mut response = self
-            .execute_raw(Command::RdVirtString, &u32::from(id).to_le_bytes())
-            .await?;
-        let retcode = response.take_u32_le()?;
-        let flen = response.take_u32_le()? as usize;
-        if retcode != 1 {
-            return Err(ProtocolError::UnexpectedReturnCode(retcode).into());
-        }
-        trim_trailing_nul_if_needed(&mut response, flen);
-        if response.size() != flen {
-            return Err(ProtocolError::BufferUnderrun {
-                need: flen,
-                have: response.size(),
-            }
-            .into());
-        }
-        Ok(response)
-    }
-
-    pub async fn read_vsfr_u32(&mut self, id: VirtSfr) -> Result<u32> {
-        let mut response = self
-            .execute_raw(Command::RdVirtSfr, &u32::from(id).to_le_bytes())
-            .await?;
-        let retcode = response.take_u32_le()?;
-        if retcode != 1 {
-            return Err(ProtocolError::UnexpectedReturnCode(retcode).into());
-        }
-        Ok(response.take_u32_le()?)
-    }
-
-    pub async fn read_vsfr_optional(&mut self, id: VirtSfr) -> Result<Option<u32>> {
-        let mut response = self
-            .execute_raw(Command::RdVirtSfr, &u32::from(id).to_le_bytes())
-            .await?;
-        let retcode = response.take_u32_le()?;
-        if retcode == 1 {
-            Ok(Some(response.take_u32_le()?))
-        } else if retcode == 0 {
-            Ok(None)
-        } else {
-            Err(ProtocolError::UnexpectedReturnCode(retcode).into())
-        }
-    }
-
-    pub async fn write_vsfr(&mut self, id: VirtSfr, data: &[u8]) -> Result<()> {
-        if !self.write_vsfr_optional(id, data).await? {
-            return Err(ProtocolError::UnexpectedReturnCode(0).into());
-        }
-        Ok(())
-    }
-
-    pub async fn write_vsfr_optional(&mut self, id: VirtSfr, data: &[u8]) -> Result<bool> {
-        let mut args = u32::from(id).to_le_bytes().to_vec();
-        args.extend_from_slice(data);
-        let mut response = self.execute_raw(Command::WrVirtSfr, &args).await?;
-        let retcode = response.take_u32_le()?;
-        if retcode == 1 {
-            if response.size() != 0 {
-                return Err(ProtocolError::ProtocolMismatch {
-                    expected: "empty payload".into(),
-                    got: format!("{} trailing bytes", response.size()),
-                }
-                .into());
-            }
-            Ok(true)
-        } else if retcode == 0 {
-            Ok(false)
-        } else {
-            Err(ProtocolError::UnexpectedReturnCode(retcode).into())
-        }
-    }
-
-    pub async fn read_vsfr_f32(&mut self, id: VirtSfr) -> Result<f32> {
-        let raw = self.read_vsfr_u32(id).await?;
-        Ok(f32::from_le_bytes(raw.to_le_bytes()))
-    }
-
-    pub async fn read_vsfr_batch(&mut self, ids: &[VirtSfr]) -> Result<Vec<u32>> {
-        crate::vsfr_batch::read_vsfr_batch(self, ids).await
-    }
-
-    pub async fn write_vsfr_batch(&mut self, pairs: &[(VirtSfr, u32)]) -> Result<()> {
-        crate::vsfr_batch::write_vsfr_batch(self, pairs).await
-    }
-
-    pub async fn disconnect(self) -> Result<()> {
-        self.transport.disconnect().await.map_err(Into::into)
-    }
-
-    pub async fn rssi_dbm(&self) -> Option<i16> {
-        self.transport.link_rssi_dbm().await
-    }
-
-    pub async fn drain_transport(&mut self) {
-        self.transport.drain_link().await;
-    }
-
-    pub async fn sample_rssi_dbm(&self) -> Option<i16> {
-        self.transport.sample_link_rssi_dbm().await
-    }
-
-    pub(crate) fn cached_versions(&self) -> Option<&DeviceVersions> {
-        self.cached_versions.as_ref()
-    }
-
-    pub fn session_restore(&self) -> Option<SessionRestore> {
-        Some(SessionRestore {
-            versions: self.cached_versions.as_ref()?.clone(),
-            spectrum_format_version: self.spectrum_format_version,
-        })
-    }
-
-    pub fn spectrum_format_version(&self) -> u32 {
-        self.spectrum_format_version
-    }
-}
-
-pub(crate) fn parse_spectrum_format_version(configuration: &str) -> u32 {
-    configuration
-        .lines()
-        .find_map(|line| line.strip_prefix("SpecFormatVersion="))
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0)
-}
-
-fn trim_trailing_nul_if_needed(buffer: &mut BytesBuffer, expected_len: usize) {
-    let data = buffer.data();
-    if data.len() == expected_len + 1 && data.last() == Some(&0) {
-        let trimmed = data[..expected_len].to_vec();
-        *buffer = BytesBuffer::new(trimmed);
     }
 }

@@ -59,13 +59,8 @@ pub fn draw_chain_viewport(
                 } else {
                     fit_mode
                 };
-                scene_rect = compute_scene_rect(
-                    mode,
-                    inner_rect,
-                    focus_rect,
-                    content_size,
-                    viewport_size,
-                );
+                scene_rect =
+                    compute_scene_rect(mode, inner_rect, focus_rect, content_size, viewport_size);
                 needs_fit = false;
             }
         });

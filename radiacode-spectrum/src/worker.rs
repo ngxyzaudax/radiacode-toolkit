@@ -68,6 +68,63 @@ impl WorkerHandle {
     }
 }
 
+pub struct WorkerSession {
+    pub device: Option<RadiaCode>,
+    pub session_endpoint: Option<DeviceEndpoint>,
+    pub alarm_limits: Option<AlarmLimits>,
+    pub monitor_polls: u64,
+    pub data_buf_cursor: DataBufCursor,
+    pub link_status: DeviceStatus,
+    pub session_restore: Option<SessionRestore>,
+}
+
+impl WorkerSession {
+    pub fn new() -> Self {
+        Self {
+            device: None,
+            session_endpoint: None,
+            alarm_limits: None,
+            monitor_polls: 0,
+            data_buf_cursor: DataBufCursor::default(),
+            link_status: DeviceStatus::default(),
+            session_restore: None,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.session_endpoint = None;
+        self.alarm_limits = None;
+        self.monitor_polls = 0;
+        self.data_buf_cursor.reset();
+        self.link_status = DeviceStatus::default();
+        self.session_restore = None;
+        self.device = None;
+    }
+
+    pub fn prepare_connect(&mut self) {
+        self.alarm_limits = None;
+        self.monitor_polls = 0;
+        self.data_buf_cursor.reset();
+        self.link_status = DeviceStatus::default();
+        self.session_restore = None;
+    }
+
+    pub fn prepare_disconnect(&mut self) {
+        self.session_endpoint = None;
+        self.alarm_limits = None;
+        self.monitor_polls = 0;
+        self.data_buf_cursor.reset();
+        self.link_status = DeviceStatus::default();
+        self.session_restore = None;
+    }
+
+    pub fn clear_if_device_lost(&mut self) {
+        if self.device.is_none() {
+            self.reset();
+        }
+    }
+}
+
 pub fn spawn_worker(capture: Arc<Mutex<SpectrogramCapture>>) -> WorkerHandle {
     let (commands, command_rx) = unbounded_channel();
     let (worker_event_tx, worker_event_rx) = unbounded();
@@ -133,95 +190,32 @@ fn monitor_poll_duration(secs: u64) -> Duration {
     Duration::from_secs(secs.clamp(1, 60))
 }
 
-fn reset_session(
-    device: &mut Option<RadiaCode>,
-    session_endpoint: &mut Option<DeviceEndpoint>,
-    alarm_limits: &mut Option<AlarmLimits>,
-    monitor_polls: &mut u64,
-    data_buf_cursor: &mut DataBufCursor,
-    link_status: &mut DeviceStatus,
-    session_restore: &mut Option<SessionRestore>,
-) {
-    *session_endpoint = None;
-    *alarm_limits = None;
-    *monitor_polls = 0;
-    data_buf_cursor.reset();
-    *link_status = DeviceStatus::default();
-    *session_restore = None;
-    *device = None;
-}
-
 async fn run_fetch_batch(
     batch: CoalescedBatch,
     events: &Sender<WorkerEvent>,
     session_epoch: &Arc<AtomicU64>,
-    device: &mut Option<RadiaCode>,
-    session_endpoint: &mut Option<DeviceEndpoint>,
-    alarm_limits: &mut Option<AlarmLimits>,
-    monitor_polls: &mut u64,
-    data_buf_cursor: &mut DataBufCursor,
-    link_status: &mut DeviceStatus,
-    session_restore: &mut Option<SessionRestore>,
+    session: &mut WorkerSession,
 ) {
     if batch.fetch_monitor || batch.fetch_spectrum {
         debug!(
             fetch_monitor = batch.fetch_monitor,
             fetch_spectrum = batch.fetch_spectrum,
-            session_endpoint = ?session_endpoint,
+            session_endpoint = ?session.session_endpoint,
             "worker coalesced fetch batch"
         );
     }
     let _ = events.send(WorkerEvent::Busy(true));
-    let session = SessionEpoch {
+    let epoch = SessionEpoch {
         live: Arc::clone(session_epoch),
         started: session_epoch.load(Ordering::SeqCst),
     };
     if batch.fetch_monitor {
-        *device = handle_monitor(
-            events,
-            device.take(),
-            session_endpoint.as_ref(),
-            alarm_limits,
-            monitor_polls,
-            data_buf_cursor,
-            &session,
-            link_status,
-            session_restore,
-        )
-        .await;
-        if device.is_none() {
-            reset_session(
-                device,
-                session_endpoint,
-                alarm_limits,
-                monitor_polls,
-                data_buf_cursor,
-                link_status,
-                session_restore,
-            );
-        }
+        handle_monitor(events, session, &epoch).await;
+        session.clear_if_device_lost();
     }
-    if batch.fetch_spectrum && device.is_some() {
-        *device = handle_spectrum(
-            events,
-            device.take(),
-            session_endpoint.as_ref(),
-            &session,
-            link_status,
-            session_restore,
-        )
-        .await;
-        if device.is_none() {
-            reset_session(
-                device,
-                session_endpoint,
-                alarm_limits,
-                monitor_polls,
-                data_buf_cursor,
-                link_status,
-                session_restore,
-            );
-        }
+    if batch.fetch_spectrum && session.device.is_some() {
+        handle_spectrum(events, session, &epoch).await;
+        session.clear_if_device_lost();
     }
     let _ = events.send(WorkerEvent::Busy(false));
 }
@@ -231,13 +225,7 @@ async fn worker_loop(
     events: Sender<WorkerEvent>,
     session_epoch: Arc<AtomicU64>,
 ) {
-    let mut device: Option<RadiaCode> = None;
-    let mut session_endpoint: Option<DeviceEndpoint> = None;
-    let mut alarm_limits: Option<AlarmLimits> = None;
-    let mut monitor_polls: u64 = 0;
-    let mut data_buf_cursor = DataBufCursor::default();
-    let mut link_status = DeviceStatus::default();
-    let mut session_restore: Option<SessionRestore> = None;
+    let mut session = WorkerSession::new();
     let mut capture_interval_secs = 5.0;
     let mut monitor_poll_secs = MONITOR_POLL_SECS;
     let mut spectrum_tick = time::interval(capture_duration(capture_interval_secs));
@@ -268,21 +256,15 @@ async fn worker_loop(
                             continue;
                         }
                         command => {
-                            debug!(?command, session_endpoint = ?session_endpoint, "worker command");
+                            debug!(?command, session_endpoint = ?session.session_endpoint, "worker command");
                             run_command(
                                 command,
                                 &events,
                                 &session_epoch,
-                                &mut device,
-                                &mut session_endpoint,
-                                &mut alarm_limits,
-                                &mut monitor_polls,
-                                &mut data_buf_cursor,
-                                &mut link_status,
-                                &mut session_restore,
+                                &mut session,
                             )
                             .await;
-                            if device.is_some() {
+                            if session.device.is_some() {
                                 spectrum_tick.reset();
                                 monitor_tick.reset();
                             }
@@ -294,17 +276,11 @@ async fn worker_loop(
                     batch,
                     &events,
                     &session_epoch,
-                    &mut device,
-                    &mut session_endpoint,
-                    &mut alarm_limits,
-                    &mut monitor_polls,
-                    &mut data_buf_cursor,
-                    &mut link_status,
-                    &mut session_restore,
+                    &mut session,
                 )
                 .await;
             }
-            _ = spectrum_tick.tick(), if device.is_some() => {
+            _ = spectrum_tick.tick(), if session.device.is_some() => {
                 debug!(capture_interval_secs, "worker background spectrum fetch");
                 run_fetch_batch(
                     CoalescedBatch {
@@ -314,17 +290,11 @@ async fn worker_loop(
                     },
                     &events,
                     &session_epoch,
-                    &mut device,
-                    &mut session_endpoint,
-                    &mut alarm_limits,
-                    &mut monitor_polls,
-                    &mut data_buf_cursor,
-                    &mut link_status,
-                    &mut session_restore,
+                    &mut session,
                 )
                 .await;
             }
-            _ = monitor_tick.tick(), if device.is_some() => {
+            _ = monitor_tick.tick(), if session.device.is_some() => {
                 debug!("worker background monitor fetch");
                 run_fetch_batch(
                     CoalescedBatch {
@@ -334,13 +304,7 @@ async fn worker_loop(
                     },
                     &events,
                     &session_epoch,
-                    &mut device,
-                    &mut session_endpoint,
-                    &mut alarm_limits,
-                    &mut monitor_polls,
-                    &mut data_buf_cursor,
-                    &mut link_status,
-                    &mut session_restore,
+                    &mut session,
                 )
                 .await;
             }
@@ -353,16 +317,10 @@ async fn run_command(
     command: WorkerCommand,
     events: &Sender<WorkerEvent>,
     session_epoch: &Arc<AtomicU64>,
-    device: &mut Option<RadiaCode>,
-    session_endpoint: &mut Option<DeviceEndpoint>,
-    alarm_limits: &mut Option<AlarmLimits>,
-    monitor_polls: &mut u64,
-    data_buf_cursor: &mut DataBufCursor,
-    link_status: &mut DeviceStatus,
-    session_restore: &mut Option<SessionRestore>,
+    session: &mut WorkerSession,
 ) {
     let _ = events.send(WorkerEvent::Busy(true));
-    let session = SessionEpoch {
+    let epoch = SessionEpoch {
         live: Arc::clone(session_epoch),
         started: session_epoch.load(Ordering::SeqCst),
     };
@@ -372,177 +330,66 @@ async fn run_command(
             endpoint,
             hint_rssi,
         } => {
-            *alarm_limits = None;
-            *monitor_polls = 0;
-            data_buf_cursor.reset();
-            *link_status = DeviceStatus::default();
-            *session_restore = None;
-            *device = handle_connect(
-                events,
-                device.take(),
-                &endpoint,
-                hint_rssi,
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            *session_endpoint = device.as_ref().map(|_| endpoint);
+            handle_connect(events, session, &endpoint, hint_rssi, &epoch).await;
         }
         WorkerCommand::Disconnect => {
             session_epoch.fetch_add(1, Ordering::SeqCst);
-            *session_endpoint = None;
-            *alarm_limits = None;
-            *monitor_polls = 0;
-            data_buf_cursor.reset();
-            *link_status = DeviceStatus::default();
-            *session_restore = None;
-            handle_disconnect(events, device.take()).await;
+            session.prepare_disconnect();
+            handle_disconnect(events, session).await;
         }
         WorkerCommand::FetchSpectrum => {
-            *device = handle_spectrum(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                *session_endpoint = None;
-                *alarm_limits = None;
-                *monitor_polls = 0;
-                *link_status = DeviceStatus::default();
-                *session_restore = None;
-            }
+            handle_spectrum(events, session, &epoch).await;
+            session.clear_if_device_lost();
         }
         WorkerCommand::ResetSpectrum => {
-            *device = handle_reset(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                *session_endpoint = None;
-                *alarm_limits = None;
-                *monitor_polls = 0;
-                *link_status = DeviceStatus::default();
-                *session_restore = None;
-            }
+            handle_reset(events, session, &epoch).await;
+            session.clear_if_device_lost();
         }
         WorkerCommand::ResetDose => {
-            *device = handle_dose_reset(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                *session_endpoint = None;
-                *alarm_limits = None;
-                *monitor_polls = 0;
-                *link_status = DeviceStatus::default();
-                *session_restore = None;
-            }
+            handle_dose_reset(events, session, &epoch).await;
+            session.clear_if_device_lost();
         }
         WorkerCommand::FetchMonitor => {
-            *device = handle_monitor(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                alarm_limits,
-                monitor_polls,
-                data_buf_cursor,
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                *session_endpoint = None;
-                *alarm_limits = None;
-                *monitor_polls = 0;
-                *session_restore = None;
-            }
+            handle_monitor(events, session, &epoch).await;
+            session.clear_if_device_lost();
         }
         WorkerCommand::FetchDeviceConfig => {
-            *device = handle_fetch_device_config(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                alarm_limits,
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                reset_session(
-                    device,
-                    session_endpoint,
-                    alarm_limits,
-                    monitor_polls,
-                    data_buf_cursor,
-                    link_status,
-                    session_restore,
-                );
-            }
+            handle_fetch_device_config(events, session, &epoch).await;
+            session.clear_if_device_lost();
         }
         WorkerCommand::ApplyDeviceConfig(config) => {
-            *device = handle_apply_device_config(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                config,
-                alarm_limits,
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                reset_session(
-                    device,
-                    session_endpoint,
-                    alarm_limits,
-                    monitor_polls,
-                    data_buf_cursor,
-                    link_status,
-                    session_restore,
-                );
-            }
+            handle_apply_device_config(events, session, config, &epoch).await;
+            session.clear_if_device_lost();
         }
         WorkerCommand::SyncDeviceClock => {
-            *device = handle_sync_device_clock(
-                events,
-                device.take(),
-                session_endpoint.as_ref(),
-                &session,
-                link_status,
-                session_restore,
-            )
-            .await;
-            if device.is_none() {
-                reset_session(
-                    device,
-                    session_endpoint,
-                    alarm_limits,
-                    monitor_polls,
-                    data_buf_cursor,
-                    link_status,
-                    session_restore,
-                );
-            }
+            handle_sync_device_clock(events, session, &epoch).await;
+            session.clear_if_device_lost();
         }
-        WorkerCommand::SetCaptureInterval(_) | WorkerCommand::SetMonitorPollInterval(_) => {}
+        WorkerCommand::SetCaptureInterval(_) | WorkerCommand::SetMonitorPollInterval(_) => {
+            unreachable!("interval commands are handled in the worker select loop")
+        }
     }
     let _ = events.send(WorkerEvent::Busy(false));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WorkerSession;
+    use radiacode_core::DeviceStatus;
+
+    #[test]
+    fn worker_session_reset_clears_link_status() {
+        let mut session = WorkerSession::new();
+        session.link_status = DeviceStatus {
+            battery_percent: Some(80.0),
+            temperature_c: Some(25.0),
+            rssi_dbm: Some(-50),
+        };
+        session.monitor_polls = 5;
+        session.reset();
+        assert_eq!(session.link_status, DeviceStatus::default());
+        assert_eq!(session.monitor_polls, 0);
+        assert!(session.device.is_none());
+        assert!(session.session_endpoint.is_none());
+    }
 }

@@ -3,10 +3,9 @@ use egui::{RichText, Ui};
 use radiacode_nuclides::{ChainSeries, NuclideId, chain_lines, equilibrium_weights};
 
 use crate::catalogue::chain_state::ChainBrowseState;
-use crate::catalogue::ui_table::{
-    TableCellStyle, draw_table_header, draw_table_row, radiation_tree_layout,
-};
+use crate::catalogue::ui_table::radiation_tree_layout;
 use crate::theme::MUTED;
+use crate::ui::table::{TableCellStyle, draw_table_header, draw_table_row};
 
 const TREE_INDENT: f32 = 16.0;
 
@@ -26,7 +25,6 @@ pub fn draw_chain_lines(
         .iter()
         .map(|line| line.scaled_intensity_pct)
         .fold(1.0_f64, f64::max);
-    let mut row = 0usize;
     let mut reveal = None;
     for (index, line) in lines.iter().enumerate() {
         let bar_fraction = (line.scaled_intensity_pct / max_intensity) as f32;
@@ -50,7 +48,7 @@ pub fn draw_chain_lines(
                 ui.set_width(layout.row_width);
                 let response = draw_table_row(
                     ui,
-                    row,
+                    index,
                     &layout,
                     &cells,
                     chains.hovered_line == Some(index),
@@ -64,7 +62,6 @@ pub fn draw_chain_lines(
                 }
             });
         });
-        row += 1;
         ui.horizontal(|ui| {
             ui.add_space(TREE_INDENT * 2.0);
             ui.label(

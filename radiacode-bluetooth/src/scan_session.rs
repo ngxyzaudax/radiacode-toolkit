@@ -29,10 +29,10 @@ pub async fn remember_scan_adapter(adapter: &Adapter) {
 }
 
 pub async fn adapter_for_connect() -> Result<Adapter, BleError> {
-    if let Some(session) = session_lock().lock().await.as_ref() {
-        if session.scanned_at.elapsed() < SESSION_TTL {
-            return Ok(session.adapter.clone());
-        }
+    if let Some(session) = session_lock().lock().await.as_ref()
+        && session.scanned_at.elapsed() < SESSION_TTL
+    {
+        return Ok(session.adapter.clone());
     }
     let adapter = default_adapter().await?;
     remember_scan_adapter(&adapter).await;

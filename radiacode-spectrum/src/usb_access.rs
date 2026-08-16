@@ -32,9 +32,7 @@ impl UsbAccessPrompt {
     }
 
     pub fn poll_install(&mut self) -> Option<UsbAccessOutcome> {
-        let Some(rx) = self.install_rx.as_ref() else {
-            return None;
-        };
+        let rx = self.install_rx.as_ref()?;
         match rx.try_recv() {
             Ok(Ok(())) => {
                 self.installing = false;

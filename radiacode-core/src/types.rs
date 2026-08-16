@@ -73,5 +73,6 @@ pub struct MonitorPollSample {
     pub accumulated: Option<AccumulatedDose>,
     pub decode_warnings: usize,
     pub rejected_records: usize,
+    pub resync_count: usize,
     pub seq_gaps: Vec<crate::data_buf_cursor::SeqGap>,
 }

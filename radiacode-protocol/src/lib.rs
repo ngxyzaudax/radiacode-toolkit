@@ -23,7 +23,7 @@ pub use catalog::{
     CatalogDrift, ChannelDef, ConfigurationCatalog, MessageGroup, SfrCatalogEntry, SfrValueKind,
     parse_configuration_ini, parse_sfr_file, validate_catalog,
 };
-pub use command::{Command, SfrAccess, VirtSfr, VirtString};
+pub use command::{Command, VirtSfr, VirtString};
 pub use data_buf::{
     AccelData, DataBufFrame, DataBufRecord, DataBufSnapshot, DecodeWarning, DecodeWarningKind,
     DeviceTicks, DoseRateDb, EventId, EventRecord, RareData, RareStatus, RawData, RealTimeData,
@@ -39,8 +39,7 @@ pub use protocol::{
 };
 pub use rate_units::{
     count_display_from_cps, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
-    dose_display_from_accum_r, dose_display_from_rh, encode_count_alarm, encode_dose_accum,
-    encode_dose_alarm,
+    dose_display_from_rh, encode_count_alarm, encode_dose_accum, encode_dose_alarm,
 };
 pub use sfr_catalog::sfr_supports_leds_on;
 pub use spectrum::decode_spectrum;

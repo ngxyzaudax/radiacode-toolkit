@@ -62,12 +62,7 @@ fn build_chain_series() -> Vec<ChainSeries> {
     series.sort_by(|left, right| {
         natural_rank(left.head)
             .cmp(&natural_rank(right.head))
-            .then_with(|| {
-                right
-                    .members
-                    .len()
-                    .cmp(&left.members.len())
-            })
+            .then_with(|| right.members.len().cmp(&left.members.len()))
             .then_with(|| left.name.cmp(&right.name))
     });
     series

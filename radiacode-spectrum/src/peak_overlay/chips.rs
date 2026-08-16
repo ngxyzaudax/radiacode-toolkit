@@ -4,10 +4,7 @@ use radiacode_nuclides::SourceSummary;
 use crate::peak_overlay::action::SpectrumPlotAction;
 use crate::theme::MUTED;
 
-pub fn draw_source_chips(
-    ui: &mut Ui,
-    sources: &SourceSummary,
-) -> Option<SpectrumPlotAction> {
+pub fn draw_source_chips(ui: &mut Ui, sources: &SourceSummary) -> Option<SpectrumPlotAction> {
     if sources.chains.is_empty() && sources.nuclides.is_empty() {
         return None;
     }

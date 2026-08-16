@@ -41,9 +41,7 @@ fn format_positive_secs(secs: f64) -> String {
 }
 
 fn format_value(value: f64) -> String {
-    if value >= 100.0 {
-        format!("{value:.1}")
-    } else if value >= 10.0 {
+    if value >= 10.0 {
         format!("{value:.1}")
     } else if value >= 1.0 {
         format!("{value:.2}")

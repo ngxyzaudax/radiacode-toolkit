@@ -55,6 +55,16 @@ impl DeviceInfo {
     }
 }
 
+impl From<&DeviceInfo> for DeviceStatus {
+    fn from(info: &DeviceInfo) -> Self {
+        Self {
+            battery_percent: info.battery_percent,
+            temperature_c: info.temperature_c,
+            rssi_dbm: info.rssi_dbm,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SpectrumView {
     pub duration: std::time::Duration,

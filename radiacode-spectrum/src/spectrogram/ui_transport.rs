@@ -40,15 +40,9 @@ pub fn draw_transport(
         }
         ui.add_space(8.0);
         ui.label(
-            RichText::new(transport_status(
-                state,
-                connected,
-                recording,
-                capture_paused,
-                can_append,
-            ))
-            .small()
-            .color(MUTED),
+            RichText::new(transport_label(state, connected))
+                .small()
+                .color(MUTED),
         );
     });
     action
@@ -108,33 +102,13 @@ fn transport_stop(ui: &mut Ui, connected: bool, recording: bool) -> bool {
     .clicked()
 }
 
-fn transport_status(
-    state: &SpectrogramState,
-    connected: bool,
-    recording: bool,
-    capture_paused: bool,
-    can_append: bool,
-) -> String {
+fn transport_label(state: &SpectrogramState, connected: bool) -> String {
     if !connected {
         return "Connect a device".into();
     }
-    if recording && capture_paused {
-        return "Recording paused".into();
+    if state.status.is_empty() {
+        "Ready".into()
+    } else {
+        state.status.clone()
     }
-    if recording {
-        return "Recording".into();
-    }
-    if can_append && capture_paused {
-        return "Saved — resume or record new".into();
-    }
-    if can_append {
-        return "Saved — append or record new".into();
-    }
-    if capture_paused {
-        return "Capture paused".into();
-    }
-    if state.live_row_count() > 0 {
-        return format!("Capturing · {} rows", state.live_row_count());
-    }
-    "Ready".into()
 }

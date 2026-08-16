@@ -1,102 +1,16 @@
 use crate::buffer::BytesBuffer;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::units::{CountRateCps, DoseRateRh, DoseRoentgen};
 
-use super::flags::{EventId, StatusFlags};
-use super::group::RecordKind;
-use super::header::{DeviceTicks, RecordHeader};
-use super::records::{
+use super::super::flags::{EventId, StatusFlags};
+use super::super::group::RecordKind;
+use super::super::header::RecordHeader;
+use super::super::records::{
     AccelData, DataBufRecord, DoseRateDb, EventRecord, RareData, RawData, RealTimeData,
 };
-use super::sanity::{SanityFailure, record_passes_sanity};
-use super::seq::Seq;
+use super::frame::{DecodeWarning, DecodeWarningKind};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DecodeWarningKind {
-    HeaderUnderrun,
-    PayloadUnderrun,
-    UnknownRecord { entity: u8, group: u8 },
-    SeqJump { expected: u8, got: u8 },
-    SanityRejected(SanityFailure),
-    TruncatedTail,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DecodeWarning {
-    pub offset: usize,
-    pub kind: DecodeWarningKind,
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct DataBufFrame {
-    pub records: Vec<DataBufRecord>,
-    pub warnings: Vec<DecodeWarning>,
-}
-
-pub fn decode_data_buf(data: &[u8]) -> DataBufFrame {
-    let mut buffer = BytesBuffer::new(data.to_vec());
-    let mut frame = DataBufFrame::default();
-    let mut expected_seq: Option<Seq> = None;
-    while buffer.size() >= 7 {
-        let offset = data.len().saturating_sub(buffer.size());
-        let Some(header) = parse_header(&mut buffer, offset, &mut frame.warnings) else {
-            break;
-        };
-        if let Some(expected) = expected_seq {
-            if header.seq != expected {
-                frame.warnings.push(DecodeWarning {
-                    offset,
-                    kind: DecodeWarningKind::SeqJump {
-                        expected: expected.raw(),
-                        got: header.seq.raw(),
-                    },
-                });
-            }
-        }
-        expected_seq = Some(header.seq.next());
-        match parse_payload(&mut buffer, header) {
-            Ok(record) => {
-                if let Err(failure) = record_passes_sanity(&record) {
-                    frame.warnings.push(DecodeWarning {
-                        offset,
-                        kind: DecodeWarningKind::SanityRejected(failure),
-                    });
-                } else {
-                    frame.records.push(record);
-                }
-            }
-            Err(warning) => frame.warnings.push(warning),
-        }
-    }
-    if buffer.size() > 0 {
-        frame.warnings.push(DecodeWarning {
-            offset: data.len().saturating_sub(buffer.size()),
-            kind: DecodeWarningKind::TruncatedTail,
-        });
-    }
-    frame
-}
-
-fn parse_header(
-    buffer: &mut BytesBuffer,
-    offset: usize,
-    warnings: &mut Vec<DecodeWarning>,
-) -> Option<RecordHeader> {
-    let seq = Seq::new(buffer.take_u8().ok()?);
-    let entity = buffer.take_u8().ok()?;
-    let group = buffer.take_u8().ok()?;
-    let ts = DeviceTicks::new(buffer.take_i32_le().ok()?);
-    let kind = RecordKind::from_entity_group(entity, group);
-    if matches!(kind, RecordKind::Unknown { .. }) {
-        warnings.push(DecodeWarning {
-            offset,
-            kind: DecodeWarningKind::UnknownRecord { entity, group },
-        });
-    }
-    Some(RecordHeader { seq, kind, ts })
-}
-
-fn parse_payload(
+pub fn parse_payload(
     buffer: &mut BytesBuffer,
     header: RecordHeader,
 ) -> std::result::Result<DataBufRecord, DecodeWarning> {
@@ -117,24 +31,12 @@ fn parse_payload(
         RecordKind::Waveform8 | RecordKind::Waveform16 | RecordKind::Waveform14 => {
             skip_waveform(buffer, header.kind).map(|_| DataBufRecord::Skipped(header))
         }
-        RecordKind::Unknown { entity, group } => {
-            return Err(DecodeWarning {
-                offset,
-                kind: DecodeWarningKind::UnknownRecord { entity, group },
-            });
-        }
+        RecordKind::Unknown { .. } => unreachable!(),
     };
-    result.map_err(|error| payload_warning(offset, error))
-}
-
-fn payload_warning(offset: usize, error: Error) -> DecodeWarning {
-    DecodeWarning {
+    result.map_err(|_| DecodeWarning {
         offset,
-        kind: match error {
-            Error::BufferUnderrun { .. } => DecodeWarningKind::PayloadUnderrun,
-            _ => DecodeWarningKind::PayloadUnderrun,
-        },
-    }
+        kind: DecodeWarningKind::PayloadUnderrun,
+    })
 }
 
 fn parse_real_time(buffer: &mut BytesBuffer, header: RecordHeader) -> Result<RealTimeData> {
@@ -208,11 +110,15 @@ fn parse_event(buffer: &mut BytesBuffer, header: RecordHeader) -> Result<EventRe
     let event = EventId::from_raw(buffer.take_u8()?);
     let event_param1 = buffer.take_u8()?;
     let flags = StatusFlags::new(buffer.take_u16_le()?);
+    let value = buffer.take_f32_le()?;
+    let trailing = buffer.take_u16_le()?;
     Ok(EventRecord {
         header,
         event,
         event_param1,
         flags,
+        value,
+        trailing,
     })
 }
 

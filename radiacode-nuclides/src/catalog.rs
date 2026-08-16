@@ -28,7 +28,7 @@ pub fn nuclide_index(id: NuclideId) -> Option<usize> {
     parsed().by_id.get(&id).copied()
 }
 
-pub fn energy_index() -> &'static EnergyIndex {
+pub(crate) fn energy_index() -> &'static EnergyIndex {
     &parsed().energy_index
 }
 

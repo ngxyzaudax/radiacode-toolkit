@@ -14,11 +14,7 @@ pub fn paint_grid_edges(painter: &Painter, origin: Pos2, edges: &[GridEdge]) {
 
 fn paint_edge(painter: &Painter, origin: Pos2, edge: &GridEdge) {
     let color = edge_color(edge.mode);
-    let points: Vec<Pos2> = edge
-        .points
-        .iter()
-        .map(|p| origin + p.to_vec2())
-        .collect();
+    let points: Vec<Pos2> = edge.points.iter().map(|p| origin + p.to_vec2()).collect();
     if points.len() >= 2 {
         for segment in points.windows(2) {
             painter.line_segment([segment[0], segment[1]], Stroke::new(2.5, color));

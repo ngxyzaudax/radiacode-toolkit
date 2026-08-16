@@ -48,10 +48,6 @@ impl Error {
     }
 }
 
-pub fn protocol_error(error: radiacode_protocol::Error) -> Error {
-    Error::Protocol(error)
-}
-
 #[cfg(test)]
 mod tests {
     use super::Error;

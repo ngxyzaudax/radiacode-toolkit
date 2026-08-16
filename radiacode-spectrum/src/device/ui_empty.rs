@@ -2,8 +2,8 @@ use egui::{Button, RichText, Ui, Vec2};
 
 use crate::theme::{MUTED, SPACE_MD, SPACE_XS};
 
-use super::ui_common::draw_section_card;
 use super::DeviceAction;
+use super::ui_common::draw_section_card;
 
 pub fn draw_empty_discovery(
     ui: &mut Ui,
@@ -16,7 +16,11 @@ pub fn draw_empty_discovery(
             if scanned_once {
                 ui.label(RichText::new("No detectors found").size(16.0).strong());
             } else {
-                ui.label(RichText::new("Searching for detectors…").size(16.0).strong());
+                ui.label(
+                    RichText::new("Searching for detectors…")
+                        .size(16.0)
+                        .strong(),
+                );
             }
             ui.add_space(SPACE_XS);
             if scanned_once {
@@ -30,7 +34,10 @@ pub fn draw_empty_discovery(
             }
             ui.add_space(SPACE_MD);
             if ui
-                .add_enabled(can_scan, Button::new("Scan again").min_size(Vec2::new(140.0, 32.0)))
+                .add_enabled(
+                    can_scan,
+                    Button::new("Scan again").min_size(Vec2::new(140.0, 32.0)),
+                )
                 .clicked()
             {
                 action = Some(DeviceAction::Scan);
@@ -41,9 +48,21 @@ pub fn draw_empty_discovery(
 }
 
 fn draw_hints(ui: &mut Ui) {
-    ui.label(RichText::new("Check USB cable is seated").small().color(MUTED));
+    ui.label(
+        RichText::new("Check USB cable is seated")
+            .small()
+            .color(MUTED),
+    );
     ui.add_space(SPACE_XS);
-    ui.label(RichText::new("Ensure detector is powered on").small().color(MUTED));
+    ui.label(
+        RichText::new("Ensure detector is powered on")
+            .small()
+            .color(MUTED),
+    );
     ui.add_space(SPACE_XS);
-    ui.label(RichText::new("Enable Bluetooth if using wireless").small().color(MUTED));
+    ui.label(
+        RichText::new("Enable Bluetooth if using wireless")
+            .small()
+            .color(MUTED),
+    );
 }

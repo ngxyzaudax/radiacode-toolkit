@@ -8,8 +8,11 @@ pub struct CatalogDrift {
     pub message: String,
 }
 
-pub fn validate_catalog(sfr_text: &str) -> Vec<CatalogDrift> {
+pub fn validate_catalog(sfr_text: &str) -> Option<Vec<CatalogDrift>> {
     let entries = parse_sfr_file(sfr_text);
+    if entries.is_empty() {
+        return None;
+    }
     let mut drifts = Vec::new();
     for register in catalog_registers() {
         let Some(entry) = entries
@@ -32,7 +35,7 @@ pub fn validate_catalog(sfr_text: &str) -> Vec<CatalogDrift> {
             }
         }
     }
-    drifts
+    Some(drifts)
 }
 
 fn catalog_registers() -> Vec<VirtSfr> {

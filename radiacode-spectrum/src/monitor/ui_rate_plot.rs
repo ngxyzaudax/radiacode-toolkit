@@ -1,25 +1,45 @@
 use egui::{Ui, Vec2b};
-use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
+use egui_plot::{HoverPosition, Plot, PlotPoints, Points};
 
-use crate::monitor::plot_bounds::{PlotBounds, PlotSeries, plot_bounds, series_points};
+use crate::monitor::draw_alarm_lines;
+use crate::monitor::plot_bounds::{
+    PlotBounds, PlotSeries, plot_bounds, series_points, window_range,
+};
 use crate::monitor::state::MonitorState;
 use crate::plot_style::styled_line;
 use crate::scale::HistogramStyle;
 use crate::theme::ACCENT;
 
-pub fn draw_rate_plot(
-    ui: &mut Ui,
-    id: &str,
-    monitor: &MonitorState,
-    series: PlotSeries,
-    unit: &str,
-    style: HistogramStyle,
-    smoothing_window: usize,
-    window_secs: f64,
-    plot_height: f32,
-) {
-    let bounds = plot_bounds(monitor, series, smoothing_window, window_secs);
-    let points = series_points(monitor, series, bounds, smoothing_window);
+pub struct RatePlotOptions<'a> {
+    pub series: PlotSeries,
+    pub unit: &'a str,
+    pub style: HistogramStyle,
+    pub smoothing_window: usize,
+    pub window_secs: f64,
+    pub plot_height: f32,
+}
+
+pub fn draw_rate_plot(ui: &mut Ui, id: &str, monitor: &MonitorState, options: RatePlotOptions<'_>) {
+    let series = options.series;
+    let unit = options.unit;
+    let style = options.style;
+    let smoothing_window = options.smoothing_window;
+    let window_secs = options.window_secs;
+    let plot_height = options.plot_height;
+    let latest = monitor
+        .history
+        .back()
+        .map(|sample| sample.elapsed.as_secs_f64())
+        .unwrap_or(0.0);
+    let (x_min, x_max) = window_range(latest, window_secs);
+    let draft = PlotBounds {
+        x_min,
+        x_max,
+        y_min: 0.0,
+        y_max: 1.0,
+    };
+    let points = series_points(monitor, series, draft, smoothing_window);
+    let bounds = plot_bounds(monitor, series, smoothing_window, window_secs, &points);
     let unit_label = unit.to_string();
     let series_title = series_label(series);
     let hover_title = series_title.clone();
@@ -67,7 +87,7 @@ pub fn draw_rate_plot(
                         (limits.l1_count_rate.max(0.0), limits.l2_count_rate.max(0.0))
                     }
                 };
-                draw_alarm_lines(plot_ui, bounds, alarm_one, alarm_two);
+                draw_alarm_lines(plot_ui, bounds, alarm_one, alarm_two, "alarm");
             }
         });
 }
@@ -101,34 +121,4 @@ fn series_label(series: PlotSeries) -> String {
         PlotSeries::Dose => "Dose rate".into(),
         PlotSeries::Count => "Count rate".into(),
     }
-}
-
-fn draw_alarm_lines(
-    plot_ui: &mut egui_plot::PlotUi,
-    bounds: PlotBounds,
-    alarm_one: f32,
-    alarm_two: f32,
-) {
-    plot_ui.line(
-        Line::new(
-            "alarm_warning",
-            PlotPoints::new(vec![
-                [bounds.x_min, f64::from(alarm_one)],
-                [bounds.x_max, f64::from(alarm_one)],
-            ]),
-        )
-        .color(egui::Color32::from_rgb(240, 180, 64))
-        .allow_hover(false),
-    );
-    plot_ui.line(
-        Line::new(
-            "alarm_danger",
-            PlotPoints::new(vec![
-                [bounds.x_min, f64::from(alarm_two)],
-                [bounds.x_max, f64::from(alarm_two)],
-            ]),
-        )
-        .color(egui::Color32::from_rgb(220, 80, 80))
-        .allow_hover(false),
-    );
 }

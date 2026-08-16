@@ -7,8 +7,8 @@ use crate::catalogue::browse_mode::CatalogueMode;
 use crate::catalogue::state::CatalogueState;
 use crate::catalogue::ui_chain_detail::draw_chain_detail;
 use crate::catalogue::ui_detail::draw_catalogue_detail;
-use crate::catalogue::ui_pane::{draw_catalogue_pane, CatalogueAction};
-use crate::layout::{draw_master_detail, MasterDetailRegion};
+use crate::catalogue::ui_pane::{CatalogueAction, draw_catalogue_pane};
+use crate::layout::{MasterDetailRegion, draw_master_detail};
 use crate::theme::{MUTED, SPACE_MD};
 
 const FOOTER_RESERVE: f32 = 28.0;

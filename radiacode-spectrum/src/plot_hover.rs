@@ -23,11 +23,7 @@ pub fn counts_plot_hover(pos: &HoverPosition<'_>, scale: YScale) -> Option<Strin
     ))
 }
 
-pub fn rate_plot_hover(
-    pos: &HoverPosition<'_>,
-    scale: YScale,
-    log_floor: f64,
-) -> Option<String> {
+pub fn rate_plot_hover(pos: &HoverPosition<'_>, scale: YScale, log_floor: f64) -> Option<String> {
     let point = hover_plot_point(pos);
     Some(format_spectrum_hover(
         point.x,
@@ -36,10 +32,7 @@ pub fn rate_plot_hover(
     ))
 }
 
-pub fn relative_intensity_plot_hover(
-    pos: &HoverPosition<'_>,
-    scale: YScale,
-) -> Option<String> {
+pub fn relative_intensity_plot_hover(pos: &HoverPosition<'_>, scale: YScale) -> Option<String> {
     let point = hover_plot_point(pos);
     Some(format_spectrum_hover(
         point.x,
@@ -48,21 +41,29 @@ pub fn relative_intensity_plot_hover(
     ))
 }
 
-pub fn spectrogram_hover_text(
-    energy_kev: f64,
-    counts: u32,
-    channel: usize,
-    absolute_row: usize,
-    total_rows: usize,
-    age_secs: f64,
-    interval_secs: f64,
-    row_total: u64,
-    kind: RowKind,
-) -> String {
-    let header = format_spectrum_hover(energy_kev, "Counts", &counts.to_string());
-    let kind_line = spectrogram_kind_line(kind, row_total);
+pub struct SpectrogramHoverInfo {
+    pub energy_kev: f64,
+    pub counts: u32,
+    pub channel: usize,
+    pub absolute_row: usize,
+    pub total_rows: usize,
+    pub age_secs: f64,
+    pub interval_secs: f64,
+    pub row_total: u64,
+    pub kind: RowKind,
+}
+
+pub fn spectrogram_hover_text(info: &SpectrogramHoverInfo) -> String {
+    let header = format_spectrum_hover(info.energy_kev, "Counts", &info.counts.to_string());
+    let kind_line = spectrogram_kind_line(info.kind, info.row_total);
     format!(
-        "{header}\n\nchannel {channel}\nrow {absolute_row} / {total_rows}\n{age_secs:.0} s ago\ninterval {interval_secs:.0} s\nrow total {row_total}\n{kind_line}"
+        "{header}\n\nchannel {channel}\nrow {absolute_row} / {total_rows}\n{age_secs:.0} s ago\ninterval {interval_secs:.0} s\nrow total {row_total}\n{kind_line}",
+        channel = info.channel,
+        absolute_row = info.absolute_row,
+        total_rows = info.total_rows,
+        age_secs = info.age_secs,
+        interval_secs = info.interval_secs,
+        row_total = info.row_total,
     )
 }
 
@@ -76,10 +77,7 @@ fn format_counts_value(displayed: f64, scale: YScale) -> String {
 fn format_rate_value(displayed: f64, scale: YScale, log_floor: f64) -> String {
     match scale {
         YScale::Linear => format!("{displayed:.2} cps"),
-        YScale::Logarithmic => format!(
-            "{:.3} cps",
-            10_f64.powf(displayed) * log_floor.max(1e-12)
-        ),
+        YScale::Logarithmic => format!("{:.3} cps", 10_f64.powf(displayed) * log_floor.max(1e-12)),
     }
 }
 

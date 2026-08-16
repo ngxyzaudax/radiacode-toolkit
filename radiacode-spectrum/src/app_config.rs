@@ -1,11 +1,10 @@
-use std::fs;
-use std::path::PathBuf;
-
-use directories::ProjectDirs;
 use radiacode_core::DeviceEndpoint;
 use serde::{Deserialize, Serialize};
 
+use crate::persist::json_store::{load_json, save_json};
 use crate::smooth::DEFAULT_SMOOTHING_WINDOW;
+
+const APP_CONFIG_PATH: &str = "app_config.json";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -110,27 +109,14 @@ impl AppConfig {
     }
 }
 
-pub fn config_path() -> PathBuf {
-    ProjectDirs::from("com", "radiacode", "radiacode-spectrum")
-        .map(|dirs| dirs.data_dir().join("app_config.json"))
-        .unwrap_or_else(|| PathBuf::from("app_config.json"))
-}
-
 pub fn load_app_config() -> AppConfig {
-    let Ok(bytes) = fs::read(config_path()) else {
-        return AppConfig::default();
-    };
-    let mut config: AppConfig = serde_json::from_slice(&bytes).unwrap_or_default();
+    let mut config: AppConfig = load_json(APP_CONFIG_PATH);
     config.clamp();
     config
 }
 
 pub fn save_app_config(config: &AppConfig) -> std::io::Result<()> {
-    let path = config_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
     let mut config = config.clone();
     config.clamp();
-    fs::write(path, serde_json::to_vec_pretty(&config)?)
+    save_json(APP_CONFIG_PATH, &config)
 }

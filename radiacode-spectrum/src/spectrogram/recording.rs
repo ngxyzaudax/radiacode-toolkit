@@ -38,53 +38,74 @@ pub fn start_recording(
     let header = recording_header(&cap, spectrum, device_serial, grid.indices.len() as u32);
     info!(path = %path.display(), "spectrogram recording started");
     let mut writer = RecordingWriter::create(path, &header).map_err(|error| error.to_string())?;
-    let seeded_rows = seed_writer_from_live(&mut writer, cap.live_series.as_ref())
+    let live_series = cap
+        .progress
+        .lock()
+        .ok()
+        .and_then(|progress| progress.live_series.clone());
+    let seeded_rows = seed_writer_from_live(&mut writer, live_series.as_deref())
         .map_err(|error| error.to_string())?;
-    let continue_live = seeded_rows > 0 && cap.baseline.is_some();
-    if !continue_live {
-        cap.skip_next_sample = true;
+    {
+        let mut progress = cap
+            .progress
+            .lock()
+            .map_err(|_| "capture progress lock failed".to_string())?;
+        let continue_live = seeded_rows > 0 && progress.baseline.is_some();
+        if !continue_live {
+            progress.skip_next_sample = true;
+        }
+        progress.paused_recording_path = None;
+        progress.capture_enabled = true;
+        progress.last_auto_save = None;
+        progress.status = if seeded_rows > 0 {
+            format!("Recording started with {seeded_rows} existing row(s).")
+        } else {
+            "Recording started.".into()
+        };
+        progress.mark_dirty();
     }
     cap.recording = Some(writer);
-    cap.paused_recording_path = None;
-    cap.capture_enabled = true;
-    cap.last_auto_save = None;
-    cap.status = if seeded_rows > 0 {
-        format!("Recording started with {seeded_rows} existing row(s).")
-    } else {
-        "Recording started.".into()
-    };
-    cap.mark_dirty();
     Ok(())
 }
 
 pub fn pause_capture(state: &mut SpectrogramState) -> Result<(), String> {
-    let mut cap = state
+    let cap = state
         .capture
         .lock()
         .map_err(|_| "capture lock failed".to_string())?;
-    cap.capture_enabled = false;
-    cap.status = if cap.recording.is_some() {
+    let recording_active = cap.recording.is_some();
+    let mut progress = cap
+        .progress
+        .lock()
+        .map_err(|_| "capture progress lock failed".to_string())?;
+    progress.capture_enabled = false;
+    progress.status = if recording_active {
         "Recording paused.".into()
     } else {
         "Live capture paused.".into()
     };
-    cap.mark_dirty();
+    progress.mark_dirty();
     Ok(())
 }
 
 pub fn resume_capture(state: &mut SpectrogramState) -> Result<(), String> {
-    let mut cap = state
+    let cap = state
         .capture
         .lock()
         .map_err(|_| "capture lock failed".to_string())?;
-    cap.capture_enabled = true;
-    cap.skip_next_sample = true;
-    cap.status = if cap.recording.is_some() {
+    let recording_active = cap.recording.is_some();
+    let mut progress = cap
+        .progress
+        .lock()
+        .map_err(|_| "capture progress lock failed".to_string())?;
+    progress.capture_enabled = true;
+    progress.skip_next_sample = true;
+    progress.status = if recording_active {
         "Recording.".into()
     } else {
         "Live capture.".into()
     };
-    cap.mark_dirty();
+    progress.mark_dirty();
     Ok(())
 }
 
@@ -98,9 +119,15 @@ pub fn stop_recording(state: &mut SpectrogramState) -> Result<(), String> {
     };
     let path = writer.finalize().map_err(|error| error.to_string())?;
     info!(path = %path.display(), "spectrogram recording saved");
-    cap.paused_recording_path = Some(path.clone());
-    cap.status = format!("Saved {}. Resume to append.", path.display());
-    cap.mark_dirty();
+    {
+        let mut progress = cap
+            .progress
+            .lock()
+            .map_err(|_| "capture progress lock failed".to_string())?;
+        progress.paused_recording_path = Some(path.clone());
+        progress.status = format!("Saved {}. Resume to append.", path.display());
+        progress.mark_dirty();
+    }
     drop(cap);
     state.refresh_history();
     Ok(())
@@ -118,7 +145,12 @@ pub fn resume_recording(
     if cap.recording.is_some() {
         return Ok(());
     }
-    let Some(path) = cap.paused_recording_path.clone() else {
+    let resume_path = cap
+        .progress
+        .lock()
+        .ok()
+        .and_then(|progress| progress.paused_recording_path.clone());
+    let Some(path) = resume_path else {
         drop(cap);
         return start_recording(state, spectrum, device_serial);
     };
@@ -127,13 +159,19 @@ pub fn resume_recording(
     };
     let grid = energy_grid(spectrum);
     ensure_live_series(&mut cap, spectrum, device_serial, &grid.energies_kev);
-    cap.skip_next_sample = true;
     let writer = open_recording_append(path.clone()).map_err(|error| error.to_string())?;
     cap.recording = Some(writer);
-    cap.capture_enabled = true;
-    cap.last_auto_save = None;
-    cap.status = format!("Recording resumed to {}.", path.display());
-    cap.mark_dirty();
+    {
+        let mut progress = cap
+            .progress
+            .lock()
+            .map_err(|_| "capture progress lock failed".to_string())?;
+        progress.skip_next_sample = true;
+        progress.capture_enabled = true;
+        progress.last_auto_save = None;
+        progress.status = format!("Recording resumed to {}.", path.display());
+        progress.mark_dirty();
+    }
     Ok(())
 }
 

@@ -30,7 +30,7 @@ fn decode_spectrum_format_one_zero_runs() {
         .into_iter()
         .flat_map(f32::to_le_bytes)
         .collect::<Vec<_>>();
-    let packed = ((3u16) << 4) | 0u16;
+    let packed = (3u16) << 4;
     let mut payload = Vec::new();
     payload.extend_from_slice(&duration);
     payload.extend_from_slice(&coeffs);

@@ -55,6 +55,8 @@ pub struct EventRecord {
     pub event: EventId,
     pub event_param1: u8,
     pub flags: StatusFlags,
+    pub value: f32,
+    pub trailing: u16,
 }
 
 #[derive(Debug, Clone, PartialEq)]

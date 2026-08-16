@@ -26,15 +26,13 @@ pub fn map_usb_error(error: UsbError) -> radiacode_core::Error {
         UsbError::Transport(message) => {
             radiacode_core::Error::from(radiacode_protocol::Error::TransportUnavailable(message))
         }
-        UsbError::Usb(error) if error == rusb::Error::Timeout => {
+        UsbError::Usb(rusb::Error::Timeout) => {
             radiacode_core::Error::from(radiacode_protocol::Error::Timeout)
         }
-        UsbError::Usb(error) if error == rusb::Error::NoDevice => {
+        UsbError::Usb(rusb::Error::NoDevice) => {
             radiacode_core::Error::from(radiacode_protocol::Error::ConnectionClosed)
         }
-        UsbError::Usb(error) if matches!(error, rusb::Error::Access) => {
-            radiacode_core::Error::UsbPermissionDenied
-        }
+        UsbError::Usb(rusb::Error::Access) => radiacode_core::Error::UsbPermissionDenied,
         UsbError::Usb(error) => radiacode_core::Error::from(
             radiacode_protocol::Error::TransportUnavailable(error.to_string()),
         ),
@@ -47,8 +45,8 @@ pub fn map_usb_protocol_error(error: UsbError) -> radiacode_protocol::Error {
             radiacode_protocol::Error::ConnectionClosed
         }
         UsbError::Transport(message) => radiacode_protocol::Error::TransportUnavailable(message),
-        UsbError::Usb(error) if error == rusb::Error::Timeout => radiacode_protocol::Error::Timeout,
-        UsbError::Usb(error) if matches!(error, rusb::Error::Access) => {
+        UsbError::Usb(rusb::Error::Timeout) => radiacode_protocol::Error::Timeout,
+        UsbError::Usb(rusb::Error::Access) => {
             radiacode_protocol::Error::TransportUnavailable("usb permission denied".into())
         }
         UsbError::DeviceNotFound => {

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::analysis::compare::Comparison;
 use crate::analysis::selection::{rebuild_samples, selection_status};
 use crate::analysis::spectrum::{CollapsedSpectrum, collapse_series};
+use crate::peaks::PeakMemo;
 use crate::smooth::DEFAULT_SMOOTHING_WINDOW;
 use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::storage::{list_recordings, load_recording};
@@ -27,6 +28,7 @@ pub struct AnalysisState {
     pub status: String,
     pub error: String,
     pub pane_open: bool,
+    pub peak_memo: PeakMemo,
 }
 
 impl AnalysisState {
@@ -45,6 +47,7 @@ impl AnalysisState {
             status: String::new(),
             error: String::new(),
             pane_open: true,
+            peak_memo: PeakMemo::new(),
         }
     }
 
@@ -53,15 +56,7 @@ impl AnalysisState {
     }
 
     pub fn filtered_library(&self) -> Vec<RecordingEntry> {
-        let filter = self.library_filter.trim().to_lowercase();
-        if filter.is_empty() {
-            return self.library.clone();
-        }
-        self.library
-            .iter()
-            .filter(|entry| entry.name.to_lowercase().contains(&filter))
-            .cloned()
-            .collect()
+        crate::ui::recording::filter_recordings(&self.library, &self.library_filter)
     }
 
     pub fn is_background(&self, path: &Path) -> bool {

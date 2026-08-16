@@ -1,7 +1,8 @@
 use egui::{Ui, Vec2b};
-use egui_plot::{HoverPosition, Line, Plot, PlotPoints, Points};
+use egui_plot::{HoverPosition, Plot, PlotPoints, Points};
 
-use crate::dosimeter::{DosimeterState, PlotBounds, dose_points, plot_bounds};
+use crate::dosimeter::{DosimeterState, dose_points, plot_bounds};
+use crate::monitor::draw_alarm_lines;
 use crate::plot_style::styled_line;
 use crate::scale::HistogramStyle;
 use crate::theme::ACCENT;
@@ -49,37 +50,8 @@ pub fn draw_cumulative_dose_plot(
                     bounds,
                     limits.l1_dose.max(0.0),
                     limits.l2_dose.max(0.0),
+                    "accum_alarm",
                 );
             }
         });
-}
-
-fn draw_alarm_lines(
-    plot_ui: &mut egui_plot::PlotUi,
-    bounds: PlotBounds,
-    alarm_one: f32,
-    alarm_two: f32,
-) {
-    plot_ui.line(
-        Line::new(
-            "accum_alarm_warning",
-            PlotPoints::new(vec![
-                [bounds.x_min, f64::from(alarm_one)],
-                [bounds.x_max, f64::from(alarm_one)],
-            ]),
-        )
-        .color(egui::Color32::from_rgb(240, 180, 64))
-        .allow_hover(false),
-    );
-    plot_ui.line(
-        Line::new(
-            "accum_alarm_danger",
-            PlotPoints::new(vec![
-                [bounds.x_min, f64::from(alarm_two)],
-                [bounds.x_max, f64::from(alarm_two)],
-            ]),
-        )
-        .color(egui::Color32::from_rgb(220, 80, 80))
-        .allow_hover(false),
-    );
 }

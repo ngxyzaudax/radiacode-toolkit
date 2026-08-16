@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use egui::{Context, RichText, Ui};
 
@@ -35,11 +35,11 @@ fn draw_manage_entry(
     ui: &mut Ui,
     state: &mut SpectrogramState,
     entry: &RecordingEntry,
-    path: &PathBuf,
+    path: &Path,
     action: &mut Option<SpectrogramControlsAction>,
 ) {
-    let is_loaded = state.loaded_path.as_ref() == Some(path);
-    let is_editing = state.library_edit_path.as_ref() == Some(path);
+    let is_loaded = state.loaded_path.as_deref() == Some(path);
+    let is_editing = state.library_edit_path.as_deref() == Some(path);
     let title_accent = is_loaded.then_some(ACCENT);
     draw_recording_card_shell(
         ui,
@@ -67,7 +67,7 @@ fn draw_manage_badges(ui: &mut Ui, is_loaded: bool) {
 fn draw_manage_footer(
     ui: &mut Ui,
     state: &mut SpectrogramState,
-    path: &PathBuf,
+    path: &Path,
     is_loaded: bool,
     is_editing: bool,
     action: &mut Option<SpectrogramControlsAction>,
@@ -78,9 +78,12 @@ fn draw_manage_footer(
                 *action = Some(SpectrogramControlsAction::CloseLoaded);
             }
         } else if ui.button("Open").clicked() {
-            *action = Some(SpectrogramControlsAction::Load(path.clone()));
+            *action = Some(SpectrogramControlsAction::Load(path.to_path_buf()));
         }
-        if ui.small_button(if is_editing { "Cancel edit" } else { "Edit" }).clicked() {
+        if ui
+            .small_button(if is_editing { "Cancel edit" } else { "Edit" })
+            .clicked()
+        {
             if is_editing {
                 state.library_edit_path = None;
             } else {
@@ -91,7 +94,7 @@ fn draw_manage_footer(
             export_entry(state, path);
         }
         if !is_loaded && ui.small_button("Delete").clicked() {
-            set_pending_library_delete(ui.ctx(), Some(path.clone()));
+            set_pending_library_delete(ui.ctx(), Some(path.to_path_buf()));
         }
     });
 }
@@ -99,7 +102,7 @@ fn draw_manage_footer(
 fn draw_inline_editor(
     ui: &mut Ui,
     state: &mut SpectrogramState,
-    path: &PathBuf,
+    path: &Path,
     action: &mut Option<SpectrogramControlsAction>,
 ) {
     ui.label(RichText::new("Name").small().color(MUTED));
@@ -147,10 +150,8 @@ fn draw_library_delete_confirm(
 }
 
 fn pending_library_delete(ctx: &Context) -> Option<PathBuf> {
-    ctx.data(|data| {
-        data.get_temp::<Option<PathBuf>>(egui::Id::new(PENDING_LIBRARY_DELETE))
-    })
-    .flatten()
+    ctx.data(|data| data.get_temp::<Option<PathBuf>>(egui::Id::new(PENDING_LIBRARY_DELETE)))
+        .flatten()
 }
 
 fn set_pending_library_delete(ctx: &Context, path: Option<PathBuf>) {
@@ -159,11 +160,11 @@ fn set_pending_library_delete(ctx: &Context, path: Option<PathBuf>) {
     });
 }
 
-fn export_entry(state: &mut SpectrogramState, path: &PathBuf) {
+fn export_entry(state: &mut SpectrogramState, path: &Path) {
     let name = state
         .history
         .iter()
-        .find(|entry| &entry.path == path)
+        .find(|entry| entry.path == path)
         .map(|entry| entry.name.as_str())
         .unwrap_or("recording");
     if let Some(destination) = rfd::FileDialog::new()
@@ -180,14 +181,14 @@ fn export_entry(state: &mut SpectrogramState, path: &PathBuf) {
 
 fn delete_entry(
     state: &mut SpectrogramState,
-    path: &PathBuf,
+    path: &Path,
     action: &mut Option<SpectrogramControlsAction>,
 ) {
     if library::delete_entry(path).is_ok() {
-        if state.loaded_path.as_ref() == Some(path) {
+        if state.loaded_path.as_deref() == Some(path) {
             state.close_loaded();
         }
-        if state.library_edit_path.as_ref() == Some(path) {
+        if state.library_edit_path.as_deref() == Some(path) {
             state.library_edit_path = None;
         }
         state.refresh_history();

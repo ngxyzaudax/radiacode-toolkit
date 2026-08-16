@@ -49,7 +49,10 @@ fn icon_button(ui: &mut Ui, tip: &str, paint: fn(&Ui, Rect, Color32)) -> egui::R
 fn paint_minus(ui: &Ui, rect: Rect, color: Color32) {
     let y = rect.center().y;
     ui.painter().line_segment(
-        [Pos2::new(rect.left() + 1.0, y), Pos2::new(rect.right() - 1.0, y)],
+        [
+            Pos2::new(rect.left() + 1.0, y),
+            Pos2::new(rect.right() - 1.0, y),
+        ],
         Stroke::new(1.8, color),
     );
 }
@@ -58,11 +61,17 @@ fn paint_plus(ui: &Ui, rect: Rect, color: Color32) {
     let stroke = Stroke::new(1.8, color);
     let c = rect.center();
     ui.painter().line_segment(
-        [Pos2::new(rect.left() + 1.0, c.y), Pos2::new(rect.right() - 1.0, c.y)],
+        [
+            Pos2::new(rect.left() + 1.0, c.y),
+            Pos2::new(rect.right() - 1.0, c.y),
+        ],
         stroke,
     );
     ui.painter().line_segment(
-        [Pos2::new(c.x, rect.top() + 1.0), Pos2::new(c.x, rect.bottom() - 1.0)],
+        [
+            Pos2::new(c.x, rect.top() + 1.0),
+            Pos2::new(c.x, rect.bottom() - 1.0),
+        ],
         stroke,
     );
 }
@@ -79,14 +88,8 @@ fn paint_fit(ui: &Ui, rect: Rect, color: Color32) {
         (rect.right() - inset, rect.bottom() - inset, -1.0, -1.0),
     ];
     for (x, y, dx, dy) in corners {
-        painter.line_segment(
-            [Pos2::new(x, y), Pos2::new(x + dx * arm, y)],
-            stroke,
-        );
-        painter.line_segment(
-            [Pos2::new(x, y), Pos2::new(x, y + dy * arm)],
-            stroke,
-        );
+        painter.line_segment([Pos2::new(x, y), Pos2::new(x + dx * arm, y)], stroke);
+        painter.line_segment([Pos2::new(x, y), Pos2::new(x, y + dy * arm)], stroke);
     }
 }
 
@@ -97,8 +100,32 @@ fn paint_focus(ui: &Ui, rect: Rect, color: Color32) {
     painter.circle_stroke(c, rect.width() * 0.28, stroke);
     painter.circle_filled(c, 1.6, color);
     let reach = rect.width() * 0.5;
-    painter.line_segment([Pos2::new(c.x, rect.top()), Pos2::new(c.x, c.y - reach * 0.35)], stroke);
-    painter.line_segment([Pos2::new(c.x, c.y + reach * 0.35), Pos2::new(c.x, rect.bottom())], stroke);
-    painter.line_segment([Pos2::new(rect.left(), c.y), Pos2::new(c.x - reach * 0.35, c.y)], stroke);
-    painter.line_segment([Pos2::new(c.x + reach * 0.35, c.y), Pos2::new(rect.right(), c.y)], stroke);
+    painter.line_segment(
+        [
+            Pos2::new(c.x, rect.top()),
+            Pos2::new(c.x, c.y - reach * 0.35),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            Pos2::new(c.x, c.y + reach * 0.35),
+            Pos2::new(c.x, rect.bottom()),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            Pos2::new(rect.left(), c.y),
+            Pos2::new(c.x - reach * 0.35, c.y),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            Pos2::new(c.x + reach * 0.35, c.y),
+            Pos2::new(rect.right(), c.y),
+        ],
+        stroke,
+    );
 }

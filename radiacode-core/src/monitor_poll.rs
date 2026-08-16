@@ -1,9 +1,11 @@
-use tracing::debug;
+use std::sync::Once;
+
+use tracing::{debug, warn};
 
 use crate::data_buf_cursor::DataBufCursor;
 use crate::device::RadiaCode;
 use crate::error::Result;
-use crate::rate_units::{count_display_from_cps, dose_display_from_accum_r, dose_display_from_rh};
+use crate::rate_units::{count_display_from_cps, dose_display_from_rh};
 use crate::status_read::status_from_frame;
 use crate::types::{AccumulatedDose, AlarmLimits, DeviceStatus, MonitorPollSample, TimedRates};
 use radiacode_protocol::{
@@ -42,20 +44,74 @@ pub async fn poll_monitor(
             )
         })
         .count();
+    let decode_warnings = frame
+        .warnings
+        .iter()
+        .filter(|warning| {
+            !matches!(
+                warning.kind,
+                radiacode_protocol::DecodeWarningKind::SeqJump { .. }
+                    | radiacode_protocol::DecodeWarningKind::SanityRejected(_)
+            )
+        })
+        .count();
+    log_first_unknown_record(&frame);
     let accumulated = latest_rare_record(&frame).map(|rare| AccumulatedDose {
-        dose: dose_display_from_accum_r(rare.dose_r.as_f32(), units.dose_unit),
+        dose: dose_display_from_rh(rare.dose_r.as_f32(), units.dose_unit),
         duration_secs: rare.duration_secs,
         dose_unit: units.dose_unit,
     });
     let sample = MonitorPollSample {
         rates,
         accumulated,
-        decode_warnings: frame.warnings.len(),
+        decode_warnings,
         rejected_records,
+        resync_count: frame.resync_count as usize,
         seq_gaps,
     };
-    debug!(?sample, ?status, "monitor poll");
+    debug!(
+        rate_count = sample.rates.len(),
+        decode_warnings = sample.decode_warnings,
+        rejected_records = sample.rejected_records,
+        resync_count = sample.resync_count,
+        seq_gap_count = sample.seq_gaps.len(),
+        ?status,
+        "monitor poll"
+    );
     Ok((sample, status))
+}
+
+static UNKNOWN_RECORD_HEX_LOG: Once = Once::new();
+
+fn log_first_unknown_record(frame: &radiacode_protocol::DataBufFrame) {
+    for warning in &frame.warnings {
+        let radiacode_protocol::DecodeWarningKind::UnknownRecord {
+            entity,
+            group,
+            tail,
+        } = &warning.kind
+        else {
+            continue;
+        };
+        UNKNOWN_RECORD_HEX_LOG.call_once(|| {
+            warn!(
+                entity,
+                group,
+                offset = warning.offset,
+                tail_hex = %hex_encode(tail),
+                "unknown databuf record type (first occurrence)"
+            );
+        });
+        return;
+    }
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 impl RadiaCode {

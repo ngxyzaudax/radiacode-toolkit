@@ -1,10 +1,13 @@
 use radiacode_protocol::{DataBufFrame, DecodeWarningKind, Seq};
 
+const MAX_PLAUSIBLE_GAP: u8 = 32;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SeqGap {
     pub expected: u8,
     pub got: u8,
-    pub lost: u8,
+    pub lost: u32,
+    pub reset: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -21,13 +24,16 @@ impl DataBufCursor {
 
     pub fn observe_frame(&mut self, frame: &DataBufFrame) -> Vec<SeqGap> {
         let mut gaps = decode_seq_gaps(frame);
-        if let (Some(last), Some(first)) = (self.last_seq, frame_first_seq(frame)) {
+        if let (Some(last), Some(first)) = (self.last_seq, frame.first_header_seq) {
             push_cross_poll_gap(&mut gaps, last, first);
         }
-        if let Some(last) = frame_last_seq(frame) {
+        if let Some(last) = frame.last_header_seq {
             self.last_seq = Some(last);
         }
         for gap in &gaps {
+            if gap.reset {
+                continue;
+            }
             self.total_gaps = self.total_gaps.saturating_add(1);
             self.total_lost = self.total_lost.saturating_add(u64::from(gap.lost));
         }
@@ -40,14 +46,53 @@ fn decode_seq_gaps(frame: &DataBufFrame) -> Vec<SeqGap> {
         .warnings
         .iter()
         .filter_map(|warning| match warning.kind {
-            DecodeWarningKind::SeqJump { expected, got } => Some(SeqGap {
-                expected,
-                got,
-                lost: Seq::new(got).lost_since(Seq::new(expected)),
-            }),
+            DecodeWarningKind::SeqJump { expected, got } => {
+                Some(seq_gap(Seq::new(got), Seq::new(expected)))
+            }
             _ => None,
         })
         .collect()
+}
+
+fn seq_gap(got: Seq, expected: Seq) -> SeqGap {
+    if got == expected {
+        return SeqGap {
+            expected: expected.raw(),
+            got: got.raw(),
+            lost: 0,
+            reset: false,
+        };
+    }
+    if !got.is_newer_than(expected) {
+        return SeqGap {
+            expected: expected.raw(),
+            got: got.raw(),
+            lost: 0,
+            reset: true,
+        };
+    }
+    let Some(lost) = got.lost_since(expected) else {
+        return SeqGap {
+            expected: expected.raw(),
+            got: got.raw(),
+            lost: 0,
+            reset: true,
+        };
+    };
+    if lost > u32::from(MAX_PLAUSIBLE_GAP) {
+        return SeqGap {
+            expected: expected.raw(),
+            got: got.raw(),
+            lost: 0,
+            reset: true,
+        };
+    }
+    SeqGap {
+        expected: expected.raw(),
+        got: got.raw(),
+        lost,
+        reset: false,
+    }
 }
 
 fn push_cross_poll_gap(gaps: &mut Vec<SeqGap>, last: Seq, first: Seq) {
@@ -55,11 +100,7 @@ fn push_cross_poll_gap(gaps: &mut Vec<SeqGap>, last: Seq, first: Seq) {
     if first == expected {
         return;
     }
-    let candidate = SeqGap {
-        expected: expected.raw(),
-        got: first.raw(),
-        lost: first.lost_since(expected),
-    };
+    let candidate = seq_gap(first, expected);
     if gaps
         .iter()
         .any(|gap| gap.expected == candidate.expected && gap.got == candidate.got)
@@ -67,14 +108,6 @@ fn push_cross_poll_gap(gaps: &mut Vec<SeqGap>, last: Seq, first: Seq) {
         return;
     }
     gaps.push(candidate);
-}
-
-fn frame_first_seq(frame: &DataBufFrame) -> Option<Seq> {
-    frame.records.first().map(|record| record.header().seq)
-}
-
-fn frame_last_seq(frame: &DataBufFrame) -> Option<Seq> {
-    frame.records.last().map(|record| record.header().seq)
 }
 
 #[cfg(test)]
@@ -120,5 +153,25 @@ mod tests {
         assert_eq!(gaps[0].expected, 11);
         assert_eq!(gaps[0].got, 12);
         assert_eq!(gaps[0].lost, 1);
+        assert!(!gaps[0].reset);
+    }
+
+    #[test]
+    fn reset_after_cursor_clear_has_no_cross_poll_gap() {
+        let mut cursor = DataBufCursor::default();
+        cursor.observe_frame(&decode_data_buf(&build_realtime(200)));
+        cursor.reset();
+        let gaps = cursor.observe_frame(&decode_data_buf(&build_realtime(5)));
+        assert!(gaps.is_empty(), "unexpected gaps after reset: {gaps:?}");
+    }
+
+    #[test]
+    fn backwards_sequence_reports_reset_not_loss() {
+        let mut cursor = DataBufCursor::default();
+        cursor.observe_frame(&decode_data_buf(&build_realtime(200)));
+        let gaps = cursor.observe_frame(&decode_data_buf(&build_realtime(5)));
+        assert_eq!(gaps.len(), 1);
+        assert!(gaps[0].reset);
+        assert_eq!(gaps[0].lost, 0);
     }
 }

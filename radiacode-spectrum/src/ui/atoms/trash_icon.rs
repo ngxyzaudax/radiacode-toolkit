@@ -34,7 +34,10 @@ fn paint_trash_icon(ui: &mut Ui, rect: Rect, color: Color32) {
     );
     painter.rect_stroke(body, 1.0, stroke, StrokeKind::Outside);
     painter.line_segment(
-        [Pos2::new(body.left(), body.top()), Pos2::new(body.right(), body.top())],
+        [
+            Pos2::new(body.left(), body.top()),
+            Pos2::new(body.right(), body.top()),
+        ],
         stroke,
     );
     painter.line_segment(
@@ -46,7 +49,10 @@ fn paint_trash_icon(ui: &mut Ui, rect: Rect, color: Color32) {
     );
     let mid = body.center().y;
     painter.line_segment(
-        [Pos2::new(body.center().x, mid - 2.0), Pos2::new(body.center().x, mid + 3.0)],
+        [
+            Pos2::new(body.center().x, mid - 2.0),
+            Pos2::new(body.center().x, mid + 3.0),
+        ],
         stroke,
     );
 }

@@ -37,23 +37,33 @@ pub fn draw_grid(
     }
 }
 
-pub fn draw_crosshair(painter: &egui::Painter, hover: Pos2, image_rect: Rect) {
-    if !image_rect.contains(hover) {
+pub fn draw_crosshair(
+    painter: &egui::Painter,
+    hover: Pos2,
+    image_rect: Rect,
+    preview_rect: Option<Rect>,
+) {
+    let in_image = image_rect.contains(hover);
+    let in_preview = preview_rect.is_some_and(|rect| rect.contains(hover));
+    if !in_image && !in_preview {
         return;
     }
     let stroke = Stroke::new(1.0, ACCENT);
+    let top = preview_rect
+        .map(|rect| rect.top())
+        .unwrap_or(image_rect.top());
+    let bottom = image_rect.bottom();
     painter.line_segment(
-        [
-            Pos2::new(hover.x, image_rect.top()),
-            Pos2::new(hover.x, image_rect.bottom()),
-        ],
+        [Pos2::new(hover.x, top), Pos2::new(hover.x, bottom)],
         stroke,
     );
-    painter.line_segment(
-        [
-            Pos2::new(image_rect.left(), hover.y),
-            Pos2::new(image_rect.right(), hover.y),
-        ],
-        stroke,
-    );
+    if in_image {
+        painter.line_segment(
+            [
+                Pos2::new(image_rect.left(), hover.y),
+                Pos2::new(image_rect.right(), hover.y),
+            ],
+            stroke,
+        );
+    }
 }

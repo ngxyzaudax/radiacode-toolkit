@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use egui::{Context, TextureOptions};
 
 use crate::spectrogram::layout::{SpectrogramLayout, channels_in_energy_range};
-use crate::spectrogram::model::SpectrogramDisplay;
+use crate::spectrogram::model::{SpectrogramDisplay, SpectrogramSeries};
 use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::texture::source_columns;
 
@@ -51,11 +53,14 @@ pub fn sync_texture(ctx: &Context, state: &mut SpectrogramState, layout: Spectro
             state.ensure_z_range();
         }
         let z_range = state.z_range;
-        let series = match state.display {
-            SpectrogramDisplay::Live => state.live_series.as_ref(),
-            SpectrogramDisplay::Loaded => state.loaded_series.as_ref(),
+        let series_for_texture: Option<Arc<SpectrogramSeries>> = match state.display {
+            SpectrogramDisplay::Live => state.live_series.clone(),
+            SpectrogramDisplay::Loaded => state
+                .loaded_series
+                .as_ref()
+                .map(|series| Arc::new(series.clone())),
         };
-        if let (Some(series), Some(z_range)) = (series, z_range) {
+        if let (Some(series), Some(z_range)) = (series_for_texture.as_deref(), z_range) {
             let visible = series.row_window(row_start, layout.display_rows);
             state.texture.rebuild(
                 series,

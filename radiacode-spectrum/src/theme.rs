@@ -4,7 +4,6 @@ pub const SPACE_XS: f32 = 4.0;
 pub const SPACE_SM: f32 = 8.0;
 pub const SPACE_MD: f32 = 12.0;
 pub const SPACE_LG: f32 = 16.0;
-pub const SPACE_XL: f32 = 24.0;
 
 pub fn apply(ctx: &egui::Context) {
     let mut visuals = Visuals::dark();

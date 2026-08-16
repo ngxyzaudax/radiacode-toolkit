@@ -27,11 +27,11 @@ mod tests {
     #[test]
     fn sequence_wraps_within_32() {
         let mut sequence = Sequence::default();
-        assert_eq!(sequence.next(), 0x80);
+        assert_eq!(sequence.advance(), 0x80);
         for _ in 0..31 {
-            let _ = sequence.next();
+            let _ = sequence.advance();
         }
-        assert_eq!(sequence.next(), 0x80);
+        assert_eq!(sequence.advance(), 0x80);
     }
 
     #[test]

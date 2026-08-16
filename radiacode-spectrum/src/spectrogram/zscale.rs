@@ -122,8 +122,10 @@ mod tests {
 
     #[test]
     fn auto_brightness_uses_peak() {
-        let mut settings = SpectrogramSettings::default();
-        settings.auto_brightness = true;
+        let settings = SpectrogramSettings {
+            auto_brightness: true,
+            ..Default::default()
+        };
         let range = resolve_z_range(&settings, &[1, 2, 100]);
         assert!(range.max >= 100.0);
     }

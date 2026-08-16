@@ -22,10 +22,17 @@ pub fn with_plot_pad(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
 pub fn tab_uses_page_inset(tab: ViewTab) -> bool {
     matches!(
         tab,
-        ViewTab::Device | ViewTab::Settings | ViewTab::About | ViewTab::Analysis | ViewTab::Catalogue
+        ViewTab::Device
+            | ViewTab::Settings
+            | ViewTab::About
+            | ViewTab::Analysis
+            | ViewTab::Catalogue
     )
 }
 
 pub fn tab_uses_plot_pad(tab: ViewTab) -> bool {
-    matches!(tab, ViewTab::Monitor | ViewTab::Spectrum | ViewTab::Spectrogram)
+    matches!(
+        tab,
+        ViewTab::Monitor | ViewTab::Spectrum | ViewTab::Spectrogram
+    )
 }

@@ -3,7 +3,7 @@ use egui::Ui;
 use radiacode_core::{AlarmSignalMode, DeviceConfig, count_unit_label, dose_unit_label};
 
 use crate::layout::{breakpoint_for, column_count};
-use crate::settings::ui_alarm_card::{alarm_card, compact_alarm_card, INNER_WIDTH};
+use crate::settings::ui_alarm_card::{INNER_WIDTH, alarm_card, compact_alarm_card};
 
 pub fn draw_alarms_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
     let dose_unit = dose_unit_label(draft.alarms.dose_unit);
@@ -49,97 +49,120 @@ fn draw_alarm_signal_mode(ui: &mut Ui, draft: &mut DeviceConfig) {
     });
 }
 
+struct AlarmCardProps<'a> {
+    compact: bool,
+    title: &'a str,
+    warning: &'a mut f32,
+    danger: &'a mut f32,
+    unit: &'a str,
+    speed: f64,
+    signals: [(&'a mut bool, &'a mut bool); 3],
+}
+
 fn dose_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str, compact: bool) {
     draw_card(
         ui,
-        compact,
-        "Dose rate",
-        &mut draft.alarms.l1_dose_rate,
-        &mut draft.alarms.l2_dose_rate,
-        unit,
-        0.01,
-        [
-            (
-                &mut draft.sound_ctrl.dose_rate_alarm1,
-                &mut draft.vibro_ctrl.dose_rate_alarm1,
-            ),
-            (
-                &mut draft.sound_ctrl.dose_rate_alarm2,
-                &mut draft.vibro_ctrl.dose_rate_alarm2,
-            ),
-            (
-                &mut draft.sound_ctrl.dose_rate_out_of_scale,
-                &mut draft.vibro_ctrl.dose_rate_out_of_scale,
-            ),
-        ],
+        AlarmCardProps {
+            compact,
+            title: "Dose rate",
+            warning: &mut draft.alarms.l1_dose_rate,
+            danger: &mut draft.alarms.l2_dose_rate,
+            unit,
+            speed: 0.01,
+            signals: [
+                (
+                    &mut draft.sound_ctrl.dose_rate_alarm1,
+                    &mut draft.vibro_ctrl.dose_rate_alarm1,
+                ),
+                (
+                    &mut draft.sound_ctrl.dose_rate_alarm2,
+                    &mut draft.vibro_ctrl.dose_rate_alarm2,
+                ),
+                (
+                    &mut draft.sound_ctrl.dose_rate_out_of_scale,
+                    &mut draft.vibro_ctrl.dose_rate_out_of_scale,
+                ),
+            ],
+        },
     );
 }
 
 fn count_rate_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str, compact: bool) {
     draw_card(
         ui,
-        compact,
-        "Count rate",
-        &mut draft.alarms.l1_count_rate,
-        &mut draft.alarms.l2_count_rate,
-        unit,
-        1.0,
-        [
-            (
-                &mut draft.sound_ctrl.count_rate_alarm1,
-                &mut draft.vibro_ctrl.count_rate_alarm1,
-            ),
-            (
-                &mut draft.sound_ctrl.count_rate_alarm2,
-                &mut draft.vibro_ctrl.count_rate_alarm2,
-            ),
-            (
-                &mut draft.sound_ctrl.count_rate_out_of_scale,
-                &mut draft.vibro_ctrl.count_rate_out_of_scale,
-            ),
-        ],
+        AlarmCardProps {
+            compact,
+            title: "Count rate",
+            warning: &mut draft.alarms.l1_count_rate,
+            danger: &mut draft.alarms.l2_count_rate,
+            unit,
+            speed: 1.0,
+            signals: [
+                (
+                    &mut draft.sound_ctrl.count_rate_alarm1,
+                    &mut draft.vibro_ctrl.count_rate_alarm1,
+                ),
+                (
+                    &mut draft.sound_ctrl.count_rate_alarm2,
+                    &mut draft.vibro_ctrl.count_rate_alarm2,
+                ),
+                (
+                    &mut draft.sound_ctrl.count_rate_out_of_scale,
+                    &mut draft.vibro_ctrl.count_rate_out_of_scale,
+                ),
+            ],
+        },
     );
 }
 
 fn accum_dose_card(ui: &mut Ui, draft: &mut DeviceConfig, unit: &str, compact: bool) {
     draw_card(
         ui,
-        compact,
-        "Accum. dose",
-        &mut draft.alarms.l1_dose,
-        &mut draft.alarms.l2_dose,
-        unit,
-        1.0,
-        [
-            (
-                &mut draft.sound_ctrl.dose_alarm1,
-                &mut draft.vibro_ctrl.dose_alarm1,
-            ),
-            (
-                &mut draft.sound_ctrl.dose_alarm2,
-                &mut draft.vibro_ctrl.dose_alarm2,
-            ),
-            (
-                &mut draft.sound_ctrl.dose_out_of_scale,
-                &mut draft.vibro_ctrl.dose_out_of_scale,
-            ),
-        ],
+        AlarmCardProps {
+            compact,
+            title: "Accum. dose",
+            warning: &mut draft.alarms.l1_dose,
+            danger: &mut draft.alarms.l2_dose,
+            unit,
+            speed: 1.0,
+            signals: [
+                (
+                    &mut draft.sound_ctrl.dose_alarm1,
+                    &mut draft.vibro_ctrl.dose_alarm1,
+                ),
+                (
+                    &mut draft.sound_ctrl.dose_alarm2,
+                    &mut draft.vibro_ctrl.dose_alarm2,
+                ),
+                (
+                    &mut draft.sound_ctrl.dose_out_of_scale,
+                    &mut draft.vibro_ctrl.dose_out_of_scale,
+                ),
+            ],
+        },
     );
 }
 
-fn draw_card(
-    ui: &mut Ui,
-    compact: bool,
-    title: &str,
-    warning: &mut f32,
-    danger: &mut f32,
-    unit: &str,
-    speed: f64,
-    signals: [(&mut bool, &mut bool); 3],
-) {
-    if compact {
-        compact_alarm_card(ui, title, warning, danger, unit, speed, signals);
+fn draw_card(ui: &mut Ui, props: AlarmCardProps<'_>) {
+    if props.compact {
+        compact_alarm_card(
+            ui,
+            props.title,
+            props.warning,
+            props.danger,
+            props.unit,
+            props.speed,
+            props.signals,
+        );
     } else {
-        alarm_card(ui, title, warning, danger, unit, speed, signals);
+        alarm_card(
+            ui,
+            props.title,
+            props.warning,
+            props.danger,
+            props.unit,
+            props.speed,
+            props.signals,
+        );
     }
 }

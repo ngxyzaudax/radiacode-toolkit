@@ -14,36 +14,27 @@ pub fn count_display_from_cps(count_cps: f32, unit: CountDisplayUnit) -> f32 {
     }
 }
 
-pub fn encode_dose_alarm(display: f32, unit: DoseDisplayUnit) -> RawMicroRoentgenPerHour {
-    let multiplier = match unit {
+fn dose_unit_factor(unit: DoseDisplayUnit) -> f32 {
+    match unit {
         DoseDisplayUnit::MicroSievertPerHour => 100.0,
         DoseDisplayUnit::MicroRoentgenPerHour => 1.0,
-    };
-    RawMicroRoentgenPerHour::new((display * multiplier).round().max(0.0) as u32)
+    }
+}
+
+pub fn encode_dose_alarm(display: f32, unit: DoseDisplayUnit) -> RawMicroRoentgenPerHour {
+    RawMicroRoentgenPerHour::new((display * dose_unit_factor(unit)).round().max(0.0) as u32)
 }
 
 pub fn decode_dose_alarm(raw: RawMicroRoentgenPerHour, unit: DoseDisplayUnit) -> f32 {
-    let divisor = match unit {
-        DoseDisplayUnit::MicroSievertPerHour => 100.0,
-        DoseDisplayUnit::MicroRoentgenPerHour => 1.0,
-    };
-    raw.as_u32() as f32 / divisor
+    raw.as_u32() as f32 / dose_unit_factor(unit)
 }
 
 pub fn encode_dose_accum(display_micro: f32, unit: DoseDisplayUnit) -> u32 {
-    let multiplier = match unit {
-        DoseDisplayUnit::MicroSievertPerHour => 100.0,
-        DoseDisplayUnit::MicroRoentgenPerHour => 1.0,
-    };
-    (display_micro * multiplier).round().max(0.0) as u32
+    (display_micro * dose_unit_factor(unit)).round().max(0.0) as u32
 }
 
 pub fn decode_dose_accum(raw: u32, unit: DoseDisplayUnit) -> f32 {
-    let divisor = match unit {
-        DoseDisplayUnit::MicroSievertPerHour => 100.0,
-        DoseDisplayUnit::MicroRoentgenPerHour => 1.0,
-    };
-    raw as f32 / divisor
+    raw as f32 / dose_unit_factor(unit)
 }
 
 pub fn encode_count_alarm(display: f32, unit: CountDisplayUnit) -> RawCountsPer10s {
@@ -60,10 +51,6 @@ pub fn decode_count_alarm(raw: RawCountsPer10s, unit: CountDisplayUnit) -> f32 {
         CountDisplayUnit::Cps => 1.0,
     };
     raw.as_u32() as f32 / 10.0 * multiplier
-}
-
-pub fn dose_display_from_accum_r(dose_r: f32, unit: DoseDisplayUnit) -> f32 {
-    dose_display_from_rh(dose_r, unit)
 }
 
 #[cfg(test)]

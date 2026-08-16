@@ -3,6 +3,8 @@ use std::time::Duration;
 
 use radiacode_core::{AlarmLimits, LiveRates, TimedRates};
 
+use crate::monitor::alarm_level;
+
 const HISTORY_MINUTES: f64 = 60.0;
 const MAX_SAMPLES: usize = 3900;
 
@@ -24,6 +26,7 @@ pub struct MonitorState {
     pub status: String,
     pub decode_warnings: u64,
     pub rejected_records: u64,
+    pub resync_count: u64,
     pub seq_gaps: u64,
     pub lost_records: u64,
 }
@@ -38,6 +41,7 @@ impl MonitorState {
             status: "Connect a device to start monitoring.".into(),
             decode_warnings: 0,
             rejected_records: 0,
+            resync_count: 0,
             seq_gaps: 0,
             lost_records: 0,
         }
@@ -49,6 +53,7 @@ impl MonitorState {
         self.device_epoch_ticks = None;
         self.decode_warnings = 0;
         self.rejected_records = 0;
+        self.resync_count = 0;
         self.seq_gaps = 0;
         self.lost_records = 0;
         self.status = "Loading monitor data…".into();
@@ -61,9 +66,18 @@ impl MonitorState {
         self.device_epoch_ticks = None;
         self.decode_warnings = 0;
         self.rejected_records = 0;
+        self.resync_count = 0;
         self.seq_gaps = 0;
         self.lost_records = 0;
         self.status = "Connect a device to start monitoring.".into();
+    }
+
+    pub fn on_reconnecting(&mut self) {
+        self.decode_warnings = 0;
+        self.rejected_records = 0;
+        self.resync_count = 0;
+        self.seq_gaps = 0;
+        self.lost_records = 0;
     }
 
     pub fn apply_limits(&mut self, limits: AlarmLimits) {
@@ -75,14 +89,21 @@ impl MonitorState {
         rates: &[TimedRates],
         decode_warnings: usize,
         rejected_records: usize,
+        resync_count: usize,
         seq_gaps: &[radiacode_core::SeqGap],
     ) {
         self.decode_warnings = self.decode_warnings.saturating_add(decode_warnings as u64);
         self.rejected_records = self
             .rejected_records
             .saturating_add(rejected_records as u64);
-        self.seq_gaps = self.seq_gaps.saturating_add(seq_gaps.len() as u64);
+        self.resync_count = self.resync_count.saturating_add(resync_count as u64);
+        self.seq_gaps = self
+            .seq_gaps
+            .saturating_add(seq_gaps.iter().filter(|gap| !gap.reset).count() as u64);
         for gap in seq_gaps {
+            if gap.reset {
+                continue;
+            }
             self.lost_records = self.lost_records.saturating_add(u64::from(gap.lost));
         }
         for rate in rates {
@@ -138,6 +159,16 @@ impl MonitorState {
         )
     }
 
+    pub fn link_health(&self) -> crate::device::MonitorLinkHealth {
+        crate::device::MonitorLinkHealth {
+            decode_warnings: self.decode_warnings,
+            rejected_records: self.rejected_records,
+            resync_count: self.resync_count,
+            seq_gaps: self.seq_gaps,
+            lost_records: self.lost_records,
+        }
+    }
+
     #[cfg(test)]
     pub fn default_for_tests() -> Self {
         Self::new()
@@ -165,8 +196,8 @@ mod tests {
     #[test]
     fn negative_device_ticks_advance_elapsed() {
         let mut monitor = MonitorState::default_for_tests();
-        monitor.push_poll(&[timed(-3387, 0.08, 15.0)], 0, 0, &[]);
-        monitor.push_poll(&[timed(-3287, 0.09, 16.0)], 0, 0, &[]);
+        monitor.push_poll(&[timed(-3387, 0.08, 15.0)], 0, 0, 0, &[]);
+        monitor.push_poll(&[timed(-3287, 0.09, 16.0)], 0, 0, 0, &[]);
         assert_eq!(monitor.history.len(), 2);
         assert_eq!(monitor.history[0].elapsed.as_secs(), 0);
         assert_eq!(monitor.history[1].elapsed.as_secs(), 1);
@@ -190,21 +221,5 @@ fn trim_history(history: &mut VecDeque<MonitorSample>, elapsed: Duration) {
         .is_some_and(|sample| elapsed.saturating_sub(sample.elapsed) > window)
     {
         history.pop_front();
-    }
-}
-
-fn alarm_level(value: Option<f32>, limits: Option<(f32, f32)>) -> AlarmLevel {
-    let Some(value) = value else {
-        return AlarmLevel::Normal;
-    };
-    let Some((l1, l2)) = limits else {
-        return AlarmLevel::Normal;
-    };
-    if value >= l2 {
-        AlarmLevel::Danger
-    } else if value >= l1 {
-        AlarmLevel::Warning
-    } else {
-        AlarmLevel::Normal
     }
 }

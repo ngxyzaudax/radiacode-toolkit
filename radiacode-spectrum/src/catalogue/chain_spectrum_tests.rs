@@ -13,7 +13,10 @@ fn combined_grid_covers_high_energy_line() {
     };
     let weights = equilibrium_weights(series);
     let lines = chain_lines(&weights);
-    let gammas = lines.iter().map(|line| line.line.clone()).collect::<Vec<_>>();
+    let gammas = lines
+        .iter()
+        .map(|line| line.line.clone())
+        .collect::<Vec<_>>();
     let max_energy = gammas
         .iter()
         .map(|line| line.energy_kev)
@@ -34,5 +37,9 @@ fn equilibrium_lines_include_branching_daughters() {
     let weights = equilibrium_weights(series);
     let lines = chain_lines(&weights);
     assert!(lines.len() > 10);
-    assert!(lines.iter().any(|line| (line.line.energy_kev - 2614.5).abs() < 5.0));
+    assert!(
+        lines
+            .iter()
+            .any(|line| (line.line.energy_kev - 2614.5).abs() < 5.0)
+    );
 }

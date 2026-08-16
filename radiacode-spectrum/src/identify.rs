@@ -1,14 +1,10 @@
 use radiacode_nuclides::{
-    MatchParams, PeakIdentification, SourceSummary, match_peaks, summarize_sources,
-    SpectrumPeak as NuclidePeak,
+    MatchParams, PeakIdentification, SourceSummary, SpectrumPeak as NuclidePeak, match_peaks,
+    summarize_sources,
 };
 
 use crate::app_config::AppConfig;
-use crate::peaks::{DetectedPeak, DetectionParams};
-
-pub fn detection_params_from_config(config: &AppConfig) -> DetectionParams {
-    DetectionParams::from_app_config(config)
-}
+use crate::peaks::DetectedPeak;
 
 pub fn match_params_from_config(config: &AppConfig) -> MatchParams {
     MatchParams {

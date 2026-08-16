@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use egui::Ui;
 
 use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
@@ -5,7 +7,8 @@ use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
 use crate::layout::page_scroll;
 use crate::model::{ConnectionState, DeviceInfo};
 
-use super::ui_common::{draw_status_footer, COLUMN_MAX_WIDTH};
+use super::link_health::MonitorLinkHealth;
+use super::ui_common::{COLUMN_MAX_WIDTH, draw_status_footer};
 use super::ui_connected::draw_connected;
 use super::ui_connecting::draw_connecting;
 use super::ui_discovery::draw_discovery;
@@ -20,6 +23,9 @@ pub struct DeviceViewProps<'a> {
     pub busy: bool,
     pub scanned_once: bool,
     pub status: &'a str,
+    pub link_health: MonitorLinkHealth,
+    pub last_spectrum_fetch: Option<Instant>,
+    pub last_monitor_fetch: Option<Instant>,
 }
 
 pub enum DeviceAction {
@@ -41,10 +47,15 @@ pub fn draw_device_view(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<Devic
 
 fn draw_device_body(ui: &mut Ui, props: DeviceViewProps<'_>) -> Option<DeviceAction> {
     let action = match props.connection {
-        ConnectionState::Connected => props
-            .device_info
-            .map(|info| draw_connected(ui, info))
-            .flatten(),
+        ConnectionState::Connected => props.device_info.and_then(|info| {
+            draw_connected(
+                ui,
+                info,
+                props.link_health,
+                props.last_spectrum_fetch,
+                props.last_monitor_fetch,
+            )
+        }),
         ConnectionState::Connecting => {
             draw_connecting(ui, props.connecting_endpoint);
             None

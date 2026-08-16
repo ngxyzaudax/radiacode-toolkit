@@ -1,4 +1,4 @@
-use egui::{RichText, Ui};
+use egui::Ui;
 
 use radiacode_nuclides::{
     AttributedLine, ChainSeries, NuclideId, chain_lines, equilibrium_weights,
@@ -11,7 +11,8 @@ use crate::catalogue::ui_spectrum_plot::{
 };
 use crate::scale::HistogramStyle;
 use crate::synthetic_spectrum::{synthesize, synthesize_grid};
-use crate::theme::{SPECTRUM_BAR, SPACE_SM};
+use crate::theme::{SPACE_SM, SPECTRUM_BAR};
+use crate::ui::widgets::{clamp_spectrum_fwhm, draw_spectrum_scale_toolbar};
 
 const GRID_POINTS: usize = 1024;
 
@@ -23,7 +24,15 @@ pub fn draw_chain_spectrum(
     config: &mut AppConfig,
     plot_height: f32,
 ) -> bool {
-    let changed = draw_spectrum_toolbar(ui, preview_log_scale, config);
+    let changed = draw_spectrum_scale_toolbar(
+        ui,
+        "Chain spectrum",
+        &mut config.catalogue_fwhm_pct,
+        preview_log_scale,
+    );
+    if changed {
+        clamp_spectrum_fwhm(config);
+    }
     ui.add_space(SPACE_SM);
     let weights = equilibrium_weights(series);
     let lines = chain_lines(&weights);
@@ -54,34 +63,6 @@ pub fn draw_chain_spectrum(
             hover_only: true,
         },
     );
-    changed
-}
-
-fn draw_spectrum_toolbar(
-    ui: &mut Ui,
-    preview_log_scale: &mut bool,
-    config: &mut AppConfig,
-) -> bool {
-    let mut changed = false;
-    ui.horizontal_wrapped(|ui| {
-        ui.label(RichText::new("Chain spectrum").strong().size(14.0));
-        ui.add_space(SPACE_SM);
-        ui.label(RichText::new("FWHM @ 662 keV").size(12.0).color(crate::theme::MUTED));
-        if ui
-            .add(
-                egui::Slider::new(&mut config.catalogue_fwhm_pct, 1.0..=20.0)
-                    .suffix("%")
-                    .fixed_decimals(1),
-            )
-            .changed()
-        {
-            config.clamp();
-            changed = true;
-        }
-        ui.separator();
-        ui.selectable_value(preview_log_scale, false, "Linear");
-        ui.selectable_value(preview_log_scale, true, "Log");
-    });
     changed
 }
 

@@ -30,10 +30,7 @@ fn query_matches(nuclide: &Nuclide, query: &str) -> bool {
     let lower = trimmed.to_ascii_lowercase();
     nuclide.display_name.to_ascii_lowercase().contains(&lower)
         || nuclide.symbol.to_ascii_lowercase().contains(&lower)
-        || nuclide
-            .mass_number
-            .to_string()
-            .contains(trimmed)
+        || nuclide.mass_number.to_string().contains(trimmed)
 }
 
 fn half_life_matches(nuclide: &Nuclide, filters: &SearchFilters) -> bool {

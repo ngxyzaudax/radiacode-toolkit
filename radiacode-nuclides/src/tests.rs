@@ -1,6 +1,8 @@
 use crate::catalog::{catalog, nuclide_count};
 use crate::chain::decay_chain;
-use crate::match_peaks::{MatchParams, PeakIdentification, SpectrumPeak, match_peaks, tolerance_kev};
+use crate::match_peaks::{
+    MatchParams, PeakIdentification, SpectrumPeak, match_peaks, tolerance_kev,
+};
 use crate::model::{Nuclide, NuclideId as Id};
 
 fn u238_id() -> Id {

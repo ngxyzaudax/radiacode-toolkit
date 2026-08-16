@@ -12,7 +12,11 @@ pub fn alarm_limit_segments<'a>(
     speed: f64,
     signals: [(&'a mut bool, &'a mut bool); 3],
 ) -> Vec<ToolbarSegment<'a>> {
-    let [(warn_sound, warn_vibro), (danger_sound, danger_vibro), (oos_sound, oos_vibro)] = signals;
+    let [
+        (warn_sound, warn_vibro),
+        (danger_sound, danger_vibro),
+        (oos_sound, oos_vibro),
+    ] = signals;
     [
         level_segments("Warn", Some((warning, speed)), warn_sound, warn_vibro),
         level_segments("Danger", Some((danger, speed)), danger_sound, danger_vibro),

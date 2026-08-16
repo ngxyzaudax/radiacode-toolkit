@@ -25,10 +25,10 @@ impl ChainBrowseState {
 
     pub fn refresh_results(&mut self) {
         self.results = search_chains(&self.filters);
-        if let Some(selected) = self.selected {
-            if !self.results.contains(&selected) {
-                self.selected = None;
-            }
+        if let Some(selected) = self.selected
+            && !self.results.contains(&selected)
+        {
+            self.selected = None;
         }
     }
 

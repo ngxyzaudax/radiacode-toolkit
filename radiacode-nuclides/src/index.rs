@@ -1,4 +1,4 @@
-use crate::model::{GammaLine, Nuclide, NuclideId, RadiationKind};
+use crate::model::{Nuclide, NuclideId, RadiationKind};
 
 #[derive(Debug, Clone, Copy)]
 pub struct IndexedLine {
@@ -8,12 +8,12 @@ pub struct IndexedLine {
     pub intensity_pct: f64,
 }
 
-pub struct EnergyIndex {
+pub(crate) struct EnergyIndex {
     lines: Vec<IndexedLine>,
 }
 
 impl EnergyIndex {
-    pub fn build(nuclides: &[Nuclide]) -> Self {
+    pub(crate) fn build(nuclides: &[Nuclide]) -> Self {
         let mut lines = Vec::new();
         for nuclide in nuclides {
             for (gamma_index, gamma) in nuclide.gammas.iter().enumerate() {
@@ -36,21 +36,11 @@ impl EnergyIndex {
         Self { lines }
     }
 
-    pub fn lines(&self) -> &[IndexedLine] {
-        &self.lines
-    }
-
-    pub fn range(&self, min_kev: f64, max_kev: f64) -> &[IndexedLine] {
-        let start = self
-            .lines
-            .partition_point(|line| line.energy_kev < min_kev);
+    pub(crate) fn range(&self, min_kev: f64, max_kev: f64) -> &[IndexedLine] {
+        let start = self.lines.partition_point(|line| line.energy_kev < min_kev);
         let end = self
             .lines
             .partition_point(|line| line.energy_kev <= max_kev);
         &self.lines[start..end]
     }
-}
-
-pub fn gamma_line<'a>(nuclide: &'a Nuclide, index: u16) -> Option<&'a GammaLine> {
-    nuclide.gammas.get(index as usize)
 }

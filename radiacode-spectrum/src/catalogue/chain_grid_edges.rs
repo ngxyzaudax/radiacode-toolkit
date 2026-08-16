@@ -7,13 +7,11 @@ use radiacode_nuclides::{DecayGraph, DecayMode};
 use crate::catalogue::chain_grid_model::{GridEdge, GridNode, LABEL_LANE_STEP};
 
 pub fn build_grid_edges(graph: &DecayGraph, nodes: &[GridNode]) -> Vec<GridEdge> {
-    let branches_per_from: HashMap<usize, usize> = graph.edges.iter().fold(
-        HashMap::new(),
-        |mut counts, edge| {
+    let branches_per_from: HashMap<usize, usize> =
+        graph.edges.iter().fold(HashMap::new(), |mut counts, edge| {
             *counts.entry(edge.from).or_insert(0) += 1;
             counts
-        },
-    );
+        });
     let mut lane_index: HashMap<usize, usize> = HashMap::new();
     graph
         .edges

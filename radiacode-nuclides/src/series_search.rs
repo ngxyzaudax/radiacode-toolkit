@@ -26,9 +26,5 @@ fn matches_query(series: &crate::series::ChainSeries, query: &str) -> bool {
         || topology_display_name(series.head)
             .to_ascii_lowercase()
             .contains(&lower)
-        || series
-            .head
-            .mass_number()
-            .to_string()
-            .contains(trimmed)
+        || series.head.mass_number().to_string().contains(trimmed)
 }

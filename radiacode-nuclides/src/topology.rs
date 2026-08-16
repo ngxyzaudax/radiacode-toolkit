@@ -53,10 +53,6 @@ pub fn has_emissions(id: NuclideId) -> bool {
     nuclide_by_id(id).is_some_and(|nuclide| !nuclide.gammas.is_empty())
 }
 
-pub fn topology_count() -> usize {
-    parsed().catalog.entries.len()
-}
-
 fn parsed() -> &'static ParsedTopology {
     TOPOLOGY.get_or_init(|| {
         let catalog: DecayCatalog =
@@ -70,10 +66,7 @@ fn parsed() -> &'static ParsedTopology {
         let mut parents: HashMap<NuclideId, Vec<NuclideId>> = HashMap::new();
         for entry in &catalog.entries {
             for branch in &entry.decays {
-                parents
-                    .entry(branch.daughter)
-                    .or_default()
-                    .push(entry.id);
+                parents.entry(branch.daughter).or_default().push(entry.id);
             }
         }
         ParsedTopology {
@@ -83,4 +76,3 @@ fn parsed() -> &'static ParsedTopology {
         }
     })
 }
-

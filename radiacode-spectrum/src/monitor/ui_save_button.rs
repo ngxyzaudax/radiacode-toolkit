@@ -21,15 +21,12 @@ pub fn draw_save_to_device_button(
     let dirty = settings.draft_dirty();
     let enabled = !settings.device_busy() && dirty;
     let status_hint = save_status_hint(settings, dirty);
-    let (rect, response) =
-        ui.allocate_exact_size(Vec2::splat(SAVE_SIZE), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(SAVE_SIZE), Sense::click());
     paint_save_icon(ui, rect, if enabled { ACCENT } else { MUTED });
     let hover = if enabled {
         "Save alarm settings to device"
-    } else if let Some(hint) = status_hint {
-        hint
     } else {
-        "No changes to save"
+        status_hint.unwrap_or("No changes to save")
     };
     let response = response.on_hover_text(hover);
     if enabled && response.clicked() {

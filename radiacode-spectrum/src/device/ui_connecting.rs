@@ -15,7 +15,11 @@ pub fn draw_connecting(ui: &mut Ui, endpoint: Option<&DeviceEndpoint>) {
             let name = endpoint
                 .map(|value| value.address_label())
                 .unwrap_or("device");
-            ui.label(RichText::new(format!("Connecting to {name}")).strong().size(15.0));
+            ui.label(
+                RichText::new(format!("Connecting to {name}"))
+                    .strong()
+                    .size(15.0),
+            );
             if let Some(value) = endpoint {
                 ui.add_space(SPACE_SM);
                 paint_transport_icon(ui, value.transport());
@@ -27,7 +31,11 @@ pub fn draw_connecting(ui: &mut Ui, endpoint: Option<&DeviceEndpoint>) {
                 );
             }
             ui.add_space(SPACE_SM);
-            ui.label(RichText::new("Keep the detector powered on.").small().color(MUTED));
+            ui.label(
+                RichText::new("Keep the detector powered on.")
+                    .small()
+                    .color(MUTED),
+            );
         });
     });
 }

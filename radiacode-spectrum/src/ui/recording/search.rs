@@ -1,7 +1,7 @@
 use egui::{RichText, Ui};
 
 use crate::theme::{MUTED, SPACE_SM, SPACE_XS};
-use crate::ui::draw_query_search;
+use crate::ui::query_search::draw_query_search;
 
 pub fn draw_recording_search(
     ui: &mut Ui,
@@ -32,7 +32,7 @@ pub fn draw_recording_search_with_hint(
     ui.add_space(SPACE_XS);
 }
 
-pub fn recording_count_label(filter: &str, matched_count: usize, total_count: usize) -> String {
+fn recording_count_label(filter: &str, matched_count: usize, total_count: usize) -> String {
     if filter.trim().is_empty() {
         if total_count == 0 {
             "No recordings".to_string()

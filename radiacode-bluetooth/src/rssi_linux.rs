@@ -1,7 +1,6 @@
 use tracing::debug;
 
-#[path = "rssi_mgmt.rs"]
-mod rssi_mgmt;
+use super::rssi_mgmt;
 
 pub async fn read_connected_rssi_dbm(mac: &str) -> Option<i16> {
     if let Some(rssi) = rssi_mgmt::read_connected_rssi_dbm(mac).await {

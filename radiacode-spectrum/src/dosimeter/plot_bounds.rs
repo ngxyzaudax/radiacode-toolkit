@@ -1,14 +1,7 @@
 use crate::dosimeter::state::DosimeterState;
+use crate::monitor::PlotBounds;
 
 const Y_HEADROOM: f64 = 0.2;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlotBounds {
-    pub x_min: f64,
-    pub x_max: f64,
-    pub y_min: f64,
-    pub y_max: f64,
-}
 
 pub fn dose_points(dosimeter: &DosimeterState, bounds: PlotBounds) -> Vec<[f64; 2]> {
     dosimeter

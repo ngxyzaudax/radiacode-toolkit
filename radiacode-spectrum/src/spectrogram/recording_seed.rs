@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::energy::energy_grid;
 use crate::model::SpectrumView;
 use crate::spectrogram::capture::SpectrogramCapture;
@@ -10,16 +12,20 @@ pub fn ensure_live_series(
     device_serial: Option<&str>,
     energies_kev: &[f64],
 ) {
-    if capture.live_series.is_some() {
+    let interval = capture.settings.capture_interval();
+    let mut progress = capture
+        .progress
+        .lock()
+        .expect("capture progress lock poisoned");
+    if progress.live_series.is_some() {
         return;
     }
-    let header = header_from_spectrum(
-        spectrum,
-        device_serial,
-        energies_kev.len() as u32,
-        capture.settings.capture_interval(),
-    );
-    capture.live_series = Some(SpectrogramSeries::new(header, energies_kev.to_vec()));
+    let header = header_from_spectrum(spectrum, device_serial, energies_kev.len() as u32, interval);
+    progress.live_series = Some(Arc::new(SpectrogramSeries::new(
+        header,
+        energies_kev.to_vec(),
+    )));
+    progress.mark_dirty();
 }
 
 pub fn recording_header(
@@ -29,9 +35,15 @@ pub fn recording_header(
     channel_count: u32,
 ) -> SpectrogramHeader {
     capture
-        .live_series
-        .as_ref()
-        .map(|series| series.header.clone())
+        .progress
+        .lock()
+        .ok()
+        .and_then(|progress| {
+            progress
+                .live_series
+                .as_ref()
+                .map(|series| series.header.clone())
+        })
         .unwrap_or_else(|| {
             header_from_spectrum(
                 spectrum,

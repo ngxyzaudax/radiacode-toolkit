@@ -5,30 +5,18 @@ use std::time::Duration;
 
 use radiacode_bluetooth::{BleError, scan_radiacode_devices};
 use radiacode_core::{
-    AlarmLimits, DataBufCursor, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice,
-    Error, RadiaCode, SessionRestore, Spectrum, merge_discovered, merge_status,
+    AlarmLimits, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice, Error, RadiaCode,
+    SessionRestore, Spectrum, merge_discovered, merge_status,
 };
 use radiacode_usb::scan_usb_devices;
 use tracing::{debug, error, info, warn};
 
 use crate::model::{DeviceInfo, SpectrumView};
-use crate::worker::WorkerEvent;
+use crate::worker::{WorkerEvent, WorkerSession};
 
 const CONNECT_COOLDOWN: Duration = Duration::from_millis(500);
 const TRANSIENT_RETRIES: usize = 2;
 const ALARM_REFRESH_POLLS: u64 = 120;
-
-#[derive(Clone)]
-pub struct SessionEpoch {
-    pub live: Arc<AtomicU64>,
-    pub started: u64,
-}
-
-impl SessionEpoch {
-    pub fn active(&self) -> bool {
-        self.live.load(Ordering::SeqCst) == self.started
-    }
-}
 
 pub async fn handle_scan(events: &Sender<WorkerEvent>) {
     info!("scanning for radiacode devices over usb and bluetooth");
@@ -65,46 +53,41 @@ async fn scan_bluetooth_async() -> Result<Vec<DiscoveredDevice>, String> {
 
 pub async fn handle_connect(
     events: &Sender<WorkerEvent>,
-    previous: Option<RadiaCode>,
+    session: &mut WorkerSession,
     endpoint: &DeviceEndpoint,
     hint_rssi: Option<i16>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &mut Option<SessionRestore>,
-) -> Option<RadiaCode> {
+    epoch: &SessionEpoch,
+) {
     info!(?endpoint, "connecting");
-    if let Some(previous) = previous {
+    if let Some(previous) = session.device.take() {
         debug!(?endpoint, "disconnecting previous session before connect");
         let _ = previous.disconnect().await;
         tokio::time::sleep(CONNECT_COOLDOWN).await;
     }
-    if !session.active() {
+    session.prepare_connect();
+    if !epoch.active() {
         warn!(?endpoint, "connect aborted: session ended");
-        return None;
+        return;
     }
     match connect_endpoint(endpoint, None).await {
         Ok(mut device) => {
-            if !session.active() {
+            if !epoch.active() {
                 warn!(?endpoint, "connect aborted after link up: session ended");
                 let _ = device.disconnect().await;
-                return None;
+                return;
             }
             match load_device_info(&mut device, endpoint, hint_rssi, events).await {
                 Ok(info) => {
-                    if !session.active() {
+                    if !epoch.active() {
                         warn!(
                             ?endpoint,
                             "connect aborted after metadata load: session ended"
                         );
                         let _ = device.disconnect().await;
-                        return None;
+                        return;
                     }
-                    *link_status = DeviceStatus {
-                        battery_percent: info.battery_percent,
-                        temperature_c: info.temperature_c,
-                        rssi_dbm: info.rssi_dbm,
-                    };
-                    *session_restore = device.session_restore();
+                    session.link_status = DeviceStatus::from(&info);
+                    session.session_restore = device.session_restore();
                     info!(
                         ?endpoint,
                         serial = %info.serial,
@@ -112,15 +95,15 @@ pub async fn handle_connect(
                         "connected"
                     );
                     let _ = events.send(WorkerEvent::Connected(info));
-                    let _ = events.send(WorkerEvent::DeviceStatus(*link_status));
-                    Some(device)
+                    let _ = events.send(WorkerEvent::DeviceStatus(session.link_status));
+                    session.device = Some(device);
+                    session.session_endpoint = Some(endpoint.clone());
                 }
                 Err(error) => {
                     error!(?endpoint, %error, "failed to load device info");
                     let _ = device.disconnect().await;
                     let _ = events.send(WorkerEvent::Error(error.to_string()));
                     let _ = events.send(WorkerEvent::Disconnected);
-                    None
                 }
             }
         }
@@ -134,8 +117,24 @@ pub async fn handle_connect(
                 let _ = events.send(WorkerEvent::Error(error.to_string()));
             }
             let _ = events.send(WorkerEvent::Disconnected);
-            None
         }
+    }
+}
+
+async fn load_device_info_with_retry(
+    device: &mut RadiaCode,
+    endpoint: &DeviceEndpoint,
+    hint_rssi: Option<i16>,
+    events: &Sender<WorkerEvent>,
+) -> radiacode_core::Result<DeviceInfo> {
+    match load_device_info(device, endpoint, hint_rssi, events).await {
+        Ok(info) => Ok(info),
+        Err(error) if error.is_transient() => {
+            warn!(%error, "transient device info load failed, retrying once");
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            load_device_info(device, endpoint, hint_rssi, events).await
+        }
+        Err(error) => Err(error),
     }
 }
 
@@ -158,130 +157,83 @@ async fn load_device_info(
     Ok(DeviceInfo::from_metadata(metadata, endpoint, status))
 }
 
-pub async fn handle_disconnect(events: &Sender<WorkerEvent>, device: Option<RadiaCode>) {
+pub async fn handle_disconnect(events: &Sender<WorkerEvent>, session: &mut WorkerSession) {
     info!("disconnect requested");
-    if let Some(device) = device {
-        if let Err(error) = device.disconnect().await {
-            error!(%error, "disconnect failed");
-            let _ = events.send(WorkerEvent::Error(error.to_string()));
-        }
+    if let Some(device) = session.device.take()
+        && let Err(error) = device.disconnect().await
+    {
+        error!(%error, "disconnect failed");
+        let _ = events.send(WorkerEvent::Error(error.to_string()));
     }
     let _ = events.send(WorkerEvent::Disconnected);
 }
 
 pub async fn handle_spectrum(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("spectrum fetch skipped: no active device");
-        return None;
+        return;
     };
-    match fetch_spectrum_with_retries(&mut device).await {
+    session.device = match fetch_spectrum_with_retries(&mut device).await {
         Ok(spectrum) => {
-            if !session.active() {
-                return Some(device);
+            if !epoch.active() {
+                Some(device)
+            } else {
+                debug!(
+                    channels = spectrum.counts.len(),
+                    duration_secs = spectrum.duration.as_secs(),
+                    "spectrum fetched"
+                );
+                let _ = events.send(WorkerEvent::Spectrum(SpectrumView::from_spectrum(spectrum)));
+                Some(device)
             }
-            debug!(
-                channels = spectrum.counts.len(),
-                duration_secs = spectrum.duration.as_secs(),
-                "spectrum fetched"
-            );
-            let _ = events.send(WorkerEvent::Spectrum(SpectrumView::from_spectrum(spectrum)));
-            Some(device)
         }
-        Err(error) => {
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
-        }
-    }
+        Err(error) => handle_device_error(events, session, device, error, epoch).await,
+    };
 }
 
 pub async fn handle_dose_reset(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("dose reset skipped: no active device");
-        return None;
+        return;
     };
     info!("resetting accumulated dose");
-    match device.dose_reset().await {
+    session.device = match device.dose_reset().await {
         Ok(()) => {
-            if session.active() {
+            if epoch.active() {
                 let _ = events.send(WorkerEvent::DoseResetComplete);
             }
             Some(device)
         }
-        Err(error) => {
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
-        }
-    }
+        Err(error) => handle_device_error(events, session, device, error, epoch).await,
+    };
 }
 
 pub async fn handle_reset(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("spectrum reset skipped: no active device");
-        return None;
+        return;
     };
     info!("resetting spectrum");
-    match device.spectrum_reset().await {
+    session.device = match device.spectrum_reset().await {
         Ok(()) => {
-            handle_spectrum(
-                events,
-                Some(device),
-                session_endpoint,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
+            session.device = Some(device);
+            handle_spectrum(events, session, epoch).await;
+            return;
         }
-        Err(error) => {
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
-        }
-    }
+        Err(error) => handle_device_error(events, session, device, error, epoch).await,
+    };
 }
 
 async fn fetch_spectrum_with_retries(device: &mut RadiaCode) -> radiacode_core::Result<Spectrum> {
@@ -305,25 +257,16 @@ async fn fetch_spectrum_with_retries(device: &mut RadiaCode) -> radiacode_core::
 
 async fn handle_device_error(
     events: &Sender<WorkerEvent>,
+    session: &mut WorkerSession,
     device: RadiaCode,
-    session_endpoint: Option<&DeviceEndpoint>,
     error: Error,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
+    epoch: &SessionEpoch,
 ) -> Option<RadiaCode> {
-    if should_reconnect(&error, session_endpoint) {
-        warn!(%error, ?session_endpoint, "connection lost during device operation");
+    if should_reconnect(&error, session.session_endpoint.as_ref()) {
+        warn!(%error, ?session.session_endpoint, "connection lost during device operation");
         drop(device);
-        if session.active() {
-            return reconnect_and_restore(
-                events,
-                session_endpoint?,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await;
+        if epoch.active() {
+            return reconnect_and_restore(events, session, epoch).await;
         }
         warn!("skipping reconnect: session ended");
         return None;
@@ -345,46 +288,42 @@ fn is_connection_lost(error: &Error) -> bool {
 
 async fn reconnect_and_restore(
     events: &Sender<WorkerEvent>,
-    endpoint: &DeviceEndpoint,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
 ) -> Option<RadiaCode> {
-    if !session.active() {
+    let endpoint = session.session_endpoint.as_ref()?;
+    if !epoch.active() {
         warn!(?endpoint, "reconnect skipped: session ended");
         return None;
     }
-    let Some(restore) = session_restore else {
+    let Some(restore) = session.session_restore.as_ref() else {
         warn!(?endpoint, "reconnect skipped: no cached session");
         let _ = events.send(WorkerEvent::Disconnected);
         return None;
     };
     info!(?endpoint, "attempting reconnect");
     let _ = events.send(WorkerEvent::Reconnecting);
-    match reconnect_endpoint(endpoint, session, restore).await {
+    match reconnect_endpoint(endpoint, epoch, restore).await {
         Ok(mut device) => {
-            if !session.active() {
+            if !epoch.active() {
                 warn!(?endpoint, "reconnect aborted after link up: session ended");
                 let _ = device.disconnect().await;
                 return None;
             }
-            *link_status = DeviceStatus::default();
-            match load_device_info(&mut device, endpoint, None, events).await {
+            session.link_status = DeviceStatus::default();
+            session.data_buf_cursor.reset();
+            match load_device_info_with_retry(&mut device, endpoint, None, events).await {
                 Ok(info) => {
-                    if !session.active() {
+                    if !epoch.active() {
                         let _ = device.disconnect().await;
                         return None;
                     }
-                    *link_status = DeviceStatus {
-                        battery_percent: info.battery_percent,
-                        temperature_c: info.temperature_c,
-                        rssi_dbm: info.rssi_dbm,
-                    };
+                    session.link_status = DeviceStatus::from(&info);
                     info!(?endpoint, serial = %info.serial, "reconnected");
                     let _ = events.send(WorkerEvent::Connected(info));
                     match fetch_spectrum_with_retries(&mut device).await {
                         Ok(spectrum) => {
-                            if session.active() {
+                            if epoch.active() {
                                 let _ = events.send(WorkerEvent::Spectrum(
                                     SpectrumView::from_spectrum(spectrum),
                                 ));
@@ -408,7 +347,7 @@ async fn reconnect_and_restore(
             }
         }
         Err(error) => {
-            if session.active() {
+            if epoch.active() {
                 error!(?endpoint, %error, "reconnect failed");
                 let _ = events.send(WorkerEvent::Error(error.to_string()));
                 let _ = events.send(WorkerEvent::Disconnected);
@@ -422,144 +361,100 @@ async fn reconnect_and_restore(
 
 pub async fn handle_monitor(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
-    alarm_limits: &mut Option<AlarmLimits>,
-    monitor_polls: &mut u64,
-    data_buf_cursor: &mut DataBufCursor,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("monitor fetch skipped: no active device");
-        return None;
+        return;
     };
-    let limits = match ensure_alarm_limits(&mut device, alarm_limits, events, monitor_polls).await {
+    let limits = match ensure_alarm_limits(
+        &mut device,
+        &mut session.alarm_limits,
+        events,
+        session.monitor_polls,
+    )
+    .await
+    {
         Ok(limits) => limits,
         Err(error) => {
-            return handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await;
+            session.device = handle_device_error(events, session, device, error, epoch).await;
+            return;
         }
     };
     let refresh_rssi = false;
-    match device
-        .poll_monitor(&limits, data_buf_cursor, refresh_rssi)
+    session.device = match device
+        .poll_monitor(&limits, &mut session.data_buf_cursor, refresh_rssi)
         .await
     {
         Ok((sample, fresh)) => {
-            merge_status(link_status, fresh);
-            if !session.active() {
-                return Some(device);
-            }
-            let has_data = !sample.rates.is_empty() || sample.accumulated.is_some();
-            if has_data {
-                *monitor_polls = monitor_polls.saturating_add(1);
-                let _ = events.send(WorkerEvent::MonitorSample(sample));
+            merge_status(&mut session.link_status, fresh);
+            if !epoch.active() {
+                Some(device)
             } else {
-                debug!("monitor data not yet available in databuf");
+                let has_data = !sample.rates.is_empty() || sample.accumulated.is_some();
+                if has_data {
+                    session.monitor_polls = session.monitor_polls.saturating_add(1);
+                    let _ = events.send(WorkerEvent::MonitorSample(sample));
+                } else {
+                    debug!("monitor data not yet available in databuf");
+                }
+                let _ = events.send(WorkerEvent::DeviceStatus(session.link_status));
+                let _ = events.send(WorkerEvent::MonitorPollComplete);
+                Some(device)
             }
-            let _ = events.send(WorkerEvent::DeviceStatus(*link_status));
-            let _ = events.send(WorkerEvent::MonitorPollComplete);
-            Some(device)
         }
-        Err(error) => {
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
-        }
-    }
+        Err(error) => handle_device_error(events, session, device, error, epoch).await,
+    };
 }
 
 pub async fn handle_fetch_device_config(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
-    alarm_limits: &mut Option<AlarmLimits>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("device config fetch skipped: no active device");
-        return None;
+        return;
     };
-    match device.load_device_config().await {
+    session.device = match device.load_device_config().await {
         Ok(config) => {
-            if session.active() {
-                *alarm_limits = Some(config.alarms);
+            if epoch.active() {
+                session.alarm_limits = Some(config.alarms);
                 let _ = events.send(WorkerEvent::AlarmLimits(config.alarms));
                 let _ = events.send(WorkerEvent::DeviceConfig(config));
             }
             Some(device)
         }
-        Err(error) => {
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
-        }
-    }
+        Err(error) => handle_device_error(events, session, device, error, epoch).await,
+    };
 }
 
 pub async fn handle_apply_device_config(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
+    session: &mut WorkerSession,
     config: DeviceConfig,
-    alarm_limits: &mut Option<AlarmLimits>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("device config apply skipped: no active device");
-        return None;
+        return;
     };
     let apply_error = match device.apply_device_config(&config).await {
         Ok(()) => None,
-        Err(error) if should_reconnect(&error, session_endpoint) => {
-            return handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await;
+        Err(error) if should_reconnect(&error, session.session_endpoint.as_ref()) => {
+            session.device = handle_device_error(events, session, device, error, epoch).await;
+            return;
         }
         Err(error) => {
             error!(%error, "device config apply failed; reloading device state");
             Some(error)
         }
     };
-    match device.load_device_config().await {
+    session.device = match device.load_device_config().await {
         Ok(loaded) => {
-            if session.active() {
-                *alarm_limits = Some(loaded.alarms);
+            if epoch.active() {
+                session.alarm_limits = Some(loaded.alarms);
                 let _ = events.send(WorkerEvent::AlarmLimits(loaded.alarms));
                 let _ = events.send(WorkerEvent::DeviceConfig(loaded));
                 if let Some(error) = apply_error {
@@ -569,64 +464,41 @@ pub async fn handle_apply_device_config(
             Some(device)
         }
         Err(error) => {
-            if apply_error.is_none() && session.active() {
-                *alarm_limits = Some(config.alarms);
+            if apply_error.is_none() && epoch.active() {
+                session.alarm_limits = Some(config.alarms);
                 let _ = events.send(WorkerEvent::AlarmLimits(config.alarms));
                 let _ = events.send(WorkerEvent::DeviceConfig(config));
             }
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
+            handle_device_error(events, session, device, error, epoch).await
         }
-    }
+    };
 }
 
 pub async fn handle_sync_device_clock(
     events: &Sender<WorkerEvent>,
-    device: Option<RadiaCode>,
-    session_endpoint: Option<&DeviceEndpoint>,
-    session: &SessionEpoch,
-    link_status: &mut DeviceStatus,
-    session_restore: &Option<SessionRestore>,
-) -> Option<RadiaCode> {
-    let Some(mut device) = device else {
+    session: &mut WorkerSession,
+    epoch: &SessionEpoch,
+) {
+    let Some(mut device) = session.device.take() else {
         warn!("clock sync skipped: no active device");
-        return None;
+        return;
     };
-    match device.sync_device_clock().await {
+    session.device = match device.sync_device_clock().await {
         Ok(()) => {
-            if session.active() {
+            if epoch.active() {
                 info!("device clock synchronized");
             }
             Some(device)
         }
-        Err(error) => {
-            handle_device_error(
-                events,
-                device,
-                session_endpoint,
-                error,
-                session,
-                link_status,
-                session_restore,
-            )
-            .await
-        }
-    }
+        Err(error) => handle_device_error(events, session, device, error, epoch).await,
+    };
 }
 
 async fn ensure_alarm_limits(
     device: &mut RadiaCode,
     cache: &mut Option<AlarmLimits>,
     events: &Sender<WorkerEvent>,
-    monitor_polls: &u64,
+    monitor_polls: u64,
 ) -> radiacode_core::Result<AlarmLimits> {
     let refresh = cache.is_none() || monitor_polls.is_multiple_of(ALARM_REFRESH_POLLS);
     if refresh {
@@ -661,11 +533,23 @@ async fn connect_endpoint(
 
 async fn reconnect_endpoint(
     endpoint: &DeviceEndpoint,
-    session: &SessionEpoch,
+    epoch: &SessionEpoch,
     restore: &SessionRestore,
 ) -> radiacode_core::Result<RadiaCode> {
-    if !session.active() {
+    if !epoch.active() {
         return Err(Error::connection_closed());
     }
     connect_endpoint(endpoint, Some(restore)).await
+}
+
+#[derive(Clone)]
+pub struct SessionEpoch {
+    pub live: Arc<AtomicU64>,
+    pub started: u64,
+}
+
+impl SessionEpoch {
+    pub fn active(&self) -> bool {
+        self.live.load(Ordering::SeqCst) == self.started
+    }
 }

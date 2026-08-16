@@ -1,15 +1,13 @@
 use egui::{RichText, Ui};
 
 use radiacode_nuclides::{
-    chain_series, format_half_life, strongest_chain_line, chain_lines, equilibrium_weights,
+    chain_lines, chain_series, equilibrium_weights, format_half_life, strongest_chain_line,
     topology_display_name,
 };
 
 use crate::catalogue::state::CatalogueState;
-use crate::catalogue::ui_table::{
-    TABLE_ROW_ALLOC, TableCellStyle, draw_table_header, draw_table_row,
-};
 use crate::theme::MUTED;
+use crate::ui::table::{TABLE_ROW_ALLOC, TableCellStyle, draw_table_header, draw_table_row};
 
 pub fn draw_chain_list(ui: &mut Ui, state: &mut CatalogueState) {
     ui.label(RichText::new("Decay chains").strong().size(14.0));
@@ -98,11 +96,7 @@ fn draw_chain_rows(ui: &mut Ui, state: &mut CatalogueState, layout: &ChainTableL
     }
 }
 
-fn draw_member_rows(
-    ui: &mut Ui,
-    series: &radiacode_nuclides::ChainSeries,
-    start_row: usize,
-) {
+fn draw_member_rows(ui: &mut Ui, series: &radiacode_nuclides::ChainSeries, start_row: usize) {
     let weights = equilibrium_weights(series);
     for (offset, member) in weights.iter().enumerate() {
         let row = start_row + offset;
@@ -120,7 +114,7 @@ fn draw_member_rows(
 }
 
 struct ChainTableLayout {
-    layout: crate::catalogue::ui_table::TableLayout,
+    layout: crate::ui::table::TableLayout,
     row_width: f32,
 }
 
@@ -130,22 +124,22 @@ fn chain_table_layout(width: f32) -> ChainTableLayout {
     let name_w = (width - members_w - peak_w - 16.0 - 16.0).max(64.0);
     let row_width = name_w + members_w + peak_w + 16.0;
     ChainTableLayout {
-        layout: crate::catalogue::ui_table::TableLayout {
+        layout: crate::ui::table::TableLayout {
             columns: vec![
-                crate::catalogue::ui_table::TableColumn {
+                crate::ui::table::TableColumn {
                     label: "Chain",
                     width: name_w,
-                    align: crate::catalogue::ui_table::ColumnAlign::Left,
+                    align: crate::ui::table::ColumnAlign::Left,
                 },
-                crate::catalogue::ui_table::TableColumn {
+                crate::ui::table::TableColumn {
                     label: "Members",
                     width: members_w,
-                    align: crate::catalogue::ui_table::ColumnAlign::Right,
+                    align: crate::ui::table::ColumnAlign::Right,
                 },
-                crate::catalogue::ui_table::TableColumn {
+                crate::ui::table::TableColumn {
                     label: "Peak",
                     width: peak_w,
-                    align: crate::catalogue::ui_table::ColumnAlign::Right,
+                    align: crate::ui::table::ColumnAlign::Right,
                 },
             ],
             row_width,

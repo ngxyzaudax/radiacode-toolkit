@@ -14,10 +14,11 @@ pub fn gaussian_smooth(values: &[f64], energies_kev: &[f64], fwhm_pct: f64) -> V
         let end = (index + half + 1).min(length);
         let mut weighted = 0.0;
         let mut total = 0.0;
-        for channel in start..end {
+        for (offset, &value) in values[start..end].iter().enumerate() {
+            let channel = start + offset;
             let delta = (channel as f64 - index as f64) / sigma.max(1e-9);
             let weight = (-0.5 * delta * delta).exp();
-            weighted += values[channel] * weight;
+            weighted += value * weight;
             total += weight;
         }
         smoothed[index] = if total > 0.0 { weighted / total } else { 0.0 };

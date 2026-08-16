@@ -8,6 +8,10 @@ use crate::model::{ConnectionState, DeviceInfo, SpectrumView};
 use crate::monitor::MonitorState;
 use crate::worker::{WorkerCommand, WorkerEvent};
 
+mod router;
+
+pub use router::EventRouter;
+
 pub struct AppState {
     pub devices: Vec<DiscoveredDevice>,
     pub connecting_endpoint: Option<DeviceEndpoint>,
@@ -47,6 +51,11 @@ impl AppState {
             monitor_fetch_pending: false,
             scanned_once: false,
         }
+    }
+
+    pub fn apply_alarm_limits(&mut self, limits: radiacode_core::AlarmLimits) {
+        self.monitor.apply_limits(limits);
+        self.dosimeter.apply_limits(limits);
     }
 
     pub fn clear_session(&mut self) {
@@ -122,6 +131,7 @@ impl AppState {
                 self.status = "Connection lost, reconnecting…".into();
                 self.spectrum = None;
                 self.last_fetch = None;
+                self.monitor.on_reconnecting();
                 self.spectrum_fetch_pending = false;
                 self.monitor_fetch_pending = false;
                 None
@@ -167,6 +177,7 @@ impl AppState {
                     &sample.rates,
                     sample.decode_warnings,
                     sample.rejected_records,
+                    sample.resync_count,
                     &sample.seq_gaps,
                 );
                 if let Some(accumulated) = sample.accumulated {
@@ -191,12 +202,13 @@ impl AppState {
             }
             WorkerEvent::MonitorPollComplete => None,
             WorkerEvent::AlarmLimits(limits) if accept_session => {
-                self.monitor.apply_limits(limits);
-                self.dosimeter.apply_limits(limits);
+                self.apply_alarm_limits(limits);
                 None
             }
             WorkerEvent::AlarmLimits(_) => None,
-            WorkerEvent::DeviceConfig(_) => None,
+            WorkerEvent::DeviceConfig(_) => {
+                unreachable!("DeviceConfig is handled in App::poll_events before apply_event")
+            }
             WorkerEvent::Error(message) => {
                 warn!(%message, "ui received worker error");
                 self.scanning = false;

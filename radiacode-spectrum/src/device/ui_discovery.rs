@@ -4,11 +4,11 @@ use radiacode_core::{DeviceEndpoint, DiscoveredDevice, TransportKind};
 
 use crate::theme::{MUTED, SPACE_MD};
 
+use super::DeviceAction;
+use super::DeviceViewProps;
 use super::ui_common::draw_section_heading;
 use super::ui_device_row::{draw_device_row, draw_reconnect_card};
 use super::ui_empty::draw_empty_discovery;
-use super::DeviceAction;
-use super::DeviceViewProps;
 
 pub fn draw_discovery(
     ui: &mut Ui,

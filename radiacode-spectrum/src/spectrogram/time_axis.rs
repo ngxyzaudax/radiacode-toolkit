@@ -19,7 +19,7 @@ pub fn draw_time_axis(
     let stride = label_stride(layout.cell_px);
     let filled = visible.len();
     let row_offset = layout.display_rows.saturating_sub(filled);
-    for local in 0..filled {
+    for (local, row) in visible.iter().enumerate().take(filled) {
         if !should_label_row(local, filled, stride) {
             continue;
         }
@@ -28,7 +28,7 @@ pub fn draw_time_axis(
         painter.text(
             egui::pos2(image_rect.left() - 6.0, y),
             Align2::RIGHT_CENTER,
-            format_duration(visible[local].elapsed_secs),
+            format_duration(row.elapsed_secs),
             font.clone(),
             MUTED,
         );
@@ -41,7 +41,7 @@ fn label_stride(cell_px: f32) -> usize {
 
 fn should_label_row(local: usize, filled: usize, stride: usize) -> bool {
     let from_bottom = filled - 1 - local;
-    from_bottom % stride == 0
+    from_bottom.is_multiple_of(stride)
 }
 
 fn format_duration(secs: f64) -> String {

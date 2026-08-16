@@ -1,16 +1,13 @@
 use egui::{Align2, Color32, FontId, Pos2, Rect, Ui, Vec2};
 
-use radiacode_nuclides::{DecayGraph, NuclideId, catalog, decay_mode_label, format_half_life, nuclide_by_id};
+use radiacode_nuclides::{
+    DecayGraph, NuclideId, catalog, decay_mode_label, format_half_life, nuclide_by_id,
+};
 
 use crate::catalogue::chain_grid_model::{GridNode, NodeRole};
 use crate::theme::{ACCENT, MUTED};
 
-pub fn draw_chain_tooltip(
-    ui: &Ui,
-    pointer: Pos2,
-    node: &GridNode,
-    graph: &DecayGraph,
-) {
+pub fn draw_chain_tooltip(ui: &Ui, pointer: Pos2, node: &GridNode, graph: &DecayGraph) {
     let screen = ui.ctx().content_rect();
     let lines = tooltip_lines(node, graph);
     let width = 220.0;

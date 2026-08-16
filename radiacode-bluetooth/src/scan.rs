@@ -2,12 +2,13 @@ use std::time::Duration;
 
 use btleplug::api::{Central, Peripheral as _, PeripheralProperties, ScanFilter};
 use btleplug::platform::Peripheral;
-use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
+use radiacode_core::{
+    DeviceEndpoint, DiscoveredDevice, model_from_advertisement, serial_from_advertisement,
+};
 use tracing::{debug, info};
 
 use crate::adapter::default_adapter;
 use crate::ble_error::BleError;
-use crate::device_model::{model_from_advertisement, serial_from_advertisement};
 use crate::uuids;
 
 pub async fn scan_radiacode_devices(
@@ -59,7 +60,7 @@ async fn readable_properties(peripheral: &Peripheral) -> Option<PeripheralProper
 }
 
 fn advertises_radiacode(props: &PeripheralProperties) -> bool {
-    let advertises_service = props.services.iter().any(|u| *u == uuids::SERVICE);
+    let advertises_service = props.services.contains(&uuids::SERVICE);
     let name_matches = props
         .local_name
         .as_deref()

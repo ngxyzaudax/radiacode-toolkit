@@ -1,6 +1,6 @@
 use egui::{Panel, Ui};
 
-use crate::layout::breakpoint::{breakpoint_for, Breakpoint};
+use crate::layout::breakpoint::{Breakpoint, breakpoint_for};
 use crate::layout::safe::{positive, safe_span};
 use crate::layout::toolbar::draw_toolbar;
 use crate::theme::SPACE_SM;

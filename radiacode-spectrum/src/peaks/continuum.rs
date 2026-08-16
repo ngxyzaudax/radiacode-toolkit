@@ -18,8 +18,8 @@ pub fn snip_baseline(counts: &[f64], iterations: usize) -> Vec<f64> {
     for pass in (1..=iterations).rev() {
         let previous = transformed.clone();
         for index in pass..length.saturating_sub(pass) {
-            transformed[index] = previous[index]
-                .min(0.5 * (previous[index - pass] + previous[index + pass]));
+            transformed[index] =
+                previous[index].min(0.5 * (previous[index - pass] + previous[index + pass]));
         }
     }
     transformed

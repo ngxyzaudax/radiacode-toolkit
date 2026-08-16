@@ -54,9 +54,7 @@ pub struct ChainGrid {
 impl ChainGrid {
     pub fn node_at(&self, point: Pos2, origin: Pos2) -> Option<usize> {
         let local = point - origin.to_vec2();
-        self.nodes
-            .iter()
-            .position(|node| node.rect.contains(local))
+        self.nodes.iter().position(|node| node.rect.contains(local))
     }
 
     pub fn content_rect(&self) -> Rect {

@@ -17,11 +17,7 @@ pub fn chain_view_cache(
     if rebuild {
         let graph = radiacode_nuclides::decay_graph(focus, 64);
         let grid = layout_chain_grid(&graph);
-        *cache = Some(ChainViewCache {
-            focus,
-            graph,
-            grid,
-        });
+        *cache = Some(ChainViewCache { focus, graph, grid });
     }
     let entry = cache.as_ref().expect("chain view cache");
     (&entry.graph, &entry.grid)

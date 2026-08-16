@@ -3,10 +3,9 @@ use egui::{RichText, Ui};
 use radiacode_nuclides::Nuclide;
 
 use crate::catalogue::state::CatalogueState;
-use crate::catalogue::ui_table::{
-    TableCellStyle, draw_table_row, radiation_tree_layout, stripe_fill,
-};
+use crate::catalogue::ui_table::radiation_tree_layout;
 use crate::theme::MUTED;
+use crate::ui::table::{TableCellStyle, draw_table_row, stripe_fill};
 
 const TREE_INDENT: f32 = 14.0;
 

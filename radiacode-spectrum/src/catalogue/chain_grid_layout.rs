@@ -58,7 +58,8 @@ fn content_size(nodes: &[GridNode], edges: &[GridEdge]) -> Vec2 {
     for edge in edges {
         if let (Some(label), Some(pos)) = (&edge.label, edge.label_pos) {
             let half = Vec2::new(
-                label.chars().count() as f32 * crate::catalogue::chain_grid_model::LABEL_CHAR_WIDTH
+                label.chars().count() as f32
+                    * crate::catalogue::chain_grid_model::LABEL_CHAR_WIDTH
                     * 0.5
                     + 10.0,
                 12.0,
@@ -170,7 +171,8 @@ fn column_gaps(graph: &DecayGraph, columns: &[Vec<usize>]) -> Vec<f32> {
             continue;
         }
         let label = crate::catalogue::chain_grid_edges::edge_label(edge.mode, edge.branching_pct);
-        let needed = label.chars().count() as f32 * crate::catalogue::chain_grid_model::LABEL_CHAR_WIDTH
+        let needed = label.chars().count() as f32
+            * crate::catalogue::chain_grid_model::LABEL_CHAR_WIDTH
             + crate::catalogue::chain_grid_model::LABEL_PAD;
         gaps[from_depth] = gaps[from_depth].max(needed.max(MIN_COL_GAP));
     }
@@ -229,12 +231,7 @@ fn placeholder_node() -> GridNode {
     }
 }
 
-fn node_role(
-    node: &ChainNode,
-    index: usize,
-    focus_index: usize,
-    focus_depth: usize,
-) -> NodeRole {
+fn node_role(node: &ChainNode, index: usize, focus_index: usize, focus_depth: usize) -> NodeRole {
     if index == focus_index {
         return NodeRole::Focus;
     }

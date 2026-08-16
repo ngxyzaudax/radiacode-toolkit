@@ -8,6 +8,7 @@ mod chain_grid_tests;
 mod chain_spectrum_tests;
 mod chain_state;
 mod chain_view_cache;
+mod detail_layout;
 mod state;
 #[cfg(test)]
 mod state_tests;

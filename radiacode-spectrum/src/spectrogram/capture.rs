@@ -1,94 +1,81 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Instant;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crossbeam_channel::{Receiver, Sender};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::model::SpectrumView;
-use crate::spectrogram::baseline::IngestBaseline;
+use crate::spectrogram::capture_progress::CaptureProgress;
 use crate::spectrogram::ingest;
-use crate::spectrogram::model::SpectrogramSeries;
 use crate::spectrogram::settings::{SpectrogramSettings, load_settings};
 use crate::spectrogram::storage::RecordingWriter;
 
 pub struct SpectrogramCapture {
-    pub live_series: Option<SpectrogramSeries>,
+    pub progress: Arc<Mutex<CaptureProgress>>,
     pub recording: Option<RecordingWriter>,
-    pub paused_recording_path: Option<std::path::PathBuf>,
     pub settings: SpectrogramSettings,
-    pub status: String,
-    pub capture_enabled: bool,
-    pub skip_next_sample: bool,
-    pub reconnect_baseline_pending: bool,
-    pub last_ingested_sequence: u64,
-    pub last_ingest_at: Option<Instant>,
-    pub last_auto_save: Option<Instant>,
     pub device_serial: Option<String>,
-    pub dirty: AtomicBool,
-    pub(crate) baseline: Option<IngestBaseline>,
 }
 
 impl SpectrogramCapture {
     pub fn new() -> Self {
         Self {
-            live_series: None,
+            progress: Arc::new(Mutex::new(CaptureProgress::new())),
             recording: None,
-            paused_recording_path: None,
             settings: load_settings(),
-            status: String::new(),
-            capture_enabled: false,
-            skip_next_sample: false,
-            reconnect_baseline_pending: false,
-            last_ingested_sequence: 0,
-            last_ingest_at: None,
-            last_auto_save: None,
             device_serial: None,
-            dirty: AtomicBool::new(false),
-            baseline: None,
         }
     }
 
-    pub fn mark_dirty(&self) {
-        self.dirty.store(true, Ordering::Release);
+    pub fn with_progress_mut<R>(&mut self, f: impl FnOnce(&mut CaptureProgress) -> R) -> Option<R> {
+        lock_capture_progress(&self.progress).map(|mut progress| f(&mut progress))
     }
 
     pub fn on_session_connect(&mut self, serial: &str) {
-        self.capture_enabled = true;
         self.device_serial = Some(serial.to_string());
-        self.skip_next_sample = true;
-        self.status = "Waiting for first fresh spectrum sample.".into();
-        self.mark_dirty();
+        let _ = self.with_progress_mut(|progress| {
+            progress.capture_enabled = true;
+            progress.skip_next_sample = true;
+            progress.status = "Waiting for first fresh spectrum sample.".into();
+            progress.mark_dirty();
+        });
     }
 
     pub fn on_reconnect(&mut self) {
-        self.skip_next_sample = true;
-        self.reconnect_baseline_pending = true;
-        self.baseline = None;
-        self.last_ingest_at = None;
-        self.status =
-            "Reconnecting. Next sample re-baselines; offline counts become a gap row.".into();
-        self.mark_dirty();
+        let _ = self.with_progress_mut(|progress| {
+            progress.skip_next_sample = true;
+            progress.reconnect_baseline_pending = true;
+            progress.baseline = None;
+            progress.last_ingest_at = None;
+            progress.status =
+                "Reconnecting. Next sample re-baselines; offline counts become a gap row.".into();
+            progress.mark_dirty();
+        });
     }
 
     pub fn on_disconnect(&mut self) {
-        self.capture_enabled = false;
-        self.live_series = None;
-        self.last_ingested_sequence = 0;
-        self.skip_next_sample = false;
-        self.reconnect_baseline_pending = false;
-        self.last_ingest_at = None;
-        self.baseline = None;
-        self.last_auto_save = None;
         self.device_serial = None;
-        self.mark_dirty();
+        let _ = self.with_progress_mut(|progress| {
+            progress.capture_enabled = false;
+            progress.live_series = None;
+            progress.last_ingested_sequence = 0;
+            progress.skip_next_sample = false;
+            progress.reconnect_baseline_pending = false;
+            progress.last_ingest_at = None;
+            progress.baseline = None;
+            progress.last_auto_save = None;
+            progress.mark_dirty();
+        });
     }
 
     pub fn ingest_spectrum(&mut self, spectrum: &SpectrumView) {
-        if !self.capture_enabled {
+        let enabled =
+            lock_capture_progress(&self.progress).is_some_and(|progress| progress.capture_enabled);
+        if !enabled {
             return;
         }
-        let sequence = self.last_ingested_sequence.saturating_add(1);
+        let sequence = lock_capture_progress(&self.progress)
+            .map(|progress| progress.last_ingested_sequence.saturating_add(1))
+            .unwrap_or(1);
         ingest::ingest_capture(self, spectrum, sequence);
     }
 
@@ -100,30 +87,30 @@ impl SpectrogramCapture {
 pub fn spawn_capture_router(
     worker_events: Receiver<crate::worker::WorkerEvent>,
     ui_events: Sender<crate::worker::WorkerEvent>,
-    capture: Arc<std::sync::Mutex<SpectrogramCapture>>,
+    capture: Arc<Mutex<SpectrogramCapture>>,
 ) {
     std::thread::spawn(move || {
         debug!("spectrogram capture router ready");
         while let Ok(event) = worker_events.recv() {
             match &event {
                 crate::worker::WorkerEvent::Spectrum(spectrum) => {
-                    if let Ok(mut cap) = capture.lock() {
+                    if let Some(mut cap) = lock_capture(&capture) {
                         cap.ingest_spectrum(spectrum);
                         cap.maybe_auto_save();
                     }
                 }
                 crate::worker::WorkerEvent::Connected(info) => {
-                    if let Ok(mut cap) = capture.lock() {
+                    if let Some(mut cap) = lock_capture(&capture) {
                         cap.on_session_connect(&info.serial);
                     }
                 }
                 crate::worker::WorkerEvent::Reconnecting => {
-                    if let Ok(mut cap) = capture.lock() {
+                    if let Some(mut cap) = lock_capture(&capture) {
                         cap.on_reconnect();
                     }
                 }
                 crate::worker::WorkerEvent::Disconnected => {
-                    if let Ok(mut cap) = capture.lock() {
+                    if let Some(mut cap) = lock_capture(&capture) {
                         cap.on_disconnect();
                     }
                 }
@@ -135,4 +122,28 @@ pub fn spawn_capture_router(
         }
         info!("spectrogram capture router stopped");
     });
+}
+
+fn lock_capture(
+    capture: &Arc<Mutex<SpectrogramCapture>>,
+) -> Option<MutexGuard<'_, SpectrogramCapture>> {
+    match capture.lock() {
+        Ok(guard) => Some(guard),
+        Err(error) => {
+            warn!("capture mutex poisoned, recovering");
+            Some(error.into_inner())
+        }
+    }
+}
+
+fn lock_capture_progress(
+    progress: &Arc<Mutex<CaptureProgress>>,
+) -> Option<MutexGuard<'_, CaptureProgress>> {
+    match progress.lock() {
+        Ok(guard) => Some(guard),
+        Err(error) => {
+            warn!("capture progress mutex poisoned, recovering");
+            Some(error.into_inner())
+        }
+    }
 }

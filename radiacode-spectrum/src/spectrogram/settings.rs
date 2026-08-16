@@ -1,10 +1,9 @@
-use std::fs;
-use std::path::PathBuf;
-
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
+use crate::persist::json_store::{load_json, save_json};
 use crate::spectrogram::color_scheme::ColorScheme;
+
+const SETTINGS_PATH: &str = "spectrogram_settings.json";
 
 pub const DEFAULT_CAPTURE_INTERVAL_SECS: f64 = 5.0;
 pub const DEFAULT_MAX_SAMPLES: usize = 10_000;
@@ -62,25 +61,10 @@ impl SpectrogramSettings {
     }
 }
 
-pub fn settings_path() -> PathBuf {
-    ProjectDirs::from("com", "radiacode", "radiacode-spectrum")
-        .map(|dirs| dirs.data_dir().join("spectrogram_settings.json"))
-        .unwrap_or_else(|| PathBuf::from("spectrogram_settings.json"))
-}
-
 pub fn load_settings() -> SpectrogramSettings {
-    let path = settings_path();
-    let Ok(bytes) = fs::read(&path) else {
-        return SpectrogramSettings::default();
-    };
-    serde_json::from_slice(&bytes).unwrap_or_default()
+    load_json(SETTINGS_PATH)
 }
 
 pub fn save_settings(settings: &SpectrogramSettings) -> std::io::Result<()> {
-    let path = settings_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let bytes = serde_json::to_vec_pretty(settings)?;
-    fs::write(path, bytes)
+    save_json(SETTINGS_PATH, settings)
 }

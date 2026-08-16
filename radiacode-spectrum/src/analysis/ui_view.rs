@@ -5,7 +5,7 @@ use crate::analysis::ui_pane::draw_analysis_library_pane;
 use crate::analysis::ui_plot::{AnalysisPlotProps, draw_analysis_plots};
 use crate::analysis::ui_toolbar::draw_analysis_toolbar;
 use crate::app_config::AppConfig;
-use crate::layout::{draw_master_detail, MasterDetailRegion};
+use crate::layout::{MasterDetailRegion, draw_master_detail};
 use crate::peak_overlay::SpectrumPlotAction;
 use crate::scale::{HistogramStyle, YScale};
 use crate::theme::{MUTED, analysis_sample_color};
@@ -38,7 +38,7 @@ pub fn draw_analysis_view(
 
 fn draw_analysis_plot(
     ui: &mut Ui,
-    state: &AnalysisState,
+    state: &mut AnalysisState,
     y_scale: YScale,
     config: &AppConfig,
 ) -> Option<SpectrumPlotAction> {
@@ -67,6 +67,7 @@ fn draw_analysis_plot(
             subtract_background: state.subtract_background,
             show_peaks: state.show_peaks,
             config,
+            peak_memo: &mut state.peak_memo,
         },
     );
     if state.subtract_background {

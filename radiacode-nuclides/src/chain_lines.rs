@@ -1,7 +1,6 @@
 use crate::catalog::nuclide_by_id;
 use crate::equilibrium::MemberWeight;
 use crate::model::{GammaLine, NuclideId};
-use crate::topology::topology_display_name;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AttributedLine {
@@ -40,22 +39,6 @@ pub fn chain_lines(weights: &[MemberWeight]) -> Vec<AttributedLine> {
             })
     });
     lines
-}
-
-pub fn lines_for_member(member: &MemberWeight) -> Vec<AttributedLine> {
-    let Some(nuclide) = nuclide_by_id(member.id) else {
-        return Vec::new();
-    };
-    nuclide
-        .gammas
-        .iter()
-        .map(|line| AttributedLine {
-            line: line.clone(),
-            source: member.id,
-            source_name: topology_display_name(member.id),
-            scaled_intensity_pct: line.intensity_pct * member.weight,
-        })
-        .collect()
 }
 
 pub fn strongest_chain_line(lines: &[AttributedLine]) -> Option<&AttributedLine> {

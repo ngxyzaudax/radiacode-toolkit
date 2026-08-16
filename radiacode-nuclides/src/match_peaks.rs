@@ -68,10 +68,7 @@ pub fn match_peaks(peaks: &[SpectrumPeak], params: MatchParams) -> Vec<PeakIdent
     if peaks.is_empty() {
         return Vec::new();
     }
-    let max_counts = peaks
-        .iter()
-        .map(|peak| peak.counts)
-        .fold(1.0_f64, f64::max);
+    let max_counts = peaks.iter().map(|peak| peak.counts).fold(1.0_f64, f64::max);
     let normalized = peaks
         .iter()
         .map(|peak| SpectrumPeak {

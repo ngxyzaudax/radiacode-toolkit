@@ -71,29 +71,7 @@ pub fn draw_app_polling(ui: &mut Ui, state: &mut SettingsState) -> bool {
 }
 
 pub fn draw_app_monitor_window(ui: &mut Ui, state: &mut SettingsState) -> bool {
-    use crate::monitor_window::{
-        window_preset_count, window_preset_index, window_preset_minutes,
-    };
-    let max_index = window_preset_count().saturating_sub(1) as i32;
-    let mut index = window_preset_index(state.app.monitor_window_minutes) as i32;
-    let mut changed = false;
-    ui.horizontal(|ui| {
-        ui.label("Window");
-        if ui
-            .add(
-                egui::Slider::new(&mut index, 0..=max_index)
-                    .custom_formatter(|value, _| {
-                        format!("{} min", window_preset_minutes(value as usize))
-                    })
-                    .fixed_decimals(0),
-            )
-            .changed()
-        {
-            state.app.monitor_window_minutes = window_preset_minutes(index as usize);
-            changed = true;
-        }
-    });
-    changed
+    crate::ui::widgets::draw_monitor_window_slider(ui, &mut state.app)
 }
 
 pub fn draw_app_connection(ui: &mut Ui, state: &mut SettingsState) -> bool {

@@ -44,6 +44,7 @@ cargo install --path radiacode-spectrum
 | `src/app.rs` | Application shell, worker events, tab routing |
 | `src/worker.rs` | Background Tokio worker for device I/O |
 | `src/peaks/` | SNIP continuum, matched-filter detection, Poisson scoring |
+| `src/spectrogram/preview/` | Column-aligned spectrum preview strip above the heatmap |
 | `src/peak_overlay/` | Shared peak markers and nuclide chips |
 | `src/identify.rs` | Detection + catalogue matching pipeline |
 | `src/app_config.rs` | Persistent application settings |
