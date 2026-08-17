@@ -1,6 +1,6 @@
 use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV};
 
-pub(crate) const FIT_FULL_THRESHOLD: f64 = 0.98;
+pub(crate) use crate::plot_zoom::FIT_FULL_THRESHOLD;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SpectrogramViewRange {

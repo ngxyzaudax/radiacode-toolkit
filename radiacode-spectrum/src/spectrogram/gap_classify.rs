@@ -13,7 +13,6 @@ pub struct ClassifiedRow {
     pub kind: RowKind,
     pub counts: Vec<u32>,
     pub interval_secs: f64,
-    pub status: String,
 }
 
 pub fn classify_row(
@@ -41,10 +40,6 @@ pub fn classify_row(
             },
             counts: row_counts,
             interval_secs: offline_secs,
-            status: format!(
-                "Offline {:.0} s recovered — {row_total} counts (rate-normalized row)",
-                offline_secs
-            ),
         };
     }
     if is_live_spike(row_total, recent_row_totals) {
@@ -53,9 +48,6 @@ pub fn classify_row(
             kind: RowKind::LiveSpike { rate_factor },
             counts: row_counts,
             interval_secs: capture_interval_secs,
-            status: format!(
-                "Elevated interval — {row_total} counts ({rate_factor:.1}× recent median)"
-            ),
         };
     }
     ClassifiedRow {
@@ -66,7 +58,6 @@ pub fn classify_row(
             wall_gap,
             capture_interval_secs,
         ),
-        status: format!("Capturing row with {row_total} counts."),
     }
 }
 

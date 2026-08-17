@@ -1,19 +1,19 @@
 use egui::Ui;
 
-use crate::analysis::peak_overlay_build::build_peak_overlay;
-use crate::analysis::spectrum::CollapsedSpectrum;
-use crate::analysis::state::SampleAnalysis;
-use crate::analysis::ui_plot_legend::draw_legend;
-use crate::analysis::ui_plot_net::draw_net_plot;
-use crate::analysis::ui_plot_overlay::{SpectrumPlotDrawParams, draw_overlay_plot};
 use crate::app_config::AppConfig;
+use crate::compare::peak_overlay_build::build_peak_overlay;
+use crate::compare::spectrum::CollapsedSpectrum;
+use crate::compare::state::ComparedSample;
+use crate::compare::ui_plot_legend::draw_legend;
+use crate::compare::ui_plot_net::draw_net_plot;
+use crate::compare::ui_plot_overlay::{SpectrumPlotDrawParams, draw_overlay_plot};
 use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips};
 use crate::scale::{HistogramStyle, YScale};
 use crate::theme::MUTED;
 use egui::RichText;
 
-pub struct AnalysisPlotProps<'a> {
-    pub samples: &'a [SampleAnalysis],
+pub struct ComparePlotProps<'a> {
+    pub samples: &'a [ComparedSample],
     pub background: Option<&'a CollapsedSpectrum>,
     pub y_scale: YScale,
     pub smooth_window: usize,
@@ -24,10 +24,7 @@ pub struct AnalysisPlotProps<'a> {
     pub peak_memo: &'a mut crate::peaks::PeakMemo,
 }
 
-pub fn draw_analysis_plots(
-    ui: &mut Ui,
-    props: AnalysisPlotProps<'_>,
-) -> Option<SpectrumPlotAction> {
+pub fn draw_compare_plots(ui: &mut Ui, props: ComparePlotProps<'_>) -> Option<SpectrumPlotAction> {
     if props.samples.is_empty() && props.background.is_none() {
         return None;
     }
@@ -50,6 +47,7 @@ pub fn draw_analysis_plots(
         props.background,
         props.subtract_background,
         props.show_peaks,
+        props.smooth_window,
         props.config,
         props.peak_memo,
     );

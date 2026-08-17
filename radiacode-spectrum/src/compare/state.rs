@@ -1,26 +1,26 @@
 use std::path::{Path, PathBuf};
 
-use crate::analysis::compare::Comparison;
-use crate::analysis::selection::{rebuild_samples, selection_status};
-use crate::analysis::spectrum::{CollapsedSpectrum, collapse_series};
+use crate::compare::selection::{rebuild_samples, selection_status};
+use crate::compare::spectrum::{CollapsedSpectrum, collapse_series};
+use crate::compare::subtract::Subtraction;
 use crate::peaks::PeakMemo;
 use crate::smooth::DEFAULT_SMOOTHING_WINDOW;
 use crate::spectrogram::model::RecordingEntry;
 use crate::spectrogram::storage::{list_recordings, load_recording};
 
 #[derive(Debug, Clone)]
-pub struct SampleAnalysis {
+pub struct ComparedSample {
     pub spectrum: CollapsedSpectrum,
-    pub comparison: Option<Comparison>,
+    pub subtraction: Option<Subtraction>,
 }
 
-pub struct AnalysisState {
+pub struct CompareState {
     pub library: Vec<RecordingEntry>,
     pub library_filter: String,
     pub background_path: Option<PathBuf>,
     pub sample_paths: Vec<PathBuf>,
     pub background: Option<CollapsedSpectrum>,
-    pub samples: Vec<SampleAnalysis>,
+    pub samples: Vec<ComparedSample>,
     pub smooth_window: usize,
     pub outline_only: bool,
     pub subtract_background: bool,
@@ -31,7 +31,7 @@ pub struct AnalysisState {
     pub peak_memo: PeakMemo,
 }
 
-impl AnalysisState {
+impl CompareState {
     pub fn new() -> Self {
         Self {
             library: Vec::new(),

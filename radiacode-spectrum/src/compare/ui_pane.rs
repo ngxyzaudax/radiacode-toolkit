@@ -1,12 +1,12 @@
 use egui::Ui;
 
-use crate::analysis::state::AnalysisState;
+use crate::compare::state::CompareState;
 use crate::layout::safe_span;
 use crate::ui::recording::{
     draw_empty_library, draw_recording_library_header, draw_select_recording_list,
 };
 
-pub fn draw_analysis_library_pane(ui: &mut Ui, state: &mut AnalysisState) {
+pub fn draw_compare_library_pane(ui: &mut Ui, state: &mut CompareState) {
     let total_count = state.library.len();
     let entries = state.filtered_library();
     draw_recording_library_header(

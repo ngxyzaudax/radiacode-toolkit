@@ -10,7 +10,7 @@ use crate::spectrogram::model::SpectrogramSeries;
 pub struct CaptureProgress {
     pub live_series: Option<Arc<SpectrogramSeries>>,
     pub paused_recording_path: Option<PathBuf>,
-    pub status: String,
+    pub error: String,
     pub last_ingested_sequence: u64,
     pub skip_next_sample: bool,
     pub reconnect_baseline_pending: bool,
@@ -26,7 +26,7 @@ impl CaptureProgress {
         Self {
             live_series: None,
             paused_recording_path: None,
-            status: String::new(),
+            error: String::new(),
             last_ingested_sequence: 0,
             skip_next_sample: false,
             reconnect_baseline_pending: false,
@@ -56,7 +56,7 @@ impl Clone for CaptureProgress {
         Self {
             live_series: self.live_series.clone(),
             paused_recording_path: self.paused_recording_path.clone(),
-            status: self.status.clone(),
+            error: self.error.clone(),
             last_ingested_sequence: self.last_ingested_sequence,
             skip_next_sample: self.skip_next_sample,
             reconnect_baseline_pending: self.reconnect_baseline_pending,

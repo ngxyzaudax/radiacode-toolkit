@@ -3,6 +3,7 @@ use egui::{Align2, FontId, Rect};
 use crate::spectrogram::layout::SpectrogramLayout;
 use crate::spectrogram::model::SpectrogramRow;
 use crate::theme::MUTED;
+use crate::time_format::format_hms;
 
 const MIN_LABEL_SPACING_PX: f32 = 14.0;
 
@@ -28,7 +29,7 @@ pub fn draw_time_axis(
         painter.text(
             egui::pos2(image_rect.left() - 6.0, y),
             Align2::RIGHT_CENTER,
-            format_duration(row.elapsed_secs),
+            format_hms(row.elapsed_secs),
             font.clone(),
             MUTED,
         );
@@ -42,14 +43,6 @@ fn label_stride(cell_px: f32) -> usize {
 fn should_label_row(local: usize, filled: usize, stride: usize) -> bool {
     let from_bottom = filled - 1 - local;
     from_bottom.is_multiple_of(stride)
-}
-
-fn format_duration(secs: f64) -> String {
-    let total = secs.max(0.0).round() as u64;
-    let hours = total / 3600;
-    let minutes = (total % 3600) / 60;
-    let seconds = total % 60;
-    format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
 #[cfg(test)]

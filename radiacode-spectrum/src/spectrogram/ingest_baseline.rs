@@ -47,6 +47,5 @@ pub fn store_baseline_capture(
     progress.baseline = Some(IngestBaseline::new(cumulative, device_duration_secs));
     progress.last_ingested_sequence = sequence;
     progress.last_ingest_at = Some(Instant::now());
-    progress.status = "Synced. Adding rows on each spectrum refresh.".into();
     progress.mark_dirty();
 }

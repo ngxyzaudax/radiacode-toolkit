@@ -3,12 +3,14 @@ use egui::{Color32, RichText, Ui, Vec2};
 use crate::model::ConnectionState;
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::state::SpectrogramState;
-use crate::theme::MUTED;
+use crate::spectrogram::transport_gating::pause_enabled;
+use crate::spectrogram::ui_transport_reset::draw_transport_reset;
+
+pub(crate) const TRANSPORT_SIZE: Vec2 = Vec2::new(34.0, 28.0);
 
 const RECORD_RED: Color32 = Color32::from_rgb(220, 55, 55);
 const RECORD_ACTIVE: Color32 = Color32::from_rgb(255, 80, 80);
 const STOP_FILL: Color32 = Color32::from_rgb(52, 56, 64);
-const TRANSPORT_SIZE: Vec2 = Vec2::new(34.0, 28.0);
 
 pub fn draw_transport(
     ui: &mut Ui,
@@ -19,13 +21,14 @@ pub fn draw_transport(
     let recording = state.is_recording();
     let capture_paused = state.is_capture_paused();
     let can_append = state.can_resume_append();
+    let ctx = ui.ctx().clone();
     let mut action = None;
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 6.0;
         if transport_record(ui, connected, recording) {
             action = Some(SpectrogramControlsAction::StartRecording);
         }
-        if transport_pause(ui, connected, capture_paused) {
+        if transport_pause(ui, connected, recording, capture_paused) {
             action = Some(SpectrogramControlsAction::PauseCapture);
         }
         if transport_resume(ui, connected, capture_paused, can_append, recording) {
@@ -38,12 +41,10 @@ pub fn draw_transport(
         if transport_stop(ui, connected, recording) {
             action = Some(SpectrogramControlsAction::StopRecording);
         }
-        ui.add_space(8.0);
-        ui.label(
-            RichText::new(transport_label(state, connected))
-                .small()
-                .color(MUTED),
-        );
+        ui.add_space(4.0);
+        if draw_transport_reset(ui, &ctx, recording) {
+            action = Some(SpectrogramControlsAction::ResetAccumulation);
+        }
     });
     action
 }
@@ -60,12 +61,12 @@ fn transport_record(ui: &mut Ui, connected: bool, recording: bool) -> bool {
     .clicked()
 }
 
-fn transport_pause(ui: &mut Ui, connected: bool, capture_paused: bool) -> bool {
+fn transport_pause(ui: &mut Ui, connected: bool, recording: bool, capture_paused: bool) -> bool {
     ui.add_enabled(
-        connected && !capture_paused,
+        pause_enabled(connected, recording, capture_paused),
         egui::Button::new(RichText::new("⏸").size(14.0)).min_size(TRANSPORT_SIZE),
     )
-    .on_hover_text("Pause capture")
+    .on_hover_text("Pause recording")
     .clicked()
 }
 
@@ -100,15 +101,4 @@ fn transport_stop(ui: &mut Ui, connected: bool, recording: bool) -> bool {
     )
     .on_hover_text("Stop and save")
     .clicked()
-}
-
-fn transport_label(state: &SpectrogramState, connected: bool) -> String {
-    if !connected {
-        return "Connect a device".into();
-    }
-    if state.status.is_empty() {
-        "Ready".into()
-    } else {
-        state.status.clone()
-    }
 }

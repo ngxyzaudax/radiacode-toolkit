@@ -1,9 +1,10 @@
 use egui::{RichText, Ui};
 
-use crate::analysis::ui_plot_bars::{owned_series, shared_log_floor, show_owned_series};
-use crate::analysis::ui_plot_overlay::SpectrumPlotDrawParams;
-use crate::analysis::ui_plot_values::smoothed_net;
-use crate::theme::{MUTED, analysis_sample_color};
+use crate::compare::plot_series_build::{owned_series, shared_log_floor};
+use crate::compare::ui_plot_bars::show_owned_series;
+use crate::compare::ui_plot_overlay::SpectrumPlotDrawParams;
+use crate::compare::ui_plot_values::smoothed_net;
+use crate::theme::{MUTED, compare_sample_color};
 
 pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
     let Some(background) = params.background else {
@@ -20,8 +21,8 @@ pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
         .samples
         .iter()
         .filter_map(|sample| {
-            sample.comparison.as_ref().map(|comparison| {
-                smoothed_net(sample, comparison, background, params.smooth_window)
+            sample.subtraction.as_ref().map(|subtraction| {
+                smoothed_net(sample, subtraction, background, params.smooth_window)
             })
         })
         .collect();
@@ -40,7 +41,7 @@ pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
                 params.energies,
                 params.width,
                 values,
-                analysis_sample_color(index),
+                compare_sample_color(index),
                 params.y_scale,
                 log_floor,
             )
@@ -51,7 +52,7 @@ pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
         .map(|item| item.plot_overlay(params.y_scale, log_floor));
     show_owned_series(
         ui,
-        "analysis_plot",
+        "compare_plot",
         &owned,
         params.y_scale,
         params.style,

@@ -1,4 +1,4 @@
-use crate::analysis::spectrum::CollapsedSpectrum;
+use crate::compare::spectrum::CollapsedSpectrum;
 use crate::energy::energy_grid;
 use crate::model::SpectrumView;
 use crate::peaks::detect::detect_peaks;

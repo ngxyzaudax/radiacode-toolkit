@@ -1,17 +1,18 @@
 use egui::Ui;
 
-use crate::analysis::peak_overlay_build::BuiltPeakOverlay;
-use crate::analysis::spectrum::CollapsedSpectrum;
-use crate::analysis::state::SampleAnalysis;
-use crate::analysis::ui_plot_bars::{owned_series, shared_log_floor, show_owned_series};
-use crate::analysis::ui_plot_values::{smoothed_background, smoothed_sample};
+use crate::compare::peak_overlay_build::BuiltPeakOverlay;
+use crate::compare::plot_series_build::{owned_series, shared_log_floor};
+use crate::compare::spectrum::CollapsedSpectrum;
+use crate::compare::state::ComparedSample;
+use crate::compare::ui_plot_bars::show_owned_series;
+use crate::compare::ui_plot_values::{smoothed_background, smoothed_sample};
 use crate::scale::{HistogramStyle, YScale};
-use crate::theme::{ANALYSIS_BACKGROUND, analysis_sample_color};
+use crate::theme::{COMPARE_BACKGROUND, compare_sample_color};
 
 pub struct SpectrumPlotDrawParams<'a> {
     pub energies: &'a [f64],
     pub width: f64,
-    pub samples: &'a [SampleAnalysis],
+    pub samples: &'a [ComparedSample],
     pub background: Option<&'a CollapsedSpectrum>,
     pub y_scale: YScale,
     pub smooth_window: usize,
@@ -41,7 +42,7 @@ pub fn draw_overlay_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
             params.energies,
             params.width,
             values,
-            ANALYSIS_BACKGROUND,
+            COMPARE_BACKGROUND,
             params.y_scale,
             log_floor,
         ));
@@ -52,7 +53,7 @@ pub fn draw_overlay_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
             params.energies,
             params.width,
             values,
-            analysis_sample_color(index),
+            compare_sample_color(index),
             params.y_scale,
             log_floor,
         ));
@@ -62,7 +63,7 @@ pub fn draw_overlay_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
         .map(|item| item.plot_overlay(params.y_scale, log_floor));
     show_owned_series(
         ui,
-        "analysis_plot",
+        "compare_plot",
         &owned,
         params.y_scale,
         params.style,

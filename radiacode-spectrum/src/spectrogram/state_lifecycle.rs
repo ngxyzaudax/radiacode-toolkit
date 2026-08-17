@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use tracing::info;
+
 use crate::spectrogram::model::SpectrogramDisplay;
 use crate::spectrogram::state::SpectrogramState;
 
@@ -14,11 +16,9 @@ impl SpectrogramState {
     pub fn on_tab_enter(&mut self) {
         if self.live_series.is_some() {
             self.texture.dirty = true;
-            self.status = format!("Capturing {} spectrogram row(s).", self.live_row_count());
-            return;
+        } else {
+            self.skip_next_sample = true;
         }
-        self.skip_next_sample = true;
-        self.status = "Waiting for first fresh spectrum sample.".into();
     }
 
     pub fn close_loaded(&mut self) {
@@ -27,11 +27,6 @@ impl SpectrogramState {
         self.display = SpectrogramDisplay::Live;
         self.z_range_rows = 0;
         self.texture.dirty = true;
-        self.status = if self.live_series.is_some() {
-            format!("Live spectrogram ({} rows).", self.live_row_count())
-        } else {
-            "Returned to live view.".into()
-        };
     }
 
     pub fn on_disconnect(&mut self) {
@@ -73,7 +68,7 @@ impl SpectrogramState {
             progress.reconnect_baseline_pending = false;
             progress.last_ingest_at = None;
             progress.last_ingested_sequence = 0;
-            progress.status = "Accumulation cleared. Waiting for next spectrum sample.".into();
+            progress.error.clear();
             progress.mark_dirty();
         }
         self.sync_from_capture();
@@ -85,6 +80,7 @@ impl SpectrogramState {
         self.z_range = None;
         self.z_range_rows = 0;
         self.mark_texture_dirty_empty();
+        info!("spectrogram accumulation reset");
     }
 
     pub fn reset_view(&mut self) {

@@ -1,13 +1,13 @@
-use crate::analysis::compare::Comparison;
-use crate::analysis::spectrum::{CollapsedSpectrum, counts_per_sec};
-use crate::analysis::state::SampleAnalysis;
+use crate::compare::spectrum::{CollapsedSpectrum, counts_per_sec};
+use crate::compare::state::ComparedSample;
+use crate::compare::subtract::Subtraction;
 use crate::smooth::moving_average_f64;
 
 pub fn smoothed_cps(counts: &[u64], live_time_secs: f64, smooth_window: usize) -> Vec<f64> {
     moving_average_f64(&counts_per_sec(counts, live_time_secs), smooth_window)
 }
 
-pub fn smoothed_sample(sample: &SampleAnalysis, smooth_window: usize) -> Vec<f64> {
+pub fn smoothed_sample(sample: &ComparedSample, smooth_window: usize) -> Vec<f64> {
     smoothed_cps(
         &sample.spectrum.counts,
         sample.spectrum.live_time_secs,
@@ -20,8 +20,8 @@ pub fn smoothed_background(background: &CollapsedSpectrum, smooth_window: usize)
 }
 
 pub fn smoothed_net(
-    sample: &SampleAnalysis,
-    _comparison: &Comparison,
+    sample: &ComparedSample,
+    _subtraction: &Subtraction,
     background: &CollapsedSpectrum,
     smooth_window: usize,
 ) -> Vec<f64> {

@@ -1,34 +1,34 @@
 use egui::{RichText, Ui};
 
-use crate::analysis::state::AnalysisState;
-use crate::analysis::ui_pane::draw_analysis_library_pane;
-use crate::analysis::ui_plot::{AnalysisPlotProps, draw_analysis_plots};
-use crate::analysis::ui_toolbar::draw_analysis_toolbar;
 use crate::app_config::AppConfig;
+use crate::compare::state::CompareState;
+use crate::compare::ui_pane::draw_compare_library_pane;
+use crate::compare::ui_plot::{ComparePlotProps, draw_compare_plots};
+use crate::compare::ui_toolbar::draw_compare_toolbar;
 use crate::layout::{MasterDetailRegion, draw_master_detail};
 use crate::peak_overlay::SpectrumPlotAction;
 use crate::scale::{HistogramStyle, YScale};
-use crate::theme::{MUTED, analysis_sample_color};
+use crate::theme::{MUTED, compare_sample_color};
 
-pub fn draw_analysis_view(
+pub fn draw_compare_view(
     ui: &mut Ui,
-    state: &mut AnalysisState,
+    state: &mut CompareState,
     y_scale: &mut YScale,
     config: &AppConfig,
 ) -> Option<SpectrumPlotAction> {
-    draw_analysis_toolbar(ui, state, y_scale);
+    draw_compare_toolbar(ui, state, y_scale);
     ui.add_space(8.0);
     let mut plot_action = None;
     let mut pane_open = state.pane_open;
     draw_master_detail(
         ui,
-        "analysis_library",
+        "compare_library",
         "Library",
         &mut pane_open,
         |ui, region| match region {
-            MasterDetailRegion::Pane => draw_analysis_library_pane(ui, state),
+            MasterDetailRegion::Pane => draw_compare_library_pane(ui, state),
             MasterDetailRegion::Detail => {
-                plot_action = draw_analysis_plot(ui, state, *y_scale, config);
+                plot_action = draw_compare_plot(ui, state, *y_scale, config);
             }
         },
     );
@@ -36,9 +36,9 @@ pub fn draw_analysis_view(
     plot_action
 }
 
-fn draw_analysis_plot(
+fn draw_compare_plot(
     ui: &mut Ui,
-    state: &mut AnalysisState,
+    state: &mut CompareState,
     y_scale: YScale,
     config: &AppConfig,
 ) -> Option<SpectrumPlotAction> {
@@ -56,9 +56,9 @@ fn draw_analysis_plot(
     } else {
         HistogramStyle::Filled
     };
-    let action = draw_analysis_plots(
+    let action = draw_compare_plots(
         ui,
-        AnalysisPlotProps {
+        ComparePlotProps {
             samples: &state.samples,
             background: state.background.as_ref(),
             y_scale,
@@ -76,16 +76,16 @@ fn draw_analysis_plot(
     action
 }
 
-fn draw_footer_readouts(ui: &mut Ui, state: &AnalysisState) {
+fn draw_footer_readouts(ui: &mut Ui, state: &CompareState) {
     let comparable: Vec<_> = state
         .samples
         .iter()
         .enumerate()
         .filter_map(|(index, sample)| {
             sample
-                .comparison
+                .subtraction
                 .as_ref()
-                .map(|comparison| (index, sample, comparison))
+                .map(|subtraction| (index, sample, subtraction))
         })
         .collect();
     if comparable.is_empty() {
@@ -93,20 +93,20 @@ fn draw_footer_readouts(ui: &mut Ui, state: &AnalysisState) {
     }
     ui.add_space(12.0);
     ui.separator();
-    for (index, sample, comparison) in comparable {
-        let color = analysis_sample_color(index);
+    for (index, sample, subtraction) in comparable {
+        let color = compare_sample_color(index);
         let live = sample.spectrum.live_time_secs;
-        let net_cps = comparison.net_total / live;
-        let net_min_cps = comparison.net_min / live;
+        let net_cps = subtraction.net_total / live;
+        let net_min_cps = subtraction.net_min / live;
         ui.horizontal_wrapped(|ui| {
             ui.label(RichText::new("●").color(color));
             ui.label(RichText::new(&sample.spectrum.name).strong().color(color));
             ui.separator();
-            ui.label(format!("T_S/T_B: {:.4}", comparison.scale_factor));
+            ui.label(format!("T_S/T_B: {:.4}", subtraction.scale_factor));
             ui.separator();
             ui.label(format!("Net total: {net_cps:.2} cps"));
             ui.separator();
-            ui.label(format!("Neg bins: {}", comparison.negative_bin_count));
+            ui.label(format!("Neg bins: {}", subtraction.negative_bin_count));
             ui.separator();
             ui.label(format!("Net min: {net_min_cps:.2} cps"));
         });

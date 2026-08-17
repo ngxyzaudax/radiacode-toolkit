@@ -49,7 +49,7 @@
 | [Monitor](./docs/monitor/README.md) | Live dose rate, count rate, and session dose |
 | [Spectrum](./docs/spectrum/README.md) | Live 1024-channel energy histogram with peak detection |
 | [Spectrogram](./docs/spectrogram/README.md) | Time–energy waterfall and recordings |
-| [Analysis](./docs/analysis/README.md) | Offline comparison of saved spectra |
+| [Compare](./docs/compare/README.md) | Offline comparison of saved spectra |
 | [Catalogue](./docs/catalogue/README.md) | Nuclide reference, decay chains, and synthetic previews |
 | [Settings](./docs/settings/README.md) | Device and application configuration |
 

@@ -25,7 +25,7 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
     let grid = energy_grid(spectrum);
     if grid.indices.is_empty() {
         warn!(sequence, "spectrogram ingest skipped: empty energy range");
-        progress.status = "No channels in selected energy range.".into();
+        progress.error = "No channels in selected energy range.".into();
         progress.last_ingested_sequence = sequence;
         progress.mark_dirty();
         return;
@@ -62,9 +62,6 @@ pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView,
             device_duration_delta, "spectrogram device timeline regressed, re-baselining"
         );
         store_baseline_capture(&mut progress, sequence, cumulative, device_duration_secs);
-        progress.status =
-            "Device spectrum reset detected. Re-synced baseline; rows resume on next interval."
-                .into();
         return;
     }
     if !gap::row_interval_ready(device_duration_delta, capture_interval)

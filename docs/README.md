@@ -18,7 +18,7 @@ Full application tour as a GIF.
 | [Monitor](./monitor/README.md) | Live dose rate, count rate, and session dose trends |
 | [Spectrum](./spectrum/README.md) | Live 1024-channel energy histogram with peak detection |
 | [Spectrogram](./spectrogram/README.md) | Time–energy waterfall and recording library |
-| [Analysis](./analysis/README.md) | Offline comparison of saved spectra |
+| [Compare](./compare/README.md) | Offline comparison of saved spectra |
 | [Catalogue](./catalogue/README.md) | Nuclide reference, decay chains, and synthetic previews |
 | [Settings](./settings/README.md) | Device and application configuration |
 

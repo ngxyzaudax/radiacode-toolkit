@@ -35,7 +35,7 @@ pub struct SpectrogramState {
     pub library_edit_comment: String,
     pub texture: SpectrogramTexture,
     pub texture_handle: Option<egui::TextureHandle>,
-    pub status: String,
+    pub error: String,
     pub settings: SpectrogramSettings,
     pub view_range: SpectrogramViewRange,
     pub last_ingested_sequence: u64,
@@ -74,7 +74,7 @@ impl SpectrogramState {
             library_edit_comment: String::new(),
             texture: SpectrogramTexture::new(1, 1),
             texture_handle: None,
-            status: String::new(),
+            error: String::new(),
             settings,
             view_range: SpectrogramViewRange::new(),
             last_ingested_sequence: 0,
@@ -127,7 +127,7 @@ impl SpectrogramState {
             }
         }
         self.paused_recording_path = snapshot.paused_recording_path;
-        self.status = snapshot.status;
+        self.error = snapshot.error;
         self.last_ingested_sequence = snapshot.last_ingested_sequence;
         self.skip_next_sample = snapshot.skip_next_sample;
         self.reconnect_baseline_pending = snapshot.reconnect_baseline_pending;

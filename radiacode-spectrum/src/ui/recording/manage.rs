@@ -172,9 +172,9 @@ fn export_entry(state: &mut SpectrogramState, path: &Path) {
         .save_file()
     {
         if let Err(message) = library::export_rcspg(path, &destination) {
-            state.status = message;
+            state.error = message;
         } else {
-            state.status = format!("Exported {}", destination.display());
+            state.error.clear();
         }
     }
 }

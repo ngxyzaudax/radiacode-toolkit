@@ -25,7 +25,7 @@ pub fn tab_uses_page_inset(tab: ViewTab) -> bool {
         ViewTab::Device
             | ViewTab::Settings
             | ViewTab::About
-            | ViewTab::Analysis
+            | ViewTab::Compare
             | ViewTab::Catalogue
     )
 }

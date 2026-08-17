@@ -45,15 +45,6 @@ impl SpectrogramState {
     fn apply_interval_change(&mut self) {
         self.reset_accumulation();
         self.apply_capture_interval_to_live_header();
-        if let Ok(cap) = self.capture.lock() {
-            let interval = self.settings.capture_interval_secs;
-            let mut progress = cap.progress.lock().expect("capture progress lock poisoned");
-            progress.status = format!(
-                "Capture interval set to {:.0}s. Accumulation reset.",
-                interval
-            );
-            progress.mark_dirty();
-        }
         self.sync_from_capture();
     }
 

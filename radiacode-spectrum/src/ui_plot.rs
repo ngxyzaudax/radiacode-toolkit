@@ -1,19 +1,19 @@
 use egui::{RichText, Ui, Vec2b};
-use egui_plot::{Bar, Plot};
+use egui_plot::Plot;
 
 use crate::app_config::AppConfig;
-use crate::energy::{
-    ENERGY_MAX_KEV, ENERGY_MIN_KEV, bar_energy_width, clamp_energy_range, energy_grid,
-};
-use crate::identify::analyze_peaks;
+use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV, energy_grid};
 use crate::model::SpectrumView;
-use crate::peak_overlay::{SpectrumPlotAction, draw_peak_markers, draw_source_chips};
-use crate::peaks::DetectionParams;
-use crate::peaks::{PeakMemo, PeakMemoKey, peaks_from_spectrum_view, sample_curve_y};
+use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips};
+use crate::peak_snap::{draw_peaks_with_cursor, override_hover, snap_label};
+use crate::peaks::{PeakMemo, sample_curve_y};
 use crate::plot_hover::counts_plot_hover;
 use crate::plot_style::styled_histogram_line;
+use crate::plot_zoom::apply_energy_axis_navigation;
 use crate::scale::{HistogramStyle, YScale, display_value, y_axis_top};
 use crate::smooth::moving_average_f64;
+use crate::spectrum::peak_analysis::peak_analysis_for_spectrum;
+use crate::spectrum::plot_bars::{build_spectrum_bars, y_axis_label};
 use crate::theme::{MUTED, SPECTRUM_BAR};
 
 pub struct SpectrumPlotDrawContext<'a> {
@@ -40,22 +40,6 @@ pub fn draw_spectrum_plot(
         return None;
     };
 
-    ui.horizontal_wrapped(|ui| {
-        ui.label(format!(
-            "Live time: {:.1}s",
-            spectrum.duration.as_secs_f64()
-        ));
-        ui.separator();
-        ui.label(format!("Total counts: {}", spectrum.total_counts));
-        ui.separator();
-        ui.label(format!("Channels: {}", spectrum.counts.len()));
-        ui.separator();
-        ui.label(format!(
-            "E= {:.2}+{:.3}·ch+{:.5}·ch² keV",
-            spectrum.a0, spectrum.a1, spectrum.a2
-        ));
-    });
-
     ui.add_space(8.0);
     let grid = energy_grid(spectrum);
     let grid_counts: Vec<f64> = grid
@@ -72,31 +56,27 @@ pub fn draw_spectrum_plot(
         spectrum_sequence,
         peak_memo,
     } = draw_context;
-    let analysis = if show_peaks {
-        let params = DetectionParams::from_app_config(config);
-        let key = PeakMemoKey::new(spectrum_sequence, params);
-        let peaks = peak_memo
-            .get_or_compute(key, || peaks_from_spectrum_view(spectrum, params))
-            .to_vec();
-        Some(analyze_peaks(&peaks, config))
-    } else {
-        None
-    };
+    let analysis =
+        peak_analysis_for_spectrum(spectrum, show_peaks, config, spectrum_sequence, peak_memo);
+    let label = snap_label();
 
     Plot::new("spectrum_plot_kev")
-        .allow_zoom(true)
+        .allow_zoom(false)
         .allow_drag(true)
-        .allow_scroll(true)
+        .allow_scroll(false)
+        .allow_double_click_reset(false)
         .auto_bounds(Vec2b::new(false, false))
         .default_x_bounds(ENERGY_MIN_KEV, ENERGY_MAX_KEV)
         .include_y(0.0)
         .x_axis_label("Energy (keV)")
         .y_axis_label(y_axis_label(y_scale))
-        .label_formatter(move |pos| counts_plot_hover(pos, y_scale))
+        .show_crosshair(false)
+        .label_formatter({
+            let label = label.clone();
+            move |pos| override_hover(&label, counts_plot_hover(pos, y_scale))
+        })
         .show(ui, |plot_ui| {
-            let bounds = plot_ui.plot_bounds();
-            let (min_x, max_x) = clamp_energy_range(bounds.min()[0], bounds.max()[0]);
-            plot_ui.set_plot_bounds_x(min_x..=max_x);
+            let (min_x, max_x) = apply_energy_axis_navigation(plot_ui);
             plot_ui.set_plot_bounds_y(0.0..=y_top);
             if !bars.is_empty() {
                 plot_ui.line(styled_histogram_line(
@@ -118,35 +98,17 @@ pub fn draw_spectrum_plot(
                     .collect();
                 let energies = &grid.energies_kev;
                 let display = &smoothed;
-                draw_peak_markers(plot_ui, &visible, move |energy| {
-                    let raw = sample_curve_y(energies, display, energy);
-                    display_value(raw, y_scale)
-                });
+                draw_peaks_with_cursor(
+                    plot_ui,
+                    &visible,
+                    move |energy| {
+                        let raw = sample_curve_y(energies, display, energy);
+                        display_value(raw, y_scale)
+                    },
+                    &label,
+                );
             }
         });
 
     analysis.and_then(|analysis| draw_source_chips(ui, &analysis.sources))
-}
-
-fn y_axis_label(scale: YScale) -> &'static str {
-    match scale {
-        YScale::Linear => "Counts",
-        YScale::Logarithmic => "Counts (log10)",
-    }
-}
-
-fn build_spectrum_bars(
-    energies_kev: &[f64],
-    smoothed: &[f64],
-    y_scale: YScale,
-    a1: f32,
-) -> Vec<Bar> {
-    energies_kev
-        .iter()
-        .enumerate()
-        .map(|(index, &energy)| {
-            let height = display_value(smoothed[index], y_scale);
-            Bar::new(energy, height).width(bar_energy_width(energies_kev, index, a1 as f64))
-        })
-        .collect()
 }

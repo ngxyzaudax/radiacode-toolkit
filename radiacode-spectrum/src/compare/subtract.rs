@@ -1,9 +1,9 @@
-use crate::analysis::spectrum::CollapsedSpectrum;
+use crate::compare::spectrum::CollapsedSpectrum;
 
 const CALIB_EPS: f32 = 1e-4;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Comparison {
+pub struct Subtraction {
     pub scale_factor: f64,
     pub scaled_background_counts: Vec<f64>,
     pub net_counts: Vec<f64>,
@@ -13,10 +13,10 @@ pub struct Comparison {
     pub net_min: f64,
 }
 
-pub fn compare(
+pub fn subtract(
     sample: &CollapsedSpectrum,
     background: &CollapsedSpectrum,
-) -> Result<Comparison, String> {
+) -> Result<Subtraction, String> {
     if sample.channel_count != background.channel_count {
         return Err(format!(
             "channel count mismatch: sample {} vs background {}",
@@ -50,7 +50,7 @@ pub fn compare(
     if net_min == f64::MAX {
         net_min = 0.0;
     }
-    Ok(Comparison {
+    Ok(Subtraction {
         scale_factor,
         scaled_background_counts,
         net_counts,
@@ -71,8 +71,8 @@ fn calibrations_differ(sample: &CollapsedSpectrum, background: &CollapsedSpectru
 mod tests {
     use std::path::PathBuf;
 
-    use super::compare;
-    use crate::analysis::spectrum::CollapsedSpectrum;
+    use super::subtract;
+    use crate::compare::spectrum::CollapsedSpectrum;
 
     fn fixture(counts: Vec<u64>, live_time_secs: f64) -> CollapsedSpectrum {
         let total_counts: u64 = counts.iter().sum();
@@ -99,25 +99,25 @@ mod tests {
     fn subtract_scales_background_by_live_time_ratio() {
         let sample = fixture(vec![100, 200], 20.0);
         let background = fixture(vec![10, 20], 10.0);
-        let comparison = compare(&sample, &background).expect("compare");
-        assert!((comparison.scale_factor - 2.0).abs() < 0.001);
-        assert!((comparison.scaled_background_counts[0] - 20.0).abs() < 0.001);
-        assert!((comparison.net_counts[0] - 80.0).abs() < 0.001);
-        assert!((comparison.net_counts[1] - 160.0).abs() < 0.001);
-        assert_eq!(comparison.negative_bin_count, 0);
+        let subtraction = subtract(&sample, &background).expect("subtract");
+        assert!((subtraction.scale_factor - 2.0).abs() < 0.001);
+        assert!((subtraction.scaled_background_counts[0] - 20.0).abs() < 0.001);
+        assert!((subtraction.net_counts[0] - 80.0).abs() < 0.001);
+        assert!((subtraction.net_counts[1] - 160.0).abs() < 0.001);
+        assert_eq!(subtraction.negative_bin_count, 0);
     }
 
     #[test]
     fn rejects_zero_live_time() {
         let sample = fixture(vec![1], 0.0);
         let background = fixture(vec![1], 10.0);
-        assert!(compare(&sample, &background).is_err());
+        assert!(subtract(&sample, &background).is_err());
     }
 
     #[test]
     fn rejects_channel_mismatch() {
         let sample = fixture(vec![1, 2], 10.0);
         let background = fixture(vec![1], 10.0);
-        assert!(compare(&sample, &background).is_err());
+        assert!(subtract(&sample, &background).is_err());
     }
 }

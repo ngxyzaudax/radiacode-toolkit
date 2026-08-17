@@ -13,7 +13,7 @@ pub fn draw_tab_bar(ui: &mut Ui, active: ViewTab) -> Option<ViewTab> {
             ViewTab::Spectrogram,
             ViewTab::Spectrogram.label(),
         );
-        ui.selectable_value(&mut selected, ViewTab::Analysis, ViewTab::Analysis.label());
+        ui.selectable_value(&mut selected, ViewTab::Compare, ViewTab::Compare.label());
         ui.selectable_value(
             &mut selected,
             ViewTab::Catalogue,

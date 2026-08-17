@@ -14,9 +14,9 @@ pub fn draw_spectrogram_peaks(
     series: &SpectrogramSeries,
     source_cols: &[usize],
     identifications: &[PeakIdentification],
+    focused: Option<usize>,
 ) {
-    let stroke = Stroke::new(1.0, PEAK_LINE);
-    for identification in identifications {
+    for (index, identification) in identifications.iter().enumerate() {
         let Some(x) = spectrogram_energy_to_x(
             image_rect,
             series,
@@ -25,6 +25,8 @@ pub fn draw_spectrogram_peaks(
         ) else {
             continue;
         };
+        let is_focused = focused == Some(index);
+        let stroke = Stroke::new(if is_focused { 2.5 } else { 1.0 }, PEAK_LINE);
         painter.line_segment(
             [
                 Pos2::new(x, image_rect.top()),
@@ -32,11 +34,16 @@ pub fn draw_spectrogram_peaks(
             ],
             stroke,
         );
+        let font_size = if is_focused {
+            PEAK_LABEL_FONT_SIZE + 2.0
+        } else {
+            PEAK_LABEL_FONT_SIZE
+        };
         painter.text(
             Pos2::new(x + 2.0, image_rect.top() + 2.0),
             Align2::LEFT_TOP,
             peak_label(identification),
-            FontId::new(PEAK_LABEL_FONT_SIZE, egui::FontFamily::Proportional),
+            FontId::new(font_size, egui::FontFamily::Proportional),
             ACCENT,
         );
     }

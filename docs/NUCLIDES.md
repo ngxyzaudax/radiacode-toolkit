@@ -35,13 +35,15 @@ cargo run -p radiacode-nuclides --bin nuclide-import --features import -- --limi
 
 ## Peak detection
 
-Spectrum, Spectrogram, and Analysis share one detection pipeline (`radiacode-spectrum/src/peaks/`):
+Spectrum, Spectrogram, and Compare share one detection pipeline (`radiacode-spectrum/src/peaks/`):
 
 1. SNIP continuum estimation
 2. Matched-filter peak finding
 3. Poisson significance threshold (configurable σ)
 
 Toggle **Peak detection** on each view's toolbar or settings panel. On the Spectrogram tab, use the **Peaks** button in the preview-strip gutter (left of the heatmap).
+
+When peak detection is enabled, the cursor snaps to the nearest detected peak line within **12 px** on Spectrum, Spectrogram, and Compare. The snapped peak is highlighted (thicker marker and line) and the hover readout shows nuclide name, energy, net area, and the best catalogue match line.
 
 ## Peak identification
 

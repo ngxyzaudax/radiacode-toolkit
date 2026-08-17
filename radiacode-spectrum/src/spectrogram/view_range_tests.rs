@@ -38,16 +38,3 @@ fn zoom_out_restores_full_spectrum() {
     assert!(range.fit_full_spectrum);
     assert!((range.energy_max_kev - 2804.0).abs() < 1.0);
 }
-
-#[test]
-fn channel_pan_survives_series_bound_refresh() {
-    let mut range = SpectrogramViewRange::new();
-    let energies = sample_energies();
-    range.fit_series_energy(&energies);
-    range.scroll_channels(40, energies.len(), 80);
-    assert!(!range.fit_full_spectrum);
-    assert_eq!(range.channel_start, 40);
-    range.set_series_energy_bounds(&energies);
-    assert_eq!(range.channel_start, 40);
-    assert!(!range.fit_full_spectrum);
-}

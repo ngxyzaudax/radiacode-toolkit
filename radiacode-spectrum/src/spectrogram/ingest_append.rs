@@ -44,16 +44,13 @@ pub fn append_classified_row_capture(
         && let Err(error) = writer.append_row(row)
     {
         warn!(%error, "spectrogram recording write failed");
-        progress.status = format!("Recording write failed: {error}");
+        progress.error = format!("Recording write failed: {error}");
+    } else {
+        progress.error.clear();
     }
     progress.baseline = Some(IngestBaseline::new(cumulative, device_duration_secs));
     progress.last_ingested_sequence = sequence;
     progress.last_ingest_at = Some(Instant::now());
-    progress.status = if let Some(series) = progress.live_series.as_ref() {
-        format!("{} ({} row(s))", classified.status, series.row_count())
-    } else {
-        classified.status
-    };
     progress.mark_dirty();
 }
 

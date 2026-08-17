@@ -1,15 +1,15 @@
 use egui::{Color32, RichText, Ui};
 
-use crate::analysis::state::SampleAnalysis;
-use crate::theme::{ANALYSIS_BACKGROUND, analysis_sample_color};
+use crate::compare::state::ComparedSample;
+use crate::theme::{COMPARE_BACKGROUND, compare_sample_color};
 
-pub fn draw_legend(ui: &mut Ui, samples: &[SampleAnalysis], has_background: bool) {
+pub fn draw_legend(ui: &mut Ui, samples: &[ComparedSample], has_background: bool) {
     ui.horizontal_wrapped(|ui| {
         if has_background {
-            legend_swatch(ui, "Background", ANALYSIS_BACKGROUND);
+            legend_swatch(ui, "Background", COMPARE_BACKGROUND);
         }
         for (index, sample) in samples.iter().enumerate() {
-            legend_swatch(ui, &sample.spectrum.name, analysis_sample_color(index));
+            legend_swatch(ui, &sample.spectrum.name, compare_sample_color(index));
         }
     });
     ui.add_space(6.0);

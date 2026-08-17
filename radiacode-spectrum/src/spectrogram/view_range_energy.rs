@@ -125,19 +125,6 @@ impl SpectrogramViewRange {
         self.fit_full_spectrum = true;
     }
 
-    pub fn scroll_channels(&mut self, delta: i32, channels_in_view: usize, display_cols: usize) {
-        if delta != 0 {
-            self.fit_full_spectrum = false;
-        }
-        if channels_in_view <= display_cols {
-            self.channel_start = 0;
-            return;
-        }
-        let max_start = channels_in_view - display_cols;
-        let next = (self.channel_start as i32 + delta).clamp(0, max_start as i32) as usize;
-        self.channel_start = next;
-    }
-
     pub fn clamp_channels(&mut self, channels_in_view: usize, display_cols: usize) {
         if self.fit_full_spectrum {
             self.channel_start = 0;

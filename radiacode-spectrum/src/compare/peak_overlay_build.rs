@@ -1,7 +1,8 @@
-use crate::analysis::spectrum::CollapsedSpectrum;
-use crate::analysis::state::SampleAnalysis;
-use crate::analysis::ui_plot_bars::PlotPeakOverlay;
 use crate::app_config::AppConfig;
+use crate::compare::spectrum::CollapsedSpectrum;
+use crate::compare::state::ComparedSample;
+use crate::compare::ui_plot_bars::PlotPeakOverlay;
+use crate::compare::ui_plot_values::{smoothed_background, smoothed_net, smoothed_sample};
 use crate::identify::analyze_peaks;
 use crate::peaks::DetectionParams;
 use crate::peaks::{PeakMemoKey, detect_peaks, peaks_from_collapsed};
@@ -31,10 +32,11 @@ impl BuiltPeakOverlay {
 }
 
 pub fn build_peak_overlay(
-    samples: &[SampleAnalysis],
+    samples: &[ComparedSample],
     background: Option<&CollapsedSpectrum>,
     subtract_background: bool,
     show_peaks: bool,
+    smooth_window: usize,
     config: &AppConfig,
     peak_memo: &mut crate::peaks::PeakMemo,
 ) -> Option<BuiltPeakOverlay> {
@@ -52,29 +54,18 @@ pub fn build_peak_overlay(
     let analysis = analyze_peaks(&peaks, config);
     let (energies, display_values) = if subtract_background {
         let sample = samples.first()?;
-        let comparison = sample.comparison.as_ref()?;
+        let subtraction = sample.subtraction.as_ref()?;
+        let background = background?;
         let energies = sample.spectrum.energies_kev.clone();
-        let display_values: Vec<f64> = comparison
-            .net_counts
-            .iter()
-            .map(|value| value.max(0.0))
-            .collect();
+        let display_values = smoothed_net(sample, subtraction, background, smooth_window);
         (energies, display_values)
     } else if let Some(sample) = samples.first() {
-        let display_values = sample
-            .spectrum
-            .counts
-            .iter()
-            .map(|&value| value as f64)
-            .collect();
-        (sample.spectrum.energies_kev.clone(), display_values)
+        let energies = sample.spectrum.energies_kev.clone();
+        let display_values = smoothed_sample(sample, smooth_window);
+        (energies, display_values)
     } else {
         let background = background?;
-        let display_values = background
-            .counts
-            .iter()
-            .map(|&value| value as f64)
-            .collect();
+        let display_values = smoothed_background(background, smooth_window);
         (background.energies_kev.clone(), display_values)
     };
     Some(BuiltPeakOverlay {
@@ -87,7 +78,7 @@ pub fn build_peak_overlay(
 }
 
 fn peak_overlay_token(
-    samples: &[SampleAnalysis],
+    samples: &[ComparedSample],
     background: Option<&CollapsedSpectrum>,
     subtract_background: bool,
 ) -> u64 {
@@ -115,7 +106,7 @@ fn peak_overlay_token(
 }
 
 fn detect_overlay_peaks(
-    samples: &[SampleAnalysis],
+    samples: &[ComparedSample],
     background: Option<&CollapsedSpectrum>,
     subtract_background: bool,
     params: DetectionParams,
@@ -124,11 +115,11 @@ fn detect_overlay_peaks(
         let Some(sample) = samples.first() else {
             return Vec::new();
         };
-        let Some(comparison) = sample.comparison.as_ref() else {
+        let Some(subtraction) = sample.subtraction.as_ref() else {
             return Vec::new();
         };
         let energies = &sample.spectrum.energies_kev;
-        let counts: Vec<f64> = comparison
+        let counts: Vec<f64> = subtraction
             .net_counts
             .iter()
             .map(|value| value.max(0.0))

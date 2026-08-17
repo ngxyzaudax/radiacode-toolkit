@@ -1,19 +1,18 @@
-use std::sync::Arc;
-
-use egui::{Color32, Context, Image, RichText, Sense, Ui};
+use egui::{Color32, Context, Image, Pos2, RichText, Sense, Ui};
 
 use crate::app_config::AppConfig;
-use crate::identify::{PeakAnalysis, analyze_peaks};
+use crate::identify::PeakAnalysis;
 use crate::layout::safe_span;
 use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips, draw_spectrogram_peaks};
-use crate::peaks::{DetectionParams, peaks_from_channel_totals, spectrogram_series_peak_token};
+use crate::peak_snap::peak_hover_text;
 use crate::spectrogram::axes::{count_rate_axis_label, draw_x_axis, x_axis_label, y_axis_label};
 use crate::spectrogram::count_rate::draw_count_rate_overlay;
-use crate::spectrogram::layout::{
-    DEFAULT_EMPTY_CHANNELS, channels_in_energy_range, compute_layout,
-};
-use crate::spectrogram::model::SpectrogramDisplay;
+use crate::spectrogram::layout::compute_layout;
 use crate::spectrogram::overlays::{draw_crosshair, draw_grid};
+use crate::spectrogram::peak_analysis::{
+    channels_for_view, peak_analysis_for_view, series_for_peak_data,
+};
+use crate::spectrogram::peak_cursor::snapped_hover;
 use crate::spectrogram::preview::{
     channel_totals, draw_preview_controls, draw_preview_strip, preview_strip_response,
     split_preview_area, strip_rect,
@@ -124,7 +123,7 @@ pub fn draw_spectrogram_plot_area(
         draw_grid(&axis_painter, layout.image_rect, layout, true);
         let series_for_totals = series_for_peak_data(state);
         let totals = series_for_totals.as_ref().map(|active| {
-            let token = spectrogram_series_peak_token(active);
+            let token = crate::peaks::spectrogram_series_peak_token(active);
             state
                 .totals_memo
                 .get_or_compute(token, || channel_totals(active))
@@ -158,6 +157,19 @@ pub fn draw_spectrogram_plot_area(
                 total_rows,
                 state.view_range.follow_live,
             );
+            let (effective_hover, focused) = response
+                .hover_pos()
+                .map(|hover| {
+                    snapped_peak_hover(
+                        hover,
+                        layout.image_rect,
+                        preview_area,
+                        series,
+                        &source_cols,
+                        peak_analysis.as_ref(),
+                    )
+                })
+                .unwrap_or((Pos2::ZERO, None));
             if let Some(analysis) = peak_analysis.as_ref() {
                 draw_spectrogram_peaks(
                     &axis_painter,
@@ -165,17 +177,23 @@ pub fn draw_spectrogram_plot_area(
                     series,
                     &source_cols,
                     &analysis.identifications,
+                    focused,
                 );
                 peak_sources = Some(analysis.sources.clone());
             }
             draw_count_rate_overlay(&axis_painter, layout.image_rect, layout, visible);
-            if let Some(hover) = response.hover_pos() {
-                draw_crosshair(&axis_painter, hover, layout.image_rect, Some(preview_area));
+            if response.hover_pos().is_some() {
+                draw_crosshair(
+                    &axis_painter,
+                    effective_hover,
+                    layout.image_rect,
+                    Some(preview_area),
+                );
             }
             draw_time_axis(&axis_painter, layout.image_rect, layout, visible);
             draw_x_axis(&axis_painter, ui, layout.image_rect, series, &source_cols);
             let details = hover_details(
-                &response,
+                effective_hover,
                 layout.image_rect,
                 series,
                 visible,
@@ -183,8 +201,9 @@ pub fn draw_spectrogram_plot_area(
                 &source_cols,
                 total_rows,
             );
-            if !details.is_empty() {
-                response.clone().on_hover_text(details);
+            let tooltip = spectrogram_tooltip(details, peak_analysis.as_ref(), focused);
+            if !tooltip.is_empty() {
+                response.clone().on_hover_text(tooltip);
             }
         }
     });
@@ -192,58 +211,48 @@ pub fn draw_spectrogram_plot_area(
     peak_sources.and_then(|sources| draw_source_chips(ui, &sources))
 }
 
-fn peak_analysis_for_view(
-    state: &mut SpectrogramState,
-    config: &AppConfig,
-) -> Option<PeakAnalysis> {
-    if !state.show_peaks {
-        return None;
+fn snapped_peak_hover(
+    hover: Pos2,
+    image_rect: egui::Rect,
+    preview_area: egui::Rect,
+    series: &crate::spectrogram::model::SpectrogramSeries,
+    source_cols: &[usize],
+    peak_analysis: Option<&PeakAnalysis>,
+) -> (Pos2, Option<usize>) {
+    let in_plot = image_rect.contains(hover) || preview_area.contains(hover);
+    if !in_plot {
+        return (hover, None);
     }
-    let series_for_peaks = series_for_peak_data(state)?;
-    let params = DetectionParams::from_app_config(config);
-    let token = spectrogram_series_peak_token(&series_for_peaks);
-    let totals = state
-        .totals_memo
-        .get_or_compute(token, || channel_totals(&series_for_peaks));
-    let channel_count = series_for_peaks.header.channel_count as usize;
-    let energies: Vec<f64> = series_for_peaks
-        .energies_kev
-        .iter()
-        .take(channel_count)
-        .copied()
-        .collect();
-    let key = crate::peaks::PeakMemoKey::new(token, params);
-    let peaks = state
-        .peak_memo
-        .get_or_compute(key, || {
-            peaks_from_channel_totals(&energies, totals.as_ref(), params)
-        })
-        .to_vec();
-    Some(analyze_peaks(&peaks, config))
+    let Some(analysis) = peak_analysis else {
+        return (hover, None);
+    };
+    snapped_hover(
+        hover,
+        image_rect,
+        series,
+        source_cols,
+        &analysis.identifications,
+    )
 }
 
-fn series_for_peak_data(
-    state: &SpectrogramState,
-) -> Option<Arc<crate::spectrogram::model::SpectrogramSeries>> {
-    match state.display {
-        SpectrogramDisplay::Live => state.live_series.clone(),
-        SpectrogramDisplay::Loaded => state
-            .loaded_series
-            .as_ref()
-            .map(|series| Arc::new(series.clone())),
+fn spectrogram_tooltip(
+    details: String,
+    peak_analysis: Option<&PeakAnalysis>,
+    focused: Option<usize>,
+) -> String {
+    let Some(index) = focused else {
+        return details;
+    };
+    let Some(analysis) = peak_analysis else {
+        return details;
+    };
+    let Some(identification) = analysis.identifications.get(index) else {
+        return details;
+    };
+    let peak_text = peak_hover_text(identification);
+    if details.is_empty() {
+        peak_text
+    } else {
+        format!("{peak_text}\n\n{details}")
     }
-}
-
-fn channels_for_view(state: &SpectrogramState) -> usize {
-    state
-        .active_series()
-        .map(|series| {
-            channels_in_energy_range(
-                &series.energies_kev,
-                state.view_range.energy_min_kev,
-                state.view_range.energy_max_kev,
-            )
-            .max(1)
-        })
-        .unwrap_or(DEFAULT_EMPTY_CHANNELS)
 }

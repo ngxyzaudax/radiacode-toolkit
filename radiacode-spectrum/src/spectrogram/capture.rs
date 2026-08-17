@@ -35,7 +35,6 @@ impl SpectrogramCapture {
         let _ = self.with_progress_mut(|progress| {
             progress.capture_enabled = true;
             progress.skip_next_sample = true;
-            progress.status = "Waiting for first fresh spectrum sample.".into();
             progress.mark_dirty();
         });
     }
@@ -46,8 +45,6 @@ impl SpectrogramCapture {
             progress.reconnect_baseline_pending = true;
             progress.baseline = None;
             progress.last_ingest_at = None;
-            progress.status =
-                "Reconnecting. Next sample re-baselines; offline counts become a gap row.".into();
             progress.mark_dirty();
         });
     }

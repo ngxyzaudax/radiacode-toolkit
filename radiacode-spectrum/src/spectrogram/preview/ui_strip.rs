@@ -7,6 +7,7 @@ use crate::scale::{YScale, display_value, y_axis_top};
 use crate::spectrogram::model::{SpectrogramDisplay, SpectrogramSeries};
 use crate::spectrogram::preview::geometry::{column_center_x, energy_to_x};
 use crate::theme::SPECTRUM_BAR;
+use crate::time_format::format_hms;
 
 const PLOT_BG: Color32 = Color32::from_rgb(8, 10, 16);
 const FILL_ALPHA: f32 = 0.35;
@@ -19,11 +20,11 @@ pub fn preview_hover_text(
     total_rows: usize,
     follow_live: bool,
 ) -> String {
-    let duration = format_duration(series.duration_secs());
+    let duration = format_hms(series.duration_secs());
     let interval = series.header.interval_secs.round() as u64;
     let (gap_count, gap_offline) = series.gap_summary();
     let gap_suffix = if gap_count > 0 {
-        format!("\ngaps: {gap_count} ({})", format_duration(gap_offline))
+        format!("\ngaps: {gap_count} ({})", format_hms(gap_offline))
     } else {
         String::new()
     };
@@ -34,7 +35,7 @@ pub fn preview_hover_text(
     let follow = if follow_live { "live" } else { "history" };
     let energy_max = series.energies_kev.last().copied().unwrap_or(0.0);
     format!(
-        "{mode}  |  total {duration}  |  interval {interval}s  |  {} ch  |  0–{energy_max:.0} keV{gap_suffix}\n{total_rows} rows  |  {follow}\nscroll zoom section, Shift+scroll history, drag pan, double-click fit all",
+        "{mode}  |  total {duration}  |  interval {interval}s  |  {} ch  |  0–{energy_max:.0} keV{gap_suffix}\n{total_rows} rows  |  {follow}\nscroll zoom, drag pan, double-click fit all",
         series.header.channel_count
     )
 }
@@ -145,14 +146,6 @@ fn draw_peak_ticks(
             stroke,
         );
     }
-}
-
-fn format_duration(secs: f64) -> String {
-    let total = secs.max(0.0).round() as u64;
-    let hours = total / 3600;
-    let minutes = (total % 3600) / 60;
-    let seconds = total % 60;
-    format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
 #[cfg(test)]

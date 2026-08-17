@@ -33,9 +33,10 @@ pub fn apply(ctx: &egui::Context) {
 pub const SPECTRUM_BAR: Color32 = Color32::from_rgb(245, 196, 0);
 pub const ACCENT: Color32 = Color32::from_rgb(120, 168, 220);
 pub const MUTED: Color32 = Color32::from_rgb(150, 158, 172);
-pub const ANALYSIS_BACKGROUND: Color32 = ACCENT;
+pub const ERROR: Color32 = Color32::from_rgb(220, 120, 120);
+pub const COMPARE_BACKGROUND: Color32 = ACCENT;
 
-const ANALYSIS_SAMPLE_COLORS: [Color32; 8] = [
+const COMPARE_SAMPLE_COLORS: [Color32; 8] = [
     Color32::from_rgb(245, 196, 0),
     Color32::from_rgb(236, 120, 96),
     Color32::from_rgb(168, 132, 232),
@@ -46,6 +47,6 @@ const ANALYSIS_SAMPLE_COLORS: [Color32; 8] = [
     Color32::from_rgb(96, 168, 240),
 ];
 
-pub fn analysis_sample_color(index: usize) -> Color32 {
-    ANALYSIS_SAMPLE_COLORS[index % ANALYSIS_SAMPLE_COLORS.len()]
+pub fn compare_sample_color(index: usize) -> Color32 {
+    COMPARE_SAMPLE_COLORS[index % COMPARE_SAMPLE_COLORS.len()]
 }

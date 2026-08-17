@@ -1,11 +1,11 @@
-use crate::analysis::compare::compare;
-use crate::analysis::spectrum::CollapsedSpectrum;
-use crate::analysis::state::SampleAnalysis;
+use crate::compare::spectrum::CollapsedSpectrum;
+use crate::compare::state::ComparedSample;
+use crate::compare::subtract::subtract;
 
 pub fn rebuild_samples(
     paths_loaded: Vec<Option<CollapsedSpectrum>>,
     background: Option<&CollapsedSpectrum>,
-) -> (Vec<SampleAnalysis>, String) {
+) -> (Vec<ComparedSample>, String) {
     let mut samples = Vec::new();
     let mut errors = Vec::new();
     for loaded in paths_loaded {
@@ -13,9 +13,9 @@ pub fn rebuild_samples(
             errors.push("Failed to load a selected sample.".into());
             continue;
         };
-        let comparison = match background {
-            Some(background) => match compare(&spectrum, background) {
-                Ok(comparison) => Some(comparison),
+        let subtraction = match background {
+            Some(background) => match subtract(&spectrum, background) {
+                Ok(subtraction) => Some(subtraction),
                 Err(message) => {
                     errors.push(format!("{}: {message}", spectrum.name));
                     None
@@ -23,9 +23,9 @@ pub fn rebuild_samples(
             },
             None => None,
         };
-        samples.push(SampleAnalysis {
+        samples.push(ComparedSample {
             spectrum,
-            comparison,
+            subtraction,
         });
     }
     (samples, errors.join(" · "))

@@ -7,8 +7,8 @@ use radiacode_core::{DeviceEndpoint, TransportKind, merge_discovered, resolve_us
 use tracing::{debug, info, warn};
 
 use crate::about::draw_about_view;
-use crate::analysis::{AnalysisState, draw_analysis_view};
 use crate::catalogue::{CatalogueState, draw_catalogue_view};
+use crate::compare::{CompareState, draw_compare_view};
 use crate::device::{DeviceAction, DeviceViewProps, draw_device_view};
 use crate::events::{AppState, EventRouter};
 use crate::layout::page_scroll;
@@ -45,7 +45,7 @@ pub struct SpectrumApp {
     state: AppState,
     settings: SettingsState,
     spectrogram: SpectrogramState,
-    analysis: AnalysisState,
+    compare: CompareState,
     catalogue: CatalogueState,
     tabs: TabNavigation,
     view: SpectrumViewState,
@@ -65,14 +65,14 @@ impl SpectrumApp {
         spectrogram.settings = settings.spectrogram.clone();
         spectrogram.on_settings_changed();
         spectrogram.refresh_history();
-        let mut analysis = AnalysisState::new();
-        analysis.refresh_library(&settings.spectrogram.recordings_dir);
+        let mut compare = CompareState::new();
+        compare.refresh_library(&settings.spectrogram.recordings_dir);
         Self {
             worker: spawn_worker(capture),
             state: AppState::new(),
             settings,
             spectrogram,
-            analysis,
+            compare,
             catalogue: CatalogueState::new(),
             tabs: TabNavigation::new(),
             view: SpectrumViewState::new(),
@@ -440,7 +440,7 @@ impl SpectrumApp {
                     .apply_spectrogram_to(&mut self.spectrogram.settings);
                 self.spectrogram.on_settings_changed();
                 if self.spectrogram.settings.recordings_dir != previous_dir {
-                    self.analysis
+                    self.compare
                         .refresh_library(&self.spectrogram.settings.recordings_dir);
                 }
                 if (previous_interval - self.spectrogram.settings.capture_interval_secs).abs()
@@ -538,22 +538,30 @@ impl SpectrumApp {
                     .spectrogram
                     .start_recording(self.state.spectrum.as_ref(), serial)
                 {
-                    self.spectrogram.status = message;
+                    self.spectrogram.error = message;
+                } else {
+                    self.spectrogram.error.clear();
                 }
             }
             SpectrogramControlsAction::StopRecording => {
                 if let Err(message) = self.spectrogram.stop_recording() {
-                    self.spectrogram.status = message;
+                    self.spectrogram.error = message;
+                } else {
+                    self.spectrogram.error.clear();
                 }
             }
             SpectrogramControlsAction::PauseCapture => {
                 if let Err(message) = self.spectrogram.pause_capture() {
-                    self.spectrogram.status = message;
+                    self.spectrogram.error = message;
+                } else {
+                    self.spectrogram.error.clear();
                 }
             }
             SpectrogramControlsAction::ResumeCapture => {
                 if let Err(message) = self.spectrogram.resume_capture() {
-                    self.spectrogram.status = message;
+                    self.spectrogram.error = message;
+                } else {
+                    self.spectrogram.error.clear();
                 }
             }
             SpectrogramControlsAction::ResumeRecording => {
@@ -566,8 +574,14 @@ impl SpectrumApp {
                     .spectrogram
                     .resume_recording(self.state.spectrum.as_ref(), serial)
                 {
-                    self.spectrogram.status = message;
+                    self.spectrogram.error = message;
+                } else {
+                    self.spectrogram.error.clear();
                 }
+            }
+            SpectrogramControlsAction::ResetAccumulation => {
+                self.spectrogram.reset_accumulation();
+                self.spectrogram.error.clear();
             }
             SpectrogramControlsAction::CloseLoaded => self.spectrogram.close_loaded(),
             SpectrogramControlsAction::Load(path) => self.spectrogram.request_load(path),
@@ -583,7 +597,7 @@ impl SpectrumApp {
             }
             SpectrogramControlsAction::LibraryChanged => {
                 self.spectrogram.refresh_history();
-                self.analysis
+                self.compare
                     .refresh_library(&self.spectrogram.settings.recordings_dir);
             }
         }
@@ -594,8 +608,8 @@ impl SpectrumApp {
         self.spectrogram.on_tab_enter();
     }
 
-    fn enter_analysis_tab(&mut self) {
-        self.analysis
+    fn enter_compare_tab(&mut self) {
+        self.compare
             .refresh_library(&self.spectrogram.settings.recordings_dir);
     }
 
@@ -704,10 +718,10 @@ impl SpectrumApp {
             page_scroll(ui, "about_page", draw_about_view);
             return;
         }
-        if self.tabs.active == ViewTab::Analysis {
-            if let Some(action) = draw_analysis_view(
+        if self.tabs.active == ViewTab::Compare {
+            if let Some(action) = draw_compare_view(
                 ui,
-                &mut self.analysis,
+                &mut self.compare,
                 &mut self.view.y_scale,
                 &self.settings.app,
             ) {
@@ -745,6 +759,7 @@ impl SpectrumApp {
                         ui,
                         SpectrumToolbarProps {
                             connection: self.state.connection,
+                            spectrum: self.state.spectrum.as_ref(),
                             y_scale: &mut self.view.y_scale,
                             smooth_window: &mut self.view.smooth_window,
                             outline_only: &mut self.view.plot_outline_only,
@@ -785,7 +800,7 @@ impl SpectrumApp {
                     }
                 }
                 ViewTab::Device
-                | ViewTab::Analysis
+                | ViewTab::Compare
                 | ViewTab::Catalogue
                 | ViewTab::Settings
                 | ViewTab::About => {}
@@ -850,8 +865,8 @@ impl App for SpectrumApp {
             if self.tabs.active == ViewTab::Spectrogram && previous_tab != ViewTab::Spectrogram {
                 self.enter_spectrogram_tab();
             }
-            if self.tabs.active == ViewTab::Analysis && previous_tab != ViewTab::Analysis {
-                self.enter_analysis_tab();
+            if self.tabs.active == ViewTab::Compare && previous_tab != ViewTab::Compare {
+                self.enter_compare_tab();
             }
             if self.tabs.active == ViewTab::Catalogue && previous_tab != ViewTab::Catalogue {
                 self.enter_catalogue_tab();

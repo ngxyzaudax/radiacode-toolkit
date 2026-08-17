@@ -33,7 +33,7 @@ cargo install --path radiacode-spectrum
 | Monitor | `src/monitor/` | [docs/monitor](../docs/monitor/README.md) |
 | Spectrum | `src/ui_plot.rs`, `src/peaks/` | [docs/spectrum](../docs/spectrum/README.md) |
 | Spectrogram | `src/spectrogram/` | [docs/spectrogram](../docs/spectrogram/README.md) |
-| Analysis | `src/analysis/` | [docs/analysis](../docs/analysis/README.md) |
+| Compare | `src/compare/` | [docs/compare](../docs/compare/README.md) |
 | Catalogue | `src/catalogue/` | [docs/catalogue](../docs/catalogue/README.md) |
 | Settings | `src/settings/` | [docs/settings](../docs/settings/README.md) |
 

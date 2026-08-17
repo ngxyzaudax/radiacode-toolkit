@@ -57,11 +57,7 @@ pub fn start_recording(
         progress.paused_recording_path = None;
         progress.capture_enabled = true;
         progress.last_auto_save = None;
-        progress.status = if seeded_rows > 0 {
-            format!("Recording started with {seeded_rows} existing row(s).")
-        } else {
-            "Recording started.".into()
-        };
+        progress.error.clear();
         progress.mark_dirty();
     }
     cap.recording = Some(writer);
@@ -73,18 +69,14 @@ pub fn pause_capture(state: &mut SpectrogramState) -> Result<(), String> {
         .capture
         .lock()
         .map_err(|_| "capture lock failed".to_string())?;
-    let recording_active = cap.recording.is_some();
     let mut progress = cap
         .progress
         .lock()
         .map_err(|_| "capture progress lock failed".to_string())?;
     progress.capture_enabled = false;
-    progress.status = if recording_active {
-        "Recording paused.".into()
-    } else {
-        "Live capture paused.".into()
-    };
+    progress.error.clear();
     progress.mark_dirty();
+    info!("spectrogram recording paused");
     Ok(())
 }
 
@@ -93,19 +85,15 @@ pub fn resume_capture(state: &mut SpectrogramState) -> Result<(), String> {
         .capture
         .lock()
         .map_err(|_| "capture lock failed".to_string())?;
-    let recording_active = cap.recording.is_some();
     let mut progress = cap
         .progress
         .lock()
         .map_err(|_| "capture progress lock failed".to_string())?;
     progress.capture_enabled = true;
     progress.skip_next_sample = true;
-    progress.status = if recording_active {
-        "Recording.".into()
-    } else {
-        "Live capture.".into()
-    };
+    progress.error.clear();
     progress.mark_dirty();
+    info!("spectrogram capture resumed");
     Ok(())
 }
 
@@ -125,7 +113,7 @@ pub fn stop_recording(state: &mut SpectrogramState) -> Result<(), String> {
             .lock()
             .map_err(|_| "capture progress lock failed".to_string())?;
         progress.paused_recording_path = Some(path.clone());
-        progress.status = format!("Saved {}. Resume to append.", path.display());
+        progress.error.clear();
         progress.mark_dirty();
     }
     drop(cap);
@@ -169,9 +157,10 @@ pub fn resume_recording(
         progress.skip_next_sample = true;
         progress.capture_enabled = true;
         progress.last_auto_save = None;
-        progress.status = format!("Recording resumed to {}.", path.display());
+        progress.error.clear();
         progress.mark_dirty();
     }
+    info!(path = %path.display(), "spectrogram recording resumed");
     Ok(())
 }
 
@@ -188,17 +177,10 @@ pub fn load_into_state(state: &mut SpectrogramState, path: PathBuf) {
             if let Some(loaded) = state.loaded_series.as_ref() {
                 state.view_range.fit_series_energy(&loaded.energies_kev);
             }
-            state.status = if state.is_recording() {
-                format!(
-                    "Viewing library file {} (recording continues).",
-                    path.display()
-                )
-            } else {
-                format!("Loaded {}", path.display())
-            };
+            state.error.clear();
             state.texture.dirty = true;
             state.z_range_rows = 0;
         }
-        Err(error) => state.status = format!("Load failed: {error}"),
+        Err(error) => state.error = format!("Load failed: {error}"),
     }
 }

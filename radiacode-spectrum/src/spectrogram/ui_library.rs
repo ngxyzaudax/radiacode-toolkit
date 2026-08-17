@@ -41,12 +41,12 @@ fn import_rcspg(state: &mut SpectrogramState, action: &mut Option<SpectrogramCon
         .pick_file()
     {
         match library::import_rcspg(&path, &state.settings.recordings_dir) {
-            Ok(saved) => {
-                state.status = format!("Imported {}", saved.display());
+            Ok(_saved) => {
+                state.error.clear();
                 state.refresh_history();
                 *action = Some(SpectrogramControlsAction::LibraryChanged);
             }
-            Err(message) => state.status = message,
+            Err(message) => state.error = message,
         }
     }
 }

@@ -7,6 +7,7 @@ pub enum SpectrogramControlsAction {
     PauseCapture,
     ResumeCapture,
     ResumeRecording,
+    ResetAccumulation,
     CloseLoaded,
     Load(PathBuf),
     SettingsChanged,
