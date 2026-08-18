@@ -280,20 +280,6 @@ async fn worker_loop(
                 )
                 .await;
             }
-            _ = spectrum_tick.tick(), if session.device.is_some() => {
-                debug!(capture_interval_secs, "worker background spectrum fetch");
-                run_fetch_batch(
-                    CoalescedBatch {
-                        priority: None,
-                        fetch_monitor: false,
-                        fetch_spectrum: true,
-                    },
-                    &events,
-                    &session_epoch,
-                    &mut session,
-                )
-                .await;
-            }
             _ = monitor_tick.tick(), if session.device.is_some() => {
                 debug!("worker background monitor fetch");
                 run_fetch_batch(
@@ -301,6 +287,20 @@ async fn worker_loop(
                         priority: None,
                         fetch_monitor: true,
                         fetch_spectrum: false,
+                    },
+                    &events,
+                    &session_epoch,
+                    &mut session,
+                )
+                .await;
+            }
+            _ = spectrum_tick.tick(), if session.device.is_some() => {
+                debug!(capture_interval_secs, "worker background spectrum fetch");
+                run_fetch_batch(
+                    CoalescedBatch {
+                        priority: None,
+                        fetch_monitor: true,
+                        fetch_spectrum: true,
                     },
                     &events,
                     &session_epoch,

@@ -59,7 +59,9 @@ fn window_is_full_width_with_one_sample() {
 #[test]
 fn window_scrolls_with_latest_sample() {
     let mut monitor = MonitorState::default_for_tests();
+    monitor.set_wall_elapsed_for_tests(std::time::Duration::from_secs(10));
     monitor.push_poll(&[timed(10.0, 1.0, 10.0)], 0, 0, 0, &[]);
+    monitor.set_wall_elapsed_for_tests(std::time::Duration::from_secs(150));
     monitor.push_poll(&[timed(150.0, 2.0, 20.0)], 0, 0, 0, &[]);
     let bounds = bounds_for(&monitor, PlotSeries::Dose);
     assert!((bounds.x_min - 20.0).abs() < 0.01);

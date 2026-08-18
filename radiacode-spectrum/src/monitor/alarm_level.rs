@@ -1,4 +1,9 @@
-use crate::monitor::state::AlarmLevel;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AlarmLevel {
+    Normal,
+    Warning,
+    Danger,
+}
 
 pub fn alarm_level(value: Option<f32>, limits: Option<(f32, f32)>) -> AlarmLevel {
     let Some(value) = value else {

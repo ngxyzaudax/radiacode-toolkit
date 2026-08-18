@@ -2,7 +2,8 @@ use egui::{Color32, RichText, Ui};
 
 use crate::dosimeter::{DosimeterState, format_session_duration};
 use crate::model::ConnectionState;
-use crate::monitor::state::{AlarmLevel, MonitorState};
+use crate::monitor::alarm_level::AlarmLevel;
+use crate::monitor::state::MonitorState;
 use crate::theme::MUTED;
 use crate::ui::{DOSE_RESET, draw_reset_confirm};
 
