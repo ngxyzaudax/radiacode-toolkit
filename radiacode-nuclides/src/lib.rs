@@ -26,7 +26,7 @@ pub use activity::{
 pub use catalog::{catalog, nuclide_by_id, nuclide_count, nuclide_index};
 pub use chain::{ChainStep, decay_branch_label, decay_chain, decay_mode_label};
 pub use chain_graph::{ChainEdge, ChainNode, DecayGraph, decay_graph};
-pub use chain_lines::{AttributedLine, chain_lines, strongest_chain_line};
+pub use chain_lines::{AttributedLine, chain_lines, strongest_chain_line, strongest_chain_peak_kev};
 pub use elements::{element_symbol, nuclide_display_name};
 pub use equilibrium::{
     MemberWeight, bottleneck_member, equilibrium_weights, time_to_equilibrium_secs,

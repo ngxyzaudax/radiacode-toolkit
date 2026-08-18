@@ -4,10 +4,13 @@ use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::delta::interval_row_counts;
 use crate::spectrogram::model::RowKind;
 
-const GAP_DEVICE_FACTOR: f64 = 1.5;
 const GAP_WALL_MIN_SECS: f64 = 10.0;
 const GAP_WALL_FACTOR: f64 = 3.0;
 const MIN_ROW_DEVICE_FACTOR: f64 = 0.85;
+
+fn gap_threshold_secs(capture_interval_secs: f64) -> f64 {
+    GAP_WALL_MIN_SECS.max(capture_interval_secs * GAP_WALL_FACTOR)
+}
 
 pub struct ClassifiedRow {
     pub kind: RowKind,
@@ -26,10 +29,8 @@ pub fn classify_row(
     let row_total = row_counts.iter().map(|&value| value as u64).sum();
     let device_duration_delta = spectrum.duration.as_secs_f64() - baseline.device_duration_secs;
     let wall_gap = baseline.ingested_at.elapsed().as_secs_f64();
-    let wall_threshold = GAP_WALL_MIN_SECS.max(capture_interval_secs * GAP_WALL_FACTOR);
-    if device_duration_delta > capture_interval_secs * GAP_DEVICE_FACTOR
-        || wall_gap > wall_threshold
-    {
+    let gap_threshold = gap_threshold_secs(capture_interval_secs);
+    if device_duration_delta > gap_threshold || wall_gap > gap_threshold {
         let offline_secs = device_duration_delta
             .max(wall_gap)
             .max(capture_interval_secs);
@@ -85,7 +86,9 @@ fn effective_interval_secs(
     } else {
         wall_gap
     };
-    interval.max(0.1).min(capture_interval_secs * 2.0)
+    interval
+        .max(0.1)
+        .min(gap_threshold_secs(capture_interval_secs))
 }
 
 fn channel_total(values: &[u32]) -> u64 {

@@ -10,6 +10,24 @@ pub struct AttributedLine {
     pub scaled_intensity_pct: f64,
 }
 
+pub fn strongest_chain_peak_kev(weights: &[MemberWeight]) -> Option<f64> {
+    let mut best_intensity = 0.0f64;
+    let mut peak_kev = None;
+    for member in weights {
+        let Some(nuclide) = nuclide_by_id(member.id) else {
+            continue;
+        };
+        for line in &nuclide.gammas {
+            let scaled = line.intensity_pct * member.weight;
+            if scaled > best_intensity {
+                best_intensity = scaled;
+                peak_kev = Some(line.energy_kev);
+            }
+        }
+    }
+    peak_kev
+}
+
 pub fn chain_lines(weights: &[MemberWeight]) -> Vec<AttributedLine> {
     let mut lines = Vec::new();
     for member in weights {

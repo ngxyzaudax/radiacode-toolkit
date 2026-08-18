@@ -78,6 +78,25 @@ fn gap_display_scales_brightness_down() {
     assert_eq!(scaled, 100);
 }
 
+#[test]
+fn normal_row_preserves_sub_threshold_gap_interval() {
+    let baseline = IngestBaseline {
+        counts: vec![10; 512],
+        device_duration_secs: 0.0,
+        ingested_at: Instant::now(),
+    };
+    let cumulative = vec![100; 512];
+    let classified = classify_row(
+        &spectrum(100, 9),
+        &baseline,
+        &cumulative,
+        1.0,
+        &[20 * 512],
+    );
+    assert!(matches!(classified.kind, RowKind::Normal));
+    assert!((classified.interval_secs - 9.0).abs() < 0.1);
+}
+
 fn spectrum(total: u32, duration_secs: u64) -> SpectrumView {
     SpectrumView {
         duration: Duration::from_secs(duration_secs),

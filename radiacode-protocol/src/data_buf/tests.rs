@@ -121,28 +121,52 @@ fn unknown_record_stops_decode_without_phantom_seq_jumps() {
     assert_eq!(frame.records.len(), 0);
 }
 
-fn build_event_record(seq: u8, event: u8, param: u8, value: f32) -> Vec<u8> {
-    let flags = 0x1141_u16.to_le_bytes();
-    let value_bytes = value.to_le_bytes();
+fn build_event_record(seq: u8, event: u8, param: u8, flags: u16) -> Vec<u8> {
     let mut bytes = vec![seq, 0, 7, 0x00, 0x00, 0x00, 0x00];
     bytes.push(event);
     bytes.push(param);
-    bytes.extend_from_slice(&flags);
-    bytes.extend_from_slice(&value_bytes);
-    bytes.extend_from_slice(&[0x33, 0x00]);
+    bytes.extend_from_slice(&flags.to_le_bytes());
     bytes
 }
 
 #[test]
-fn parses_event_record_with_ten_byte_payload() {
-    let bytes = build_event_record(1, 0x14, 0x03, 20.08);
+fn parses_event_record_with_four_byte_payload() {
+    let bytes = build_event_record(1, 0x14, 0x03, 0x1141);
     let frame = decode_data_buf(&bytes);
     assert_eq!(frame.warnings.len(), 0);
     assert_eq!(frame.records.len(), 1);
     let DataBufRecord::Event(record) = &frame.records[0] else {
         panic!("expected event record");
     };
-    assert!((record.value - 20.08).abs() < 0.01);
+    assert_eq!(record.event_param1, 0x03);
+    assert_eq!(record.flags.raw(), 0x1141);
+}
+
+#[test]
+fn event_followed_by_real_time_decodes_both_without_resync() {
+    let count_rate = 12.5f32.to_le_bytes();
+    let dose_rate = 0.000_125f32.to_le_bytes();
+    let mut bytes = build_event_record(1, 0x04, 0x00, 0x0000);
+    bytes.extend_from_slice(&[2u8, 0, 0, 0, 0, 0, 0]);
+    bytes.extend_from_slice(&count_rate);
+    bytes.extend_from_slice(&dose_rate);
+    bytes.extend_from_slice(&[0u8; 7]);
+    let frame = decode_data_buf(&bytes);
+    assert_eq!(frame.records.len(), 2);
+    assert_eq!(frame.resync_count, 0);
+    assert!(matches!(&frame.records[0], DataBufRecord::Event(_)));
+    assert!(matches!(&frame.records[1], DataBufRecord::RealTime(_)));
+    assert!(
+        !frame
+            .warnings
+            .iter()
+            .any(|warning| matches!(
+                warning.kind,
+                DecodeWarningKind::SeqJump { .. }
+                    | DecodeWarningKind::UnknownRecord { .. }
+                    | DecodeWarningKind::TruncatedTail
+            ))
+    );
 }
 
 #[test]

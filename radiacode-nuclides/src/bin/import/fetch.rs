@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use radiacode_nuclides::GammaLine;
+use rayon::prelude::*;
 
-use super::parse::{parse_gamma_rows, parse_xray_rows};
+use super::isomer::RadiationBundle;
 use super::{API_BASE, USER_AGENT};
 
 pub fn fetch_csv(url: &str) -> Result<Vec<HashMap<String, String>>, Box<dyn std::error::Error>> {
@@ -26,10 +26,30 @@ pub fn fetch_csv(url: &str) -> Result<Vec<HashMap<String, String>>, Box<dyn std:
     Ok(rows)
 }
 
-pub fn fetch_radiations(slug: &str) -> Vec<GammaLine> {
-    let gamma_url = format!("{API_BASE}?fields=decay_rads&rad_types=g&nuclides={slug}");
-    let xray_url = format!("{API_BASE}?fields=decay_rads&rad_types=x&nuclides={slug}");
-    let mut radiations = parse_gamma_rows(&fetch_csv(&gamma_url).unwrap_or_default());
-    radiations.extend(parse_xray_rows(&fetch_csv(&xray_url).unwrap_or_default()));
-    radiations
+pub fn fetch_radiation_bundle(slug: &str) -> RadiationBundle {
+    let [gamma_rows, xray_rows, beta_minus_rows, beta_plus_rows]: [Vec<_>; 4] =
+        ["g", "x", "bm", "bp"]
+            .par_iter()
+            .map(|rad_type| fetch_decay_rows(slug, rad_type))
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap_or_else(|_| unreachable!());
+    RadiationBundle {
+        gamma_rows,
+        xray_rows,
+        beta_minus_rows,
+        beta_plus_rows,
+    }
+}
+
+pub fn fetch_radiation_bundles(slugs: &[String]) -> HashMap<String, RadiationBundle> {
+    slugs
+        .par_iter()
+        .map(|slug| (slug.clone(), fetch_radiation_bundle(slug)))
+        .collect()
+}
+
+fn fetch_decay_rows(slug: &str, rad_type: &str) -> Vec<HashMap<String, String>> {
+    let url = format!("{API_BASE}?fields=decay_rads&rad_types={rad_type}&nuclides={slug}");
+    fetch_csv(&url).unwrap_or_default()
 }

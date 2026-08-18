@@ -44,7 +44,11 @@ fn identifies_cs137_peak() {
     }];
     let identifications = match_peaks(&peaks, MatchParams::default());
     let best = identifications[0].candidates.first().expect("candidate");
-    assert!(best.display_name.contains("Cs"));
+    assert!(
+        best.display_name.contains("Cs") || best.display_name.starts_with("Ba-137m"),
+        "expected Cs-137 or Ba-137m for 661.7 keV, got {}",
+        best.display_name
+    );
 }
 
 #[test]

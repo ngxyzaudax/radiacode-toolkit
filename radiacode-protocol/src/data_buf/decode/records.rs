@@ -110,15 +110,11 @@ fn parse_event(buffer: &mut BytesBuffer, header: RecordHeader) -> Result<EventRe
     let event = EventId::from_raw(buffer.take_u8()?);
     let event_param1 = buffer.take_u8()?;
     let flags = StatusFlags::new(buffer.take_u16_le()?);
-    let value = buffer.take_f32_le()?;
-    let trailing = buffer.take_u16_le()?;
     Ok(EventRecord {
         header,
         event,
         event_param1,
         flags,
-        value,
-        trailing,
     })
 }
 

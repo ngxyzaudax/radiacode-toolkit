@@ -52,15 +52,15 @@ pub fn import_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
         if values.len() < 2 {
             continue;
         }
-        let row_interval = values[1] as f64;
+        let row_interval = values[1];
         let kind = if values.len() >= 4 {
             let raw_total = values
                 .iter()
                 .skip(4)
                 .take(channels as usize)
-                .map(|&value| value as u64)
+                .map(|&value| value.max(0.0) as u64)
                 .sum();
-            RowKind::from_storage_tag(values[2] as u8, values[3] as f64, raw_total)
+            RowKind::from_storage_tag(values[2].round() as u8, values[3], raw_total)
         } else {
             RowKind::Normal
         };
@@ -69,7 +69,7 @@ pub fn import_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
             .iter()
             .skip(count_offset)
             .take(channels as usize)
-            .map(|&value| value as u32)
+            .map(|&value| value.max(0.0).round() as u32)
             .collect();
         rows.push(SpectrogramRow {
             elapsed_secs: elapsed,
@@ -133,7 +133,7 @@ fn parse_header_field<'a>(line: &'a str, key: &str) -> Option<&'a str> {
     })
 }
 
-fn parse_number_list(line: &str) -> Vec<i64> {
+fn parse_number_list(line: &str) -> Vec<f64> {
     line.split_whitespace()
         .filter_map(|token| token.parse().ok())
         .collect()

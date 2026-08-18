@@ -9,6 +9,13 @@ pub fn parse_ground_states(rows: &[HashMap<String, String>]) -> Vec<Candidate> {
 }
 
 fn parse_ground_row(row: &HashMap<String, String>) -> Option<Candidate> {
+    let energy = row
+        .get("energy")
+        .and_then(|value| value.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    if energy.abs() > 0.001 {
+        return None;
+    }
     let z = parse_u8(row.get("z")?)?;
     let n = parse_u16(row.get("n")?)?;
     if z == 0 {
@@ -18,33 +25,35 @@ fn parse_ground_row(row: &HashMap<String, String>) -> Option<Candidate> {
     if symbol.is_empty() {
         return None;
     }
-    let half_life_text = row
-        .get("half_life")
-        .filter(|value| !value.trim().is_empty())
-        .cloned()
-        .unwrap_or_else(|| "stable".to_string());
-    let half_life_secs = row
-        .get("half_life_sec")
-        .and_then(|value| value.parse::<f64>().ok())
-        .filter(|value| value.is_finite() && *value > 0.0);
-    let metastable = row
-        .get("energy_shift")
-        .and_then(|value| value.parse::<u8>().ok())
-        .unwrap_or(0);
-    let id = NuclideId::new(z, n, metastable);
+    let id = NuclideId::new(z, n, 0);
     let decays = parse_decay_branches(row, id);
     Some(Candidate {
         id,
         symbol,
         mass_number: id.mass_number(),
-        half_life_secs,
-        half_life_text,
+        half_life_secs: parse_half_life_secs(row),
+        half_life_text: half_life_text_from_row(row),
         decays,
         force_include: false,
+        level_energy_kev: 0.0,
     })
 }
 
-fn parse_decay_branches(row: &HashMap<String, String>, parent: NuclideId) -> Vec<DecayBranch> {
+pub fn half_life_text_from_row(row: &HashMap<String, String>) -> String {
+    row.get("half_life")
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn parse_half_life_secs(row: &HashMap<String, String>) -> Option<f64> {
+    row.get("half_life_sec")
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|value| value.is_finite() && *value > 0.0)
+}
+
+pub fn parse_decay_branches(row: &HashMap<String, String>, parent: NuclideId) -> Vec<DecayBranch> {
     [
         ("decay_1", "decay_1_%"),
         ("decay_2", "decay_2_%"),
@@ -74,13 +83,14 @@ fn parse_decay_branches(row: &HashMap<String, String>, parent: NuclideId) -> Vec
     .collect()
 }
 
-fn daughter_from_mode(parent: NuclideId, mode: DecayMode) -> Option<NuclideId> {
+pub fn daughter_from_mode(parent: NuclideId, mode: DecayMode) -> Option<NuclideId> {
     let z = i16::from(parent.z);
     let n = parent.n as i16;
     let (next_z, next_n) = match mode {
         DecayMode::Alpha if z >= 2 && n >= 2 => (z - 2, n - 2),
         DecayMode::BetaMinus => (z + 1, n - 1),
         DecayMode::BetaPlus | DecayMode::ElectronCapture if z >= 1 => (z - 1, n + 1),
+        DecayMode::Isomeric => (z, n),
         DecayMode::Proton if z >= 1 => (z - 1, n),
         DecayMode::Neutron if n >= 1 => (z, n - 1),
         _ => return None,
@@ -91,24 +101,16 @@ fn daughter_from_mode(parent: NuclideId, mode: DecayMode) -> Option<NuclideId> {
     Some(NuclideId::new(next_z as u8, next_n as u16, 0))
 }
 
-pub fn parse_gamma_rows(rows: &[HashMap<String, String>]) -> Vec<GammaLine> {
-    rows.iter()
-        .filter_map(|row| parse_radiation_row(row, RadiationKind::Gamma))
-        .collect()
-}
-
-pub fn parse_xray_rows(rows: &[HashMap<String, String>]) -> Vec<GammaLine> {
-    rows.iter()
-        .filter_map(|row| parse_radiation_row(row, RadiationKind::XRay))
-        .collect()
-}
-
-fn parse_radiation_row(row: &HashMap<String, String>, kind: RadiationKind) -> Option<GammaLine> {
+pub fn parse_radiation_row(
+    row: &HashMap<String, String>,
+    kind: RadiationKind,
+    parent_level_energy_kev: f64,
+) -> Option<GammaLine> {
     let parent_energy = row
         .get("p_energy")
         .and_then(|value| value.parse::<f64>().ok())
         .unwrap_or(0.0);
-    if parent_energy.abs() > 0.001 {
+    if (parent_energy - parent_level_energy_kev).abs() > 0.001 {
         return None;
     }
     let energy = row.get("energy")?.parse::<f64>().ok()?;
@@ -135,23 +137,46 @@ fn parse_radiation_row(row: &HashMap<String, String>, kind: RadiationKind) -> Op
 }
 
 pub fn parse_decay_mode(value: &str) -> DecayMode {
-    match value.trim().to_ascii_uppercase().as_str() {
-        "A" | "ALPHA" => DecayMode::Alpha,
-        "B-" | "BM" | "BETA-" => DecayMode::BetaMinus,
-        "B+" | "BP" | "BETA+" => DecayMode::BetaPlus,
-        "EC" | "EPSILON" => DecayMode::ElectronCapture,
-        "IT" | "ISOMERIC" => DecayMode::Isomeric,
-        "SF" => DecayMode::SpontaneousFission,
-        "P" => DecayMode::Proton,
-        "N" => DecayMode::Neutron,
-        _ => DecayMode::Unknown,
+    let upper = value.trim().to_ascii_uppercase();
+    if upper.contains("IT") || upper.contains("ISOMERIC") {
+        return DecayMode::Isomeric;
+    }
+    if upper.contains("SF") {
+        return DecayMode::SpontaneousFission;
+    }
+    if upper == "A" || upper.starts_with("ALPHA") {
+        return DecayMode::Alpha;
+    }
+    if upper.contains("EC") {
+        return DecayMode::ElectronCapture;
+    }
+    if upper.contains("B+") || upper.contains("BP") {
+        return DecayMode::BetaPlus;
+    }
+    if upper.contains("B-") || upper.contains("BM") || upper.starts_with("2B") {
+        return DecayMode::BetaMinus;
+    }
+    if upper == "P" {
+        return DecayMode::Proton;
+    }
+    if upper == "N" {
+        return DecayMode::Neutron;
+    }
+    DecayMode::Unknown
+}
+
+pub fn display_name(symbol: &str, mass_number: u16, metastable: u8) -> String {
+    match metastable {
+        0 => format!("{symbol}-{mass_number}"),
+        1 => format!("{symbol}-{mass_number}m"),
+        index => format!("{symbol}-{mass_number}m{index}"),
     }
 }
 
-fn parse_u8(value: &str) -> Option<u8> {
+pub fn parse_u8(value: &str) -> Option<u8> {
     value.trim().parse::<u8>().ok()
 }
 
-fn parse_u16(value: &str) -> Option<u16> {
+pub fn parse_u16(value: &str) -> Option<u16> {
     value.trim().parse::<u16>().ok()
 }

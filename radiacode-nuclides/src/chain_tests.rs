@@ -123,3 +123,11 @@ fn chain_search_matches_thorium_family() {
         );
     }
 }
+
+#[test]
+fn equilibrium_weights_terminates_for_all_series() {
+    for series in chain_series() {
+        let weights = equilibrium_weights(series);
+        assert!(weights.len() <= series.members.len());
+    }
+}

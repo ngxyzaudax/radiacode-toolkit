@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::model::NuclideId;
 use crate::series::ChainSeries;
@@ -14,13 +14,21 @@ pub struct MemberWeight {
 }
 
 pub fn equilibrium_weights(series: &ChainSeries) -> Vec<MemberWeight> {
+    let members: HashMap<NuclideId, ()> = series.members.iter().copied().map(|id| (id, ())).collect();
     let mut weights: HashMap<NuclideId, f64> = HashMap::from([(series.head, 1.0)]);
     let mut depths: HashMap<NuclideId, usize> = HashMap::from([(series.head, 0)]);
+    let mut expanded = HashSet::new();
     let mut queue = VecDeque::from([series.head]);
     while let Some(id) = queue.pop_front() {
+        if !expanded.insert(id) {
+            continue;
+        }
         let from_weight = weights.get(&id).copied().unwrap_or(0.0);
         let from_depth = depths.get(&id).copied().unwrap_or(0);
         for branch in topology_decays(id) {
+            if !members.contains_key(&branch.daughter) {
+                continue;
+            }
             let share = from_weight * branch.branching_pct / 100.0;
             *weights.entry(branch.daughter).or_insert(0.0) += share;
             depths

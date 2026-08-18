@@ -6,7 +6,7 @@ description = "Bundled nuclide catalogue with gamma lines and decay chains"
 license = "AGPL-3.0-only"
 
 [features]
-import = ["dep:ureq", "dep:csv"]
+import = ["dep:ureq", "dep:csv", "dep:rayon"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -17,6 +17,10 @@ version = "3"
 optional = true
 
 [dependencies.csv]
+version = "1"
+optional = true
+
+[dependencies.rayon]
 version = "1"
 optional = true
 

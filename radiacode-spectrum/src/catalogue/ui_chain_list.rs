@@ -1,7 +1,7 @@
 use egui::{RichText, Ui};
 
 use radiacode_nuclides::{
-    chain_lines, chain_series, equilibrium_weights, format_half_life, strongest_chain_line,
+    chain_series, equilibrium_weights, format_half_life, strongest_chain_peak_kev,
     topology_display_name,
 };
 
@@ -55,9 +55,8 @@ fn draw_chain_rows(ui: &mut Ui, state: &mut CatalogueState, layout: &ChainTableL
         };
         let expanded = state.chains.selected == Some(series_index);
         let weights = equilibrium_weights(series);
-        let lines = chain_lines(&weights);
-        let strongest = strongest_chain_line(&lines)
-            .map(|line| format!("{:.1} keV", line.line.energy_kev))
+        let strongest = strongest_chain_peak_kev(&weights)
+            .map(|energy_kev| format!("{energy_kev:.1} keV"))
             .unwrap_or_else(|| "—".to_string());
         let cells = [
             TableCellStyle {

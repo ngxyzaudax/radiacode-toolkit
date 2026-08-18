@@ -1,7 +1,9 @@
 pub mod build;
 pub mod fetch;
+pub mod isomer;
 pub mod parse;
 pub mod select;
+pub mod validate;
 
 use radiacode_nuclides::{DecayBranch, NuclideId};
 
@@ -10,7 +12,6 @@ pub(crate) const USER_AGENT: &str = "radiacode-nuclides/0.1 (research; contact: 
 pub(crate) const MIN_HALF_LIFE_SECS: f64 = 1.0;
 pub(crate) const MIN_GAMMA_INTENSITY: f64 = 0.05;
 pub(crate) const MAX_GAMMA_ENERGY: f64 = 4000.0;
-pub(crate) const REQUEST_DELAY_MS: u64 = 60;
 
 #[derive(Clone)]
 pub(crate) struct Candidate {
@@ -21,4 +22,5 @@ pub(crate) struct Candidate {
     pub half_life_text: String,
     pub decays: Vec<DecayBranch>,
     pub force_include: bool,
+    pub level_energy_kev: f64,
 }

@@ -19,7 +19,7 @@ pub fn draw_chain_viewport(
     state: &mut CatalogueState,
     viewport_height: f32,
 ) {
-    state.sync_chain_scene_focus();
+    state.sync_chain_scene_focus(focus);
     let action = draw_legend_toolbar_row(ui);
     match action {
         Some(ChainToolbarAction::Fit) => {

@@ -81,10 +81,10 @@ impl CatalogueState {
         }
     }
 
-    pub fn sync_chain_scene_focus(&mut self) {
-        if self.chain_scene.last_focus != self.selected {
+    pub fn sync_chain_scene_focus(&mut self, focus: NuclideId) {
+        if self.chain_scene.last_focus != Some(focus) {
             self.chain_scene.scene_rect = Rect::ZERO;
-            self.chain_scene.last_focus = self.selected;
+            self.chain_scene.last_focus = Some(focus);
             self.chain_scene.needs_fit = true;
             self.chain_scene.fit_mode = ChainFitMode::Adaptive;
         }
