@@ -1,10 +1,10 @@
 use serde::Deserialize;
 
 use crate::app_config::AppConfig;
-use crate::identify::{analyze_peaks, match_params_from_config};
+use crate::identify::{analyze_peaks, analysis_window_from_energies, match_params_from_config};
 use crate::peaks::resolution::fwhm_kev;
 use crate::peaks::{DetectionParams, detect_peaks};
-use radiacode_nuclides::tolerance_kev;
+use radiacode_nuclides::{VerdictKind, tolerance_kev};
 
 #[derive(Debug, Deserialize)]
 struct FixtureSpectrum {
@@ -64,15 +64,51 @@ fn thoriated_rods_identifies_thorium_series() {
     let params = DetectionParams::default();
     let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
     let config = AppConfig::default();
-    let analysis = analyze_peaks(&peaks, &config);
+    let window = analysis_window_from_energies(&fixture.energies_kev);
+    let analysis = analyze_peaks(&peaks, &config, window);
+    let top_chain = analysis
+        .sources
+        .chains
+        .first()
+        .expect("expected at least one chain");
+    assert!(
+        top_chain.name.contains("Thorium"),
+        "expected thorium series first, got {top_chain:?} in {:?}",
+        analysis.sources.chains
+    );
+    assert!(
+        top_chain.matched_members >= 3,
+        "expected >=3 thorium members, got {top_chain:?}"
+    );
+    assert!(
+        analysis.sources.verdict.headline.contains("Thorium"),
+        "verdict headline: {}",
+        analysis.sources.verdict.headline
+    );
+}
+
+#[test]
+fn background_identifies_k40_nuclide() {
+    let fixture = load_fixture("background_indoor_outdoor");
+    let params = DetectionParams::default();
+    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
+    let config = AppConfig::default();
+    let window = analysis_window_from_energies(&fixture.energies_kev);
+    let analysis = analyze_peaks(&peaks, &config, window);
+    assert_ne!(
+        analysis.sources.verdict.kind,
+        VerdictKind::Chain,
+        "background should not classify as a junk chain: {}",
+        analysis.sources.verdict.headline
+    );
     assert!(
         analysis
             .sources
-            .chains
+            .nuclides
             .iter()
-            .any(|chain| chain.name.contains("Thorium")),
-        "expected thorium series in {:?}",
-        analysis.sources.chains
+            .any(|nuclide| nuclide.display_name.starts_with("K-40")),
+        "expected K-40 in nuclide evidence {:?}",
+        analysis.sources.nuclides
     );
 }
 
@@ -100,6 +136,7 @@ fn detection_params_follow_app_config() {
     assert_eq!(match_params.detector_fwhm_pct, 8.5);
     assert_eq!(match_params.relative_frac, 0.02);
     assert_eq!(match_params.min_intensity_pct, 1.7);
+    assert_eq!(match_params.min_supported_half_life_secs, 600.0);
 }
 
 #[test]
@@ -166,14 +203,18 @@ fn tuned_settings_find_thorium_lines() {
             "missing peak near {energy} keV with tuned settings in {peaks:?}"
         );
     }
-    let analysis = analyze_peaks(&peaks, &config);
+    let window = analysis_window_from_energies(&fixture.energies_kev);
+    let analysis = analyze_peaks(&peaks, &config, window);
+    let top_chain = analysis
+        .sources
+        .chains
+        .first()
+        .expect("expected at least one chain");
     assert!(
-        analysis
-            .sources
-            .chains
-            .iter()
-            .any(|chain| chain.name.contains("Thorium")),
-        "expected thorium series with tuned settings in {:?}",
+        top_chain.name.contains("Thorium"),
+        "expected thorium series first with tuned settings, got {top_chain:?} in {:?}",
         analysis.sources.chains
     );
+    assert!(top_chain.matched_members >= 3);
+    assert!(analysis.sources.verdict.headline.contains("Thorium"));
 }

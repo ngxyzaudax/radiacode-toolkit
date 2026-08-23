@@ -1,12 +1,12 @@
 use egui::{RichText, Ui};
 
 use crate::compare::plot_series_build::{owned_series, shared_log_floor};
-use crate::compare::ui_plot_bars::show_owned_series;
+use crate::compare::ui_plot_bars::{OwnedSeriesPlotConfig, show_owned_series};
 use crate::compare::ui_plot_overlay::SpectrumPlotDrawParams;
 use crate::compare::ui_plot_values::smoothed_net;
 use crate::theme::{MUTED, compare_sample_color};
 
-pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
+pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>, plot_height: f32) {
     let Some(background) = params.background else {
         ui.label(
             RichText::new("Select a background recording to compute net spectra.").color(MUTED),
@@ -54,9 +54,12 @@ pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
         ui,
         "compare_plot",
         &owned,
-        params.y_scale,
-        params.style,
-        log_floor,
+        OwnedSeriesPlotConfig {
+            y_scale: params.y_scale,
+            style: params.style,
+            log_floor,
+            plot_height,
+        },
         overlay.as_ref(),
     );
 }

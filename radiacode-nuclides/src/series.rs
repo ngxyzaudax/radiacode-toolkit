@@ -68,6 +68,10 @@ fn build_chain_series() -> Vec<ChainSeries> {
     series
 }
 
+pub fn is_natural_series_head(head: NuclideId) -> bool {
+    natural_rank(head) < u8::MAX
+}
+
 fn natural_rank(head: NuclideId) -> u8 {
     NATURAL_SERIES
         .iter()

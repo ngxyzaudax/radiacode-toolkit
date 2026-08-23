@@ -7,10 +7,8 @@ use crate::compare::state::ComparedSample;
 use crate::compare::ui_plot_legend::draw_legend;
 use crate::compare::ui_plot_net::draw_net_plot;
 use crate::compare::ui_plot_overlay::{SpectrumPlotDrawParams, draw_overlay_plot};
-use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips};
+use crate::peak_overlay::{SpectrumPlotAction, draw_with_classification_strip};
 use crate::scale::{HistogramStyle, YScale};
-use crate::theme::MUTED;
-use egui::RichText;
 
 pub struct ComparePlotProps<'a> {
     pub samples: &'a [ComparedSample],
@@ -51,15 +49,11 @@ pub fn draw_compare_plots(ui: &mut Ui, props: ComparePlotProps<'_>) -> Option<Sp
         props.config,
         props.peak_memo,
     );
-    if props.show_peaks
-        && let Some(overlay) = peak_overlay.as_ref()
-    {
-        ui.label(
-            RichText::new(format!("{} detected peaks", overlay.peak_count))
-                .small()
-                .color(MUTED),
-        );
-    }
+    let peak_count = peak_overlay
+        .as_ref()
+        .map(|overlay| overlay.peak_count)
+        .unwrap_or(0);
+    let sources = peak_overlay.as_ref().map(|overlay| &overlay.sources);
     let draw_params = SpectrumPlotDrawParams {
         energies,
         width,
@@ -70,10 +64,17 @@ pub fn draw_compare_plots(ui: &mut Ui, props: ComparePlotProps<'_>) -> Option<Sp
         style: props.style,
         peak_overlay: peak_overlay.as_ref(),
     };
-    if show_net {
-        draw_net_plot(ui, draw_params);
-    } else {
-        draw_overlay_plot(ui, draw_params);
-    }
-    peak_overlay.and_then(|overlay| draw_source_chips(ui, &overlay.sources))
+    draw_with_classification_strip(
+        ui,
+        props.show_peaks,
+        peak_count,
+        sources,
+        |ui, plot_height| {
+            if show_net {
+                draw_net_plot(ui, draw_params, plot_height);
+            } else {
+                draw_overlay_plot(ui, draw_params, plot_height);
+            }
+        },
+    )
 }

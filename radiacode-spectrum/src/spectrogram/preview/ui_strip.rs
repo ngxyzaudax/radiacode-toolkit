@@ -2,7 +2,7 @@ use egui::{Color32, Pos2, Rect, Response, Shape, Stroke};
 use radiacode_nuclides::PeakIdentification;
 
 use crate::identify::PeakAnalysis;
-use crate::peak_overlay::PEAK_LINE;
+use crate::peak_overlay::{PEAK_LINE, peak_label};
 use crate::scale::{YScale, display_value, y_axis_top};
 use crate::spectrogram::model::{SpectrogramDisplay, SpectrogramSeries};
 use crate::spectrogram::preview::geometry::{column_center_x, energy_to_x};
@@ -96,6 +96,41 @@ pub fn draw_preview_strip(
             series,
             source_cols,
             &analysis.identifications,
+        );
+        draw_peak_labels(
+            painter,
+            strip_rect,
+            series,
+            source_cols,
+            &analysis.identifications,
+        );
+    }
+}
+
+fn draw_peak_labels(
+    painter: &egui::Painter,
+    strip_rect: Rect,
+    series: &SpectrogramSeries,
+    source_cols: &[usize],
+    identifications: &[PeakIdentification],
+) {
+    for identification in identifications {
+        let Some(x) = energy_to_x(
+            strip_rect,
+            series,
+            source_cols,
+            identification.peak.energy_kev,
+        ) else {
+            continue;
+        };
+        let label = peak_label(identification);
+        let pos = Pos2::new(x, strip_rect.top() + 2.0);
+        painter.text(
+            pos,
+            egui::Align2::CENTER_TOP,
+            label,
+            egui::FontId::proportional(9.0),
+            PEAK_LINE,
         );
     }
 }

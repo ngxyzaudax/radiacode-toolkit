@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::app_config::AppConfig;
-use crate::identify::{PeakAnalysis, analyze_peaks};
+use crate::identify::{AnalysisWindow, PeakAnalysis, analyze_peaks};
 use crate::peaks::{DetectionParams, peaks_from_channel_totals, spectrogram_series_peak_token};
 use crate::spectrogram::layout::{DEFAULT_EMPTY_CHANNELS, channels_in_energy_range};
 use crate::spectrogram::model::{SpectrogramDisplay, SpectrogramSeries};
@@ -35,7 +35,11 @@ pub fn peak_analysis_for_view(
             peaks_from_channel_totals(&energies, totals.as_ref(), params)
         })
         .to_vec();
-    Some(analyze_peaks(&peaks, config))
+    let window = AnalysisWindow {
+        min_kev: state.view_range.energy_min_kev,
+        max_kev: state.view_range.energy_max_kev,
+    };
+    Some(analyze_peaks(&peaks, config, window))
 }
 
 pub fn series_for_peak_data(state: &SpectrogramState) -> Option<Arc<SpectrogramSeries>> {

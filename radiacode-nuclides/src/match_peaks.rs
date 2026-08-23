@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
-use crate::catalog::{energy_index, nuclide_by_id};
-use crate::index::IndexedLine;
+use crate::identify::candidates::{peak_candidates, rank_candidates};
 use crate::model::NuclideId;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -11,6 +8,9 @@ pub struct MatchParams {
     pub min_intensity_pct: f64,
     pub detector_fwhm_pct: f64,
     pub tolerance_fwhm_frac: f64,
+    pub min_supported_half_life_secs: f64,
+    pub absence_penalty: f64,
+    pub low_energy_cutoff_kev: f64,
 }
 
 impl Default for MatchParams {
@@ -21,6 +21,9 @@ impl Default for MatchParams {
             min_intensity_pct: 1.7,
             detector_fwhm_pct: 7.0,
             tolerance_fwhm_frac: 0.5,
+            min_supported_half_life_secs: 600.0,
+            absence_penalty: 0.15,
+            low_energy_cutoff_kev: 100.0,
         }
     }
 }
@@ -69,93 +72,20 @@ pub fn match_peaks(peaks: &[SpectrumPeak], params: MatchParams) -> Vec<PeakIdent
         return Vec::new();
     }
     let max_counts = peaks.iter().map(|peak| peak.counts).fold(1.0_f64, f64::max);
-    let normalized = peaks
+    peaks
         .iter()
-        .map(|peak| SpectrumPeak {
-            energy_kev: peak.energy_kev,
-            counts: peak.counts / max_counts,
-        })
-        .collect::<Vec<_>>();
-    let per_peak = normalized
-        .iter()
-        .map(|peak| single_peak_candidates(*peak, params))
-        .collect::<Vec<_>>();
-    normalized
-        .iter()
-        .zip(peaks.iter())
-        .zip(per_peak)
-        .map(|((_, peak), candidates)| {
-            let ranked = rank_candidates(candidates);
+        .map(|peak| {
+            let normalized = SpectrumPeak {
+                energy_kev: peak.energy_kev,
+                counts: peak.counts / max_counts,
+            };
+            let candidates = rank_candidates(peak_candidates(normalized, params));
             PeakIdentification {
                 peak: *peak,
-                candidates: ranked,
+                candidates,
             }
         })
         .collect()
-}
-
-fn single_peak_candidates(peak: SpectrumPeak, params: MatchParams) -> Vec<NuclideMatch> {
-    let tolerance = tolerance_kev(peak.energy_kev, params);
-    let min_energy = peak.energy_kev - tolerance;
-    let max_energy = peak.energy_kev + tolerance;
-    energy_index()
-        .range(min_energy, max_energy)
-        .iter()
-        .filter(|line| line.intensity_pct >= params.min_intensity_pct)
-        .filter_map(|line| line_match(peak, line, tolerance))
-        .collect()
-}
-
-fn line_match(peak: SpectrumPeak, line: &IndexedLine, tolerance: f64) -> Option<NuclideMatch> {
-    let nuclide = nuclide_by_id(line.nuclide_id)?;
-    let delta = (peak.energy_kev - line.energy_kev).abs();
-    if delta > tolerance {
-        return None;
-    }
-    let closeness = 1.0 - delta / tolerance;
-    if closeness < 0.25 {
-        return None;
-    }
-    let intensity_weight = (line.intensity_pct / 100.0).clamp(0.01, 1.0);
-    let count_weight = (peak.counts.max(1e-6).sqrt() + 0.1).min(2.0);
-    let score = closeness * closeness * (0.15 + 0.85 * intensity_weight) * count_weight;
-    Some(NuclideMatch {
-        nuclide_id: line.nuclide_id,
-        display_name: nuclide.display_name.clone(),
-        line_energy_kev: line.energy_kev,
-        intensity_pct: line.intensity_pct,
-        delta_kev: delta,
-        score,
-        matched_lines: 1,
-    })
-}
-
-fn rank_candidates(mut candidates: Vec<NuclideMatch>) -> Vec<NuclideMatch> {
-    let mut best_by_nuclide = HashMap::new();
-    for candidate in candidates.drain(..) {
-        best_by_nuclide
-            .entry(candidate.nuclide_id)
-            .and_modify(|existing: &mut NuclideMatch| {
-                if candidate.score > existing.score {
-                    *existing = candidate.clone();
-                }
-            })
-            .or_insert(candidate);
-    }
-    let mut ranked = best_by_nuclide.into_values().collect::<Vec<_>>();
-    ranked.sort_by(|left, right| {
-        right
-            .score
-            .partial_cmp(&left.score)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                left.delta_kev
-                    .partial_cmp(&right.delta_kev)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .then_with(|| left.display_name.cmp(&right.display_name))
-    });
-    ranked
 }
 
 pub fn best_match(identification: &PeakIdentification) -> Option<&NuclideMatch> {

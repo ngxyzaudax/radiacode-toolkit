@@ -1,5 +1,6 @@
 use crate::app_config::AppConfig;
-use crate::identify::{PeakAnalysis, analyze_peaks};
+use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV};
+use crate::identify::{AnalysisWindow, PeakAnalysis, analyze_peaks};
 use crate::model::SpectrumView;
 use crate::peaks::{DetectionParams, PeakMemo, PeakMemoKey, peaks_from_spectrum_view};
 
@@ -18,5 +19,12 @@ pub fn peak_analysis_for_spectrum(
     let peaks = peak_memo
         .get_or_compute(key, || peaks_from_spectrum_view(spectrum, params))
         .to_vec();
-    Some(analyze_peaks(&peaks, config))
+    Some(analyze_peaks(
+        &peaks,
+        config,
+        AnalysisWindow {
+            min_kev: ENERGY_MIN_KEV,
+            max_kev: ENERGY_MAX_KEV,
+        },
+    ))
 }

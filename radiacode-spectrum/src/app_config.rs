@@ -29,6 +29,8 @@ pub struct AppConfig {
     pub detector_fwhm_pct: f64,
     #[serde(default = "default_catalogue_fwhm_pct")]
     pub catalogue_fwhm_pct: f64,
+    #[serde(default = "default_match_min_supported_half_life_secs")]
+    pub match_min_supported_half_life_secs: f64,
     #[serde(default = "default_ui_scale")]
     pub ui_scale: f32,
 }
@@ -57,6 +59,10 @@ fn default_catalogue_fwhm_pct() -> f64 {
     7.5
 }
 
+fn default_match_min_supported_half_life_secs() -> f64 {
+    600.0
+}
+
 fn default_ui_scale() -> f32 {
     1.0
 }
@@ -82,6 +88,7 @@ impl Default for AppConfig {
             peak_sensitivity_sigma: default_peak_sensitivity_sigma(),
             detector_fwhm_pct: default_detector_fwhm_pct(),
             catalogue_fwhm_pct: default_catalogue_fwhm_pct(),
+            match_min_supported_half_life_secs: default_match_min_supported_half_life_secs(),
             ui_scale: default_ui_scale(),
         }
     }
@@ -101,6 +108,8 @@ impl AppConfig {
         self.peak_sensitivity_sigma = self.peak_sensitivity_sigma.clamp(2.0, 15.0);
         self.detector_fwhm_pct = self.detector_fwhm_pct.clamp(4.0, 15.0);
         self.catalogue_fwhm_pct = self.catalogue_fwhm_pct.clamp(1.0, 20.0);
+        self.match_min_supported_half_life_secs =
+            self.match_min_supported_half_life_secs.clamp(1.0, 1.0e12);
         self.ui_scale = self.ui_scale.clamp(0.75, 1.5);
     }
 

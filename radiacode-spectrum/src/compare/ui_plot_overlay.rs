@@ -4,7 +4,7 @@ use crate::compare::peak_overlay_build::BuiltPeakOverlay;
 use crate::compare::plot_series_build::{owned_series, shared_log_floor};
 use crate::compare::spectrum::CollapsedSpectrum;
 use crate::compare::state::ComparedSample;
-use crate::compare::ui_plot_bars::show_owned_series;
+use crate::compare::ui_plot_bars::{OwnedSeriesPlotConfig, show_owned_series};
 use crate::compare::ui_plot_values::{smoothed_background, smoothed_sample};
 use crate::scale::{HistogramStyle, YScale};
 use crate::theme::{COMPARE_BACKGROUND, compare_sample_color};
@@ -20,7 +20,7 @@ pub struct SpectrumPlotDrawParams<'a> {
     pub peak_overlay: Option<&'a BuiltPeakOverlay>,
 }
 
-pub fn draw_overlay_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
+pub fn draw_overlay_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>, plot_height: f32) {
     let background_values = params
         .background
         .map(|item| smoothed_background(item, params.smooth_window));
@@ -65,9 +65,12 @@ pub fn draw_overlay_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>) {
         ui,
         "compare_plot",
         &owned,
-        params.y_scale,
-        params.style,
-        log_floor,
+        OwnedSeriesPlotConfig {
+            y_scale: params.y_scale,
+            style: params.style,
+            log_floor,
+            plot_height,
+        },
         overlay.as_ref(),
     );
 }

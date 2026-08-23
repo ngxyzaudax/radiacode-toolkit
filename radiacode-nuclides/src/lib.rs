@@ -10,9 +10,11 @@ mod chain_tests;
 mod elements;
 mod equilibrium;
 mod half_life;
+mod identify;
 mod index;
 mod match_peaks;
 mod model;
+mod plausibility;
 mod search;
 mod series;
 mod series_search;
@@ -32,6 +34,10 @@ pub use equilibrium::{
     MemberWeight, bottleneck_member, equilibrium_weights, time_to_equilibrium_secs,
 };
 pub use half_life::format_half_life;
+pub use identify::{
+    AnalysisWindow, Confidence, PeakAnalysisResult, SourceVerdict, VerdictKind, analyze_peaks,
+};
+pub use plausibility::{is_plausible, supported_half_life_secs};
 pub use index::IndexedLine;
 pub use match_peaks::{
     MatchParams, NuclideMatch, PeakIdentification, SpectrumPeak, best_match, match_peaks,
@@ -43,14 +49,19 @@ pub use model::{
 };
 pub use search::{SearchFilters, search_nuclides};
 pub use series::{
-    ChainSeries, chain_series, chain_series_by_head, family_label, series_for_member,
+    ChainSeries, chain_series, chain_series_by_head, family_label, is_natural_series_head,
+    series_for_member,
 };
 pub use series_search::{ChainFilters, search_chains};
-pub use source_summary::{ChainEvidence, NuclideEvidence, SourceSummary, summarize_sources};
+pub use source_summary::{
+    ChainEvidence, NuclideEvidence, SourceSummary, collect_nuclide_evidence, summarize_sources,
+};
 pub use topology::{
     decay_catalog, has_emissions, topology_decays, topology_display_name, topology_entry,
     topology_half_life_secs, topology_parents,
 };
 
+#[cfg(test)]
+mod identify_tests;
 #[cfg(test)]
 mod tests;

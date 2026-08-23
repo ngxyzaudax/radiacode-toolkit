@@ -4,7 +4,7 @@ use egui_plot::Plot;
 use crate::app_config::AppConfig;
 use crate::energy::{ENERGY_MAX_KEV, ENERGY_MIN_KEV, energy_grid};
 use crate::model::SpectrumView;
-use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips};
+use crate::peak_overlay::{SpectrumPlotAction, draw_with_classification_strip};
 use crate::peak_snap::{draw_peaks_with_cursor, override_hover, snap_label};
 use crate::peaks::{PeakMemo, sample_curve_y};
 use crate::plot_hover::counts_plot_hover;
@@ -58,57 +58,60 @@ pub fn draw_spectrum_plot(
     } = draw_context;
     let analysis =
         peak_analysis_for_spectrum(spectrum, show_peaks, config, spectrum_sequence, peak_memo);
+    let peak_count = analysis.as_ref().map(|item| item.peaks.len()).unwrap_or(0);
+    let sources = analysis.as_ref().map(|item| &item.sources);
     let label = snap_label();
 
-    Plot::new("spectrum_plot_kev")
-        .allow_zoom(false)
-        .allow_drag(true)
-        .allow_scroll(false)
-        .allow_double_click_reset(false)
-        .auto_bounds(Vec2b::new(false, false))
-        .default_x_bounds(ENERGY_MIN_KEV, ENERGY_MAX_KEV)
-        .include_y(0.0)
-        .x_axis_label("Energy (keV)")
-        .y_axis_label(y_axis_label(y_scale))
-        .show_crosshair(false)
-        .label_formatter({
-            let label = label.clone();
-            move |pos| override_hover(&label, counts_plot_hover(pos, y_scale))
-        })
-        .show(ui, |plot_ui| {
-            let (min_x, max_x) = apply_energy_axis_navigation(plot_ui);
-            plot_ui.set_plot_bounds_y(0.0..=y_top);
-            if !bars.is_empty() {
-                plot_ui.line(styled_histogram_line(
-                    "spectrum",
-                    &bars,
-                    SPECTRUM_BAR,
-                    style,
-                ));
-            }
-            if let Some(analysis) = analysis.as_ref() {
-                let visible: Vec<_> = analysis
-                    .identifications
-                    .iter()
-                    .filter(|identification| {
-                        let energy = identification.peak.energy_kev;
-                        energy >= min_x && energy <= max_x
-                    })
-                    .cloned()
-                    .collect();
-                let energies = &grid.energies_kev;
-                let display = &smoothed;
-                draw_peaks_with_cursor(
-                    plot_ui,
-                    &visible,
-                    move |energy| {
-                        let raw = sample_curve_y(energies, display, energy);
-                        display_value(raw, y_scale)
-                    },
-                    &label,
-                );
-            }
-        });
-
-    analysis.and_then(|analysis| draw_source_chips(ui, &analysis.sources))
+    draw_with_classification_strip(ui, show_peaks, peak_count, sources, |ui, plot_height| {
+        Plot::new("spectrum_plot_kev")
+            .allow_zoom(false)
+            .allow_drag(true)
+            .allow_scroll(false)
+            .allow_double_click_reset(false)
+            .auto_bounds(Vec2b::new(false, false))
+            .default_x_bounds(ENERGY_MIN_KEV, ENERGY_MAX_KEV)
+            .include_y(0.0)
+            .height(plot_height)
+            .x_axis_label("Energy (keV)")
+            .y_axis_label(y_axis_label(y_scale))
+            .show_crosshair(false)
+            .label_formatter({
+                let label = label.clone();
+                move |pos| override_hover(&label, counts_plot_hover(pos, y_scale))
+            })
+            .show(ui, |plot_ui| {
+                let (min_x, max_x) = apply_energy_axis_navigation(plot_ui);
+                plot_ui.set_plot_bounds_y(0.0..=y_top);
+                if !bars.is_empty() {
+                    plot_ui.line(styled_histogram_line(
+                        "spectrum",
+                        &bars,
+                        SPECTRUM_BAR,
+                        style,
+                    ));
+                }
+                if let Some(analysis) = analysis.as_ref() {
+                    let visible: Vec<_> = analysis
+                        .identifications
+                        .iter()
+                        .filter(|identification| {
+                            let energy = identification.peak.energy_kev;
+                            energy >= min_x && energy <= max_x
+                        })
+                        .cloned()
+                        .collect();
+                    let energies = &grid.energies_kev;
+                    let display = &smoothed;
+                    draw_peaks_with_cursor(
+                        plot_ui,
+                        &visible,
+                        move |energy| {
+                            let raw = sample_curve_y(energies, display, energy);
+                            display_value(raw, y_scale)
+                        },
+                        &label,
+                    );
+                }
+            });
+    })
 }

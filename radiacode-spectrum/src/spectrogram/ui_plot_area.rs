@@ -1,9 +1,13 @@
 use egui::{Color32, Context, Image, Pos2, RichText, Sense, Ui};
+use radiacode_nuclides::SourceSummary;
 
 use crate::app_config::AppConfig;
 use crate::identify::PeakAnalysis;
 use crate::layout::safe_span;
-use crate::peak_overlay::{SpectrumPlotAction, draw_source_chips, draw_spectrogram_peaks};
+use crate::peak_overlay::{
+    CLASSIFICATION_STRIP_HEIGHT, SpectrumPlotAction, draw_classification_strip,
+    draw_spectrogram_peaks,
+};
 use crate::peak_snap::peak_hover_text;
 use crate::spectrogram::axes::{count_rate_axis_label, draw_x_axis, x_axis_label, y_axis_label};
 use crate::spectrogram::count_rate::draw_count_rate_overlay;
@@ -48,12 +52,16 @@ pub fn draw_spectrogram_plot_area(
     }
     let x_label = x_axis_label();
     let available = ui.available_size();
+    let strip_h = if state.show_peaks {
+        CLASSIFICATION_STRIP_HEIGHT
+    } else {
+        0.0
+    };
     let plot_size = egui::vec2(
         safe_span(available.x, AXIS_LEFT + AXIS_RIGHT, PLOT_MIN),
-        safe_span(available.y, AXIS_BOTTOM, PLOT_MIN),
+        safe_span(available.y, AXIS_BOTTOM + strip_h, PLOT_MIN),
     );
     let peak_analysis = peak_analysis_for_view(state, config);
-    let mut peak_sources = None;
 
     ui.horizontal(|ui| {
         ui.allocate_ui_with_layout(
@@ -179,7 +187,6 @@ pub fn draw_spectrogram_plot_area(
                     &analysis.identifications,
                     focused,
                 );
-                peak_sources = Some(analysis.sources.clone());
             }
             draw_count_rate_overlay(&axis_painter, layout.image_rect, layout, visible);
             if response.hover_pos().is_some() {
@@ -208,7 +215,19 @@ pub fn draw_spectrogram_plot_area(
         }
     });
     ui.label(RichText::new(x_label).small().color(MUTED));
-    peak_sources.and_then(|sources| draw_source_chips(ui, &sources))
+    if !state.show_peaks {
+        return None;
+    }
+    let peak_count = peak_analysis
+        .as_ref()
+        .map(|analysis| analysis.peaks.len())
+        .unwrap_or(0);
+    let default_sources = SourceSummary::default();
+    let sources = peak_analysis
+        .as_ref()
+        .map(|analysis| &analysis.sources)
+        .unwrap_or(&default_sources);
+    draw_classification_strip(ui, peak_count, sources)
 }
 
 fn snapped_peak_hover(

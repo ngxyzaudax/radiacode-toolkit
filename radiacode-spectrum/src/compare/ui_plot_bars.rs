@@ -25,15 +25,21 @@ pub struct PlotPeakOverlay<'a> {
     pub log_floor: f64,
 }
 
+pub struct OwnedSeriesPlotConfig {
+    pub y_scale: YScale,
+    pub style: HistogramStyle,
+    pub log_floor: f64,
+    pub plot_height: f32,
+}
+
 pub fn show_owned_series(
     ui: &mut Ui,
     id: &str,
     owned: &[(String, Vec<egui_plot::Bar>, egui::Color32)],
-    y_scale: YScale,
-    style: HistogramStyle,
-    log_floor: f64,
+    config: OwnedSeriesPlotConfig,
     peak_overlay: Option<&PlotPeakOverlay<'_>>,
 ) {
+    let y_scale = config.y_scale;
     let series: Vec<PlotSeries<'_>> = owned
         .iter()
         .map(|(series_id, bars, color)| PlotSeries {
@@ -49,10 +55,11 @@ pub fn show_owned_series(
         id,
         &series,
         SeriesPlotConfig {
-            y_scale,
+            y_scale: config.y_scale,
             y_top,
-            style,
-            log_floor,
+            style: config.style,
+            log_floor: config.log_floor,
+            plot_height: config.plot_height,
         },
         peak_overlay,
     );
@@ -63,6 +70,7 @@ struct SeriesPlotConfig {
     y_top: f64,
     style: HistogramStyle,
     log_floor: f64,
+    plot_height: f32,
 }
 
 fn plot_series(
@@ -76,6 +84,7 @@ fn plot_series(
     let y_top = config.y_top;
     let style = config.style;
     let log_floor = config.log_floor;
+    let plot_height = config.plot_height;
     let plot_id = format!("{id}_{y_scale:?}");
     let label = snap_label();
     Plot::new(plot_id)
@@ -86,6 +95,7 @@ fn plot_series(
         .auto_bounds(Vec2b::new(false, false))
         .default_x_bounds(ENERGY_MIN_KEV, ENERGY_MAX_KEV)
         .include_y(0.0)
+        .height(plot_height)
         .x_axis_label("Energy (keV)")
         .y_axis_label(y_axis_label(y_scale))
         .show_crosshair(false)
