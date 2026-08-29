@@ -5,7 +5,9 @@ mod vsfr;
 #[path = "vsfr_tests.rs"]
 mod vsfr_tests;
 
-use radiacode_protocol::{Sequence, Transport};
+use std::time::SystemTime;
+
+use radiacode_protocol::{DeviceTicks, Sequence, SfrCatalogEntry, Transport};
 
 use crate::error::Result;
 use crate::session_restore::SessionRestore;
@@ -16,6 +18,8 @@ pub struct RadiaCode {
     pub(crate) sequence: Sequence,
     pub(crate) spectrum_format_version: u32,
     cached_versions: Option<DeviceVersions>,
+    base_time: SystemTime,
+    sfr_entries: Vec<SfrCatalogEntry>,
 }
 
 impl RadiaCode {
@@ -48,5 +52,17 @@ impl RadiaCode {
 
     pub fn spectrum_format_version(&self) -> u32 {
         self.spectrum_format_version
+    }
+
+    pub fn base_time(&self) -> SystemTime {
+        self.base_time
+    }
+
+    pub fn sfr_entries(&self) -> &[SfrCatalogEntry] {
+        &self.sfr_entries
+    }
+
+    pub fn wall_clock(&self, ticks: DeviceTicks) -> SystemTime {
+        ticks.wall_clock_time(self.base_time)
     }
 }

@@ -18,7 +18,9 @@ Transport-agnostic: implements the `Transport` trait boundary but not USB or Blu
 
 ## Reference
 
-Full wire-format documentation: [docs/PROTOCOL.md](../docs/PROTOCOL.md).
+Full wire-format documentation: [docs/protocol/README.md](../docs/protocol/README.md).
+
+Device client documentation: [docs/core/README.md](../docs/core/README.md).
 
 ## Usage
 

@@ -2,12 +2,15 @@ mod alarm_limits;
 mod data_buf_cursor;
 mod device;
 mod device_config;
+mod device_diagnostics;
 mod device_info;
+mod device_language;
 mod device_model;
 mod device_settings;
 mod device_status;
 mod device_time;
 mod discovery;
+mod energy_calib;
 mod error;
 mod live_rates;
 mod metadata;
@@ -24,6 +27,8 @@ pub use device_config::{
     AlarmSignalMode, BacklightOffTime, DeviceConfig, DisplayDirection, SignalFlags,
     apply_device_config, load_device_config, sync_device_clock,
 };
+pub use device_diagnostics::{FirmwareSignature, fw_signature, sfr_file_text, status, text_message};
+pub use device_language::DeviceLanguage;
 pub use device_model::{model_from_advertisement, model_from_serial, serial_from_advertisement};
 pub use discovery::{
     DeviceEndpoint, DiscoveredDevice, TransportKind, merge_discovered, resolve_usb_endpoint,
@@ -38,9 +43,10 @@ pub use radiacode_protocol::{
 };
 pub use radiacode_protocol::{
     count_display_from_cps, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
-    dose_display_from_rh, encode_count_alarm, encode_dose_accum, encode_dose_alarm,
-    latest_rare_status, latest_real_time_rates, latest_snapshot, parse_configuration_ini,
-    parse_sfr_file, sfr_supports_leds_on, validate_catalog,
+    decode_cp1251, dose_display_from_rh, encode_count_alarm, encode_dose_accum,
+    encode_dose_alarm, extract_vsfr_f32, extract_vsfr_u32, latest_rare_status,
+    latest_real_time_rates, latest_snapshot, parse_configuration_ini, parse_sfr_file,
+    resolve_value_kind, sfr_supports_leds_on, validate_catalog,
 };
 pub use rate_units::{count_unit_label, dose_accum_unit_label, dose_unit_label};
 pub use session_restore::SessionRestore;
@@ -49,6 +55,7 @@ pub use types::{
     AccumulatedDose, AlarmLimits, AlarmLimitsUpdate, DeviceMetadata, DeviceStatus, LiveRates,
     MonitorPollSample, TimedRates,
 };
+pub use vsfr_batch::{extract_vsfr_value, read_vsfr_batch_raw};
 
 #[cfg(test)]
 mod device_config_tests;

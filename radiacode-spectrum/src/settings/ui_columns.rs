@@ -49,7 +49,7 @@ pub fn draw_detector_column(
                 settings_section(
                     ui,
                     "Signals",
-                    "Masters, clicks, and per-event flags.",
+                    "Masters, quantum registration, and per-event flags.",
                     |ui| {
                         draw_signals_panel(ui, draft);
                     },

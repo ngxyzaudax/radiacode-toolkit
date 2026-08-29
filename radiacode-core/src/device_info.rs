@@ -3,6 +3,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::debug;
 
+use radiacode_protocol::decode_cp1251;
 use radiacode_protocol::Error as ProtocolError;
 use radiacode_protocol::{Command, Spectrum, VirtString, decode_fw_version, decode_spectrum};
 
@@ -47,7 +48,7 @@ pub async fn serial_number(device: &mut RadiaCode) -> Result<String> {
 
 pub async fn configuration(device: &mut RadiaCode) -> Result<String> {
     let response = device.read_virt_string(VirtString::Configuration).await?;
-    Ok(String::from_utf8_lossy(response.data()).into_owned())
+    Ok(decode_cp1251(response.data()))
 }
 
 pub async fn spectrum(device: &mut RadiaCode) -> Result<Spectrum> {

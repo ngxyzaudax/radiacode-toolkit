@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use super::group::RecordKind;
 use super::seq::Seq;
@@ -23,6 +23,11 @@ impl DeviceTicks {
     pub fn duration_since(self, origin: Self) -> Duration {
         let millis = i64::from(self.0.saturating_sub(origin.0)).saturating_mul(10);
         Duration::from_millis(millis.max(0) as u64)
+    }
+
+    pub fn wall_clock_time(self, base: SystemTime) -> SystemTime {
+        base.checked_add(self.as_duration())
+            .unwrap_or(base)
     }
 }
 

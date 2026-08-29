@@ -26,7 +26,8 @@ Full application tour as a GIF.
 
 | Document | Description |
 | --- | --- |
-| [PROTOCOL.md](./PROTOCOL.md) | RadiaCode wire format, opcodes, and payload layout |
+| [PROTOCOL.md](./PROTOCOL.md) | RadiaCode wire format index ([full reference](./protocol/README.md)) |
+| [CORE.md](./CORE.md) | Device client and domain models ([full reference](./core/README.md)) |
 | [NUCLIDES.md](./NUCLIDES.md) | Catalogue data provenance, regeneration, and peak matching |
 
 ## Crate READMEs

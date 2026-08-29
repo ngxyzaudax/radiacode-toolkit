@@ -1,11 +1,11 @@
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use tracing::{debug, info, warn};
 
 use radiacode_protocol::Error as ProtocolError;
 use radiacode_protocol::{
-    BytesBuffer, Command, Sequence, Transport, VirtSfr, VirtString, build_request, request_header,
-    strip_echoed_header,
+    BytesBuffer, Command, Sequence, Transport, VirtSfr, VirtString, build_request,
+    parse_sfr_file, request_header, strip_echoed_header,
 };
 
 use crate::error::{Error, Result};
@@ -91,6 +91,8 @@ impl RadiaCode {
                 .map(|session| session.spectrum_format_version)
                 .unwrap_or(0),
             cached_versions: restore.map(|session| session.versions.clone()),
+            base_time: SystemTime::now(),
+            sfr_entries: Vec::new(),
         };
         if let Err(error) = device.initialize(ignore_firmware_check, restore).await {
             warn!(%error, "initialize failed, disconnecting partial session");
@@ -117,6 +119,8 @@ impl RadiaCode {
         crate::device_time::set_local_time_now(self).await?;
         self.write_vsfr(VirtSfr::DeviceTime, &0u32.to_le_bytes())
             .await?;
+        self.base_time = SystemTime::now() + Duration::from_secs(128);
+        self.load_sfr_entries().await?;
         self.drain_transport().await;
         tokio::time::sleep(INIT_SETTLE).await;
         self.drain_transport().await;
@@ -179,5 +183,13 @@ impl RadiaCode {
         let request = build_request(command, seq, args);
         let response = self.transport.execute(&request).await?;
         strip_echoed_header(response, request_header(command, seq)).map_err(Into::into)
+    }
+
+    async fn load_sfr_entries(&mut self) -> Result<()> {
+        if let Ok(sfr_file) = self.read_virt_string(VirtString::SfrFile).await {
+            let sfr_text = String::from_utf8_lossy(sfr_file.data());
+            self.sfr_entries = parse_sfr_file(&sfr_text);
+        }
+        Ok(())
     }
 }

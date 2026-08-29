@@ -1,4 +1,4 @@
-use crate::command::{SfrValueKind as StaticValueKind, VirtSfr};
+use crate::command::{SfrValueKind as StaticValueKind, VirtSfr, catalog_registers};
 
 use super::sfr_file::{SfrValueKind, parse_sfr_file};
 
@@ -38,16 +38,15 @@ pub fn validate_catalog(sfr_text: &str) -> Option<Vec<CatalogDrift>> {
     Some(drifts)
 }
 
-fn catalog_registers() -> Vec<VirtSfr> {
-    VirtSfr::catalog().to_vec()
-}
-
 fn kinds_compatible(static_kind: StaticValueKind, device_kind: SfrValueKind) -> bool {
     matches!(
         (static_kind, device_kind),
         (StaticValueKind::U32, SfrValueKind::U32)
+            | (StaticValueKind::I32, SfrValueKind::U32)
             | (StaticValueKind::F32, SfrValueKind::F32)
             | (StaticValueKind::U8, SfrValueKind::U8)
+            | (StaticValueKind::U16, SfrValueKind::U16)
+            | (StaticValueKind::I16, SfrValueKind::U16)
             | (StaticValueKind::Bool, SfrValueKind::U8)
             | (_, SfrValueKind::Unknown)
     )

@@ -24,7 +24,9 @@
   ·
   <a href="./docs/README.md"><strong>Docs</strong></a>
   ·
-  <a href="./docs/PROTOCOL.md"><strong>Protocol</strong></a>
+  <a href="./docs/protocol/README.md"><strong>Protocol</strong></a>
+  ·
+  <a href="./docs/core/README.md"><strong>Core</strong></a>
   ·
   <a href="./docs/NUCLIDES.md"><strong>Nuclides</strong></a>
   ·
@@ -53,7 +55,7 @@
 | [Catalogue](./docs/catalogue/README.md) | Nuclide reference, decay chains, and synthetic previews |
 | [Settings](./docs/settings/README.md) | Device and application configuration |
 
-Per-tab demos and notes: [`docs/`](./docs/README.md). Wire format: [`docs/PROTOCOL.md`](./docs/PROTOCOL.md). Nuclear data: [`docs/NUCLIDES.md`](./docs/NUCLIDES.md).
+Per-tab demos and notes: [`docs/`](./docs/README.md). Wire format: [`docs/protocol/`](./docs/protocol/README.md). Device client: [`docs/core/`](./docs/core/README.md). Nuclear data: [`docs/NUCLIDES.md`](./docs/NUCLIDES.md).
 
 ---
 
@@ -112,8 +114,8 @@ Shared Rust crates sit behind the desktop app and handle protocol, transport, nu
 | --- | --- |
 | [`radiacode-spectrum`](./radiacode-spectrum/README.md) | Desktop application (egui) |
 | [`radiacode-nuclides`](./radiacode-nuclides/README.md) | Bundled nuclide catalogue, decay chains, peak matching |
-| [`radiacode-protocol`](./radiacode-protocol/README.md) | Wire protocol — framing, opcodes, payload decoders, `Transport` trait ([reference](./docs/PROTOCOL.md)) |
-| [`radiacode-core`](./radiacode-core/README.md) | Device client (`RadiaCode`) and domain models |
+| [`radiacode-protocol`](./radiacode-protocol/README.md) | Wire protocol — framing, opcodes, payload decoders, `Transport` trait ([reference](./docs/protocol/README.md)) |
+| [`radiacode-core`](./radiacode-core/README.md) | Device client (`RadiaCode`) and domain models ([reference](./docs/core/README.md)) |
 | [`radiacode-usb`](./radiacode-usb/README.md) | USB transport |
 | [`radiacode-bluetooth`](./radiacode-bluetooth/README.md) | Bluetooth LE transport |
 

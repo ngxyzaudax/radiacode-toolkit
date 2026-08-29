@@ -1,10 +1,14 @@
+mod decode;
+
 use tracing::warn;
 
 use radiacode_protocol::Error as ProtocolError;
-use radiacode_protocol::{BytesBuffer, Command, VirtSfr};
+use radiacode_protocol::{BytesBuffer, Command, VirtSfr, extract_vsfr_u32, resolve_value_kind};
 
 use crate::device::RadiaCode;
 use crate::error::{Error, Result};
+
+use decode::decode_batch_words;
 
 const VSFR_BATCH_RETRIES: usize = 2;
 const VSFR_BATCH_RETRY_DELAY: std::time::Duration = std::time::Duration::from_millis(100);
@@ -17,13 +21,14 @@ pub async fn read_vsfr_batch(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<
         }
         .into());
     }
+    let entries = device.sfr_entries().to_vec();
     let mut last_error: Option<Error> = None;
     for attempt in 0..=VSFR_BATCH_RETRIES {
         if attempt > 0 {
             tokio::time::sleep(VSFR_BATCH_RETRY_DELAY).await;
         }
         match read_vsfr_batch_once(device, ids).await {
-            Ok(values) => return Ok(values),
+            Ok(values) => return Ok(decode_batch_words(ids, &values, &entries)),
             Err(Error::Protocol(ProtocolError::VsfrBatchEmpty)) => {
                 return Err(Error::Protocol(ProtocolError::VsfrBatchEmpty));
             }
@@ -36,15 +41,23 @@ pub async fn read_vsfr_batch(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<
                 );
                 last_error = Some(error);
             }
-            Err(error) => return fill_missing_vsfrs(device, ids, error).await,
+            Err(error) => {
+                let values = fill_missing_vsfrs(device, ids, error).await?;
+                return Ok(decode_batch_words(ids, &values, &entries));
+            }
         }
     }
-    fill_missing_vsfrs(
+    let values = fill_missing_vsfrs(
         device,
         ids,
         last_error.unwrap_or(ProtocolError::Timeout.into()),
     )
-    .await
+    .await?;
+    Ok(decode_batch_words(ids, &values, &entries))
+}
+
+pub async fn read_vsfr_batch_raw(device: &mut RadiaCode, ids: &[VirtSfr]) -> Result<Vec<u32>> {
+    read_vsfr_batch_once(device, ids).await
 }
 
 pub async fn write_vsfr_batch(device: &mut RadiaCode, pairs: &[(VirtSfr, u32)]) -> Result<()> {
@@ -168,6 +181,15 @@ fn ensure_empty_payload(response: &mut BytesBuffer) -> Result<()> {
         .into());
     }
     Ok(())
+}
+
+pub fn extract_vsfr_value(device: &RadiaCode, register: VirtSfr, raw: u32) -> u32 {
+    let kind = resolve_value_kind(register, device.sfr_entries()).unwrap_or_else(|| {
+        register
+            .static_value_kind()
+            .unwrap_or(radiacode_protocol::VirtSfrValueKind::U32)
+    });
+    extract_vsfr_u32(raw, kind)
 }
 
 #[cfg(test)]

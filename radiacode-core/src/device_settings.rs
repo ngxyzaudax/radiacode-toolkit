@@ -2,6 +2,7 @@ use radiacode_protocol::Error as ProtocolError;
 use radiacode_protocol::{Command, VirtSfr, VirtString};
 
 use crate::device::RadiaCode;
+use crate::device_language::DeviceLanguage;
 use crate::error::Result;
 
 impl RadiaCode {
@@ -40,6 +41,19 @@ impl RadiaCode {
             .into());
         }
         self.write_vsfr(VirtSfr::DispBrt, &(brightness as u32).to_le_bytes())
+            .await
+    }
+
+    pub async fn set_language(&mut self, language: DeviceLanguage) -> Result<()> {
+        self.write_vsfr(
+            VirtSfr::DeviceLang,
+            &language.to_device_flag().to_le_bytes(),
+        )
+        .await
+    }
+
+    pub async fn set_device_on(&mut self, on: bool) -> Result<()> {
+        self.write_vsfr(VirtSfr::DeviceOn, &u32::from(on).to_le_bytes())
             .await
     }
 }

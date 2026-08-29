@@ -21,9 +21,12 @@ mod units;
 pub use buffer::BytesBuffer;
 pub use catalog::{
     CatalogDrift, ChannelDef, ConfigurationCatalog, MessageGroup, SfrCatalogEntry, SfrValueKind,
-    parse_configuration_ini, parse_sfr_file, validate_catalog,
+    decode_cp1251, parse_configuration_ini, parse_sfr_file, validate_catalog,
 };
-pub use command::{Command, VirtSfr, VirtString};
+pub use command::{
+    Command, SfrValueKind as VirtSfrValueKind, VirtSfr, VirtString, catalog_registers,
+    extract_vsfr_f32, extract_vsfr_u32, resolve_value_kind,
+};
 pub use data_buf::{
     AccelData, DataBufFrame, DataBufRecord, DataBufSnapshot, DecodeWarning, DecodeWarningKind,
     DeviceTicks, DoseRateDb, EventId, EventRecord, RareData, RareStatus, RawData, RealTimeData,
