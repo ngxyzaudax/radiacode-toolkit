@@ -15,5 +15,8 @@ time = { version = "0.3", features = ["local-offset"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 tracing = "0.1"
 
+[features]
+test-support = []
+
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "test-util"] }

@@ -41,7 +41,6 @@ mod usb_access;
 mod view_tab;
 mod window;
 mod worker;
-mod worker_ops;
 
 use std::process::ExitCode;
 

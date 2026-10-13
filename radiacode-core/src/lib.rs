@@ -59,8 +59,8 @@ pub use types::{
 };
 pub use vsfr_batch::{extract_vsfr_value, read_vsfr_batch_raw};
 
-#[cfg(test)]
-pub(crate) mod test_support;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
 
 #[cfg(test)]
 mod data_buf_cursor_tests;

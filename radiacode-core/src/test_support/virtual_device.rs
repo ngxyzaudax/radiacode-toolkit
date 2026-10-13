@@ -20,6 +20,16 @@ pub enum ScriptedReply {
     Error(ProtocolError),
 }
 
+impl ScriptedReply {
+    pub fn timeout() -> Self {
+        Self::Error(ProtocolError::Timeout)
+    }
+
+    pub fn connection_closed() -> Self {
+        Self::Error(ProtocolError::ConnectionClosed)
+    }
+}
+
 #[derive(Debug)]
 pub struct VirtualDevice {
     pub target_firmware: (u16, u16),
