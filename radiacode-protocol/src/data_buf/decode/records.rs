@@ -8,7 +8,7 @@ use super::super::header::RecordHeader;
 use super::super::records::{
     AccelData, DataBufRecord, DoseRateDb, EventRecord, RareData, RawData, RealTimeData,
 };
-use super::frame::{DecodeWarning, DecodeWarningKind};
+use super::warnings::{DecodeWarning, DecodeWarningKind};
 
 pub fn parse_payload(
     buffer: &mut BytesBuffer,
