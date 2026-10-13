@@ -51,22 +51,8 @@ pub fn build_peak_overlay(
             detect_overlay_peaks(samples, background, subtract_background, params)
         })
         .to_vec();
-    let (energies, display_values) = if subtract_background {
-        let sample = samples.first()?;
-        let subtraction = sample.subtraction.as_ref()?;
-        let background = background?;
-        let energies = sample.spectrum.energies_kev.clone();
-        let display_values = smoothed_net(sample, subtraction, background, smooth_window);
-        (energies, display_values)
-    } else if let Some(sample) = samples.first() {
-        let energies = sample.spectrum.energies_kev.clone();
-        let display_values = smoothed_sample(sample, smooth_window);
-        (energies, display_values)
-    } else {
-        let background = background?;
-        let display_values = smoothed_background(background, smooth_window);
-        (background.energies_kev.clone(), display_values)
-    };
+    let (energies, display_values) =
+        overlay_display_data(samples, background, subtract_background, smooth_window)?;
     let analysis = analyze_peaks(&peaks, config, analysis_window_from_energies(&energies));
     Some(BuiltPeakOverlay {
         peak_count: analysis.peaks.len(),
@@ -75,6 +61,30 @@ pub fn build_peak_overlay(
         display_values,
         energies,
     })
+}
+
+fn overlay_display_data(
+    samples: &[ComparedSample],
+    background: Option<&CollapsedSpectrum>,
+    subtract_background: bool,
+    smooth_window: usize,
+) -> Option<(Vec<f64>, Vec<f64>)> {
+    match (subtract_background, samples.first(), background) {
+        (true, Some(sample), Some(background)) if sample.subtraction.is_some() => Some((
+            sample.spectrum.energies_kev.clone(),
+            smoothed_net(sample, background, smooth_window),
+        )),
+        (true, _, _) => None,
+        (false, Some(sample), _) => Some((
+            sample.spectrum.energies_kev.clone(),
+            smoothed_sample(sample, smooth_window),
+        )),
+        (false, None, Some(background)) => Some((
+            background.energies_kev.clone(),
+            smoothed_background(background, smooth_window),
+        )),
+        (false, None, None) => None,
+    }
 }
 
 fn peak_overlay_token(

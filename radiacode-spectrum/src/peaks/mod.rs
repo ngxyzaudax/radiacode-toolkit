@@ -8,7 +8,7 @@ mod resolution;
 mod source;
 
 #[cfg(test)]
-mod detect_fixtures;
+pub(crate) mod detect_fixtures;
 #[cfg(test)]
 mod detect_tests;
 #[cfg(test)]

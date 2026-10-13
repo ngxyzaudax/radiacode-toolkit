@@ -1,6 +1,5 @@
 use crate::compare::spectrum::{CollapsedSpectrum, counts_per_sec};
 use crate::compare::state::ComparedSample;
-use crate::compare::subtract::Subtraction;
 use crate::smooth::moving_average_f64;
 
 pub fn smoothed_cps(counts: &[u64], live_time_secs: f64, smooth_window: usize) -> Vec<f64> {
@@ -21,7 +20,6 @@ pub fn smoothed_background(background: &CollapsedSpectrum, smooth_window: usize)
 
 pub fn smoothed_net(
     sample: &ComparedSample,
-    _subtraction: &Subtraction,
     background: &CollapsedSpectrum,
     smooth_window: usize,
 ) -> Vec<f64> {

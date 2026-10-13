@@ -1,4 +1,6 @@
 mod peak_overlay_build;
+#[cfg(test)]
+mod peak_overlay_tests;
 mod plot_series_build;
 mod selection;
 pub mod spectrum;
