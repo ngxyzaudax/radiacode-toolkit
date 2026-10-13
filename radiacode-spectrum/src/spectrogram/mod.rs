@@ -18,6 +18,9 @@ mod ingest_append;
 mod ingest_baseline;
 pub mod layout;
 pub mod library;
+mod library_autosave;
+#[cfg(test)]
+mod library_autosave_tests;
 pub mod library_meta;
 #[cfg(test)]
 mod library_tests;

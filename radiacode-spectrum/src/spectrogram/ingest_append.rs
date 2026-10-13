@@ -8,7 +8,7 @@ use crate::spectrogram::capture::SpectrogramCapture;
 use crate::spectrogram::capture_lock::lock_progress;
 use crate::spectrogram::capture_progress::CaptureProgress;
 use crate::spectrogram::gap::ClassifiedRow;
-use crate::spectrogram::library;
+use crate::spectrogram::library_autosave;
 
 pub fn append_classified_row_capture(
     recording: &mut Option<crate::spectrogram::storage::RecordingWriter>,
@@ -72,7 +72,7 @@ pub fn maybe_auto_save_capture(capture: &mut SpectrogramCapture) {
     let Some(series) = progress.live_series.as_ref() else {
         return;
     };
-    match library::auto_save_snapshot(series, recording, &recordings_dir) {
+    match library_autosave::auto_save_snapshot(series, recording, &recordings_dir) {
         Ok(path) => {
             progress.last_auto_save = Some(Instant::now());
             debug!(path = %path.display(), "spectrogram auto-saved");
