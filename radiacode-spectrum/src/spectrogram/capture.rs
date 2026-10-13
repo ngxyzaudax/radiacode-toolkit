@@ -1,13 +1,15 @@
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::{Receiver, Sender};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::model::SpectrumView;
+use crate::spectrogram::capture_lock::{lock_capture, lock_progress};
 use crate::spectrogram::capture_progress::CaptureProgress;
 use crate::spectrogram::ingest;
 use crate::spectrogram::settings::{SpectrogramSettings, load_settings};
 use crate::spectrogram::storage::RecordingWriter;
+use crate::worker::WorkerEvent;
 
 pub struct SpectrogramCapture {
     pub progress: Arc<Mutex<CaptureProgress>>,
@@ -26,121 +28,66 @@ impl SpectrogramCapture {
         }
     }
 
-    pub fn with_progress_mut<R>(&mut self, f: impl FnOnce(&mut CaptureProgress) -> R) -> Option<R> {
-        lock_capture_progress(&self.progress).map(|mut progress| f(&mut progress))
+    pub fn with_progress_mut<R>(&self, f: impl FnOnce(&mut CaptureProgress) -> R) -> R {
+        f(&mut lock_progress(&self.progress))
     }
 
     pub fn on_session_connect(&mut self, serial: &str) {
         self.device_serial = Some(serial.to_string());
-        let _ = self.with_progress_mut(|progress| {
-            progress.capture_enabled = true;
-            progress.skip_next_sample = true;
-            progress.mark_dirty();
-        });
+        self.with_progress_mut(CaptureProgress::on_session_connect);
     }
 
     pub fn on_reconnect(&mut self) {
-        let _ = self.with_progress_mut(|progress| {
-            progress.skip_next_sample = true;
-            progress.reconnect_baseline_pending = true;
-            progress.baseline = None;
-            progress.last_ingest_at = None;
-            progress.mark_dirty();
-        });
+        self.with_progress_mut(CaptureProgress::on_reconnect);
     }
 
     pub fn on_disconnect(&mut self) {
         self.device_serial = None;
-        let _ = self.with_progress_mut(|progress| {
-            progress.capture_enabled = false;
-            progress.live_series = None;
-            progress.last_ingested_sequence = 0;
-            progress.skip_next_sample = false;
-            progress.reconnect_baseline_pending = false;
-            progress.last_ingest_at = None;
-            progress.baseline = None;
-            progress.last_auto_save = None;
-            progress.mark_dirty();
-        });
+        self.with_progress_mut(CaptureProgress::on_disconnect);
     }
 
     pub fn ingest_spectrum(&mut self, spectrum: &SpectrumView) {
-        let enabled =
-            lock_capture_progress(&self.progress).is_some_and(|progress| progress.capture_enabled);
-        if !enabled {
-            return;
+        let next_sequence = self.with_progress_mut(|progress| {
+            progress
+                .capture_enabled
+                .then(|| progress.last_ingested_sequence.saturating_add(1))
+        });
+        if let Some(sequence) = next_sequence {
+            ingest::ingest_capture(self, spectrum, sequence);
         }
-        let sequence = lock_capture_progress(&self.progress)
-            .map(|progress| progress.last_ingested_sequence.saturating_add(1))
-            .unwrap_or(1);
-        ingest::ingest_capture(self, spectrum, sequence);
     }
 
     pub fn maybe_auto_save(&mut self) {
         ingest::maybe_auto_save_capture(self);
     }
+
+    fn on_worker_event(&mut self, event: &WorkerEvent) {
+        match event {
+            WorkerEvent::Spectrum(spectrum) => {
+                self.ingest_spectrum(spectrum);
+                self.maybe_auto_save();
+            }
+            WorkerEvent::Connected(info) => self.on_session_connect(&info.serial),
+            WorkerEvent::Reconnecting => self.on_reconnect(),
+            WorkerEvent::Disconnected => self.on_disconnect(),
+            _ => {}
+        }
+    }
 }
 
 pub fn spawn_capture_router(
-    worker_events: Receiver<crate::worker::WorkerEvent>,
-    ui_events: Sender<crate::worker::WorkerEvent>,
+    worker_events: Receiver<WorkerEvent>,
+    ui_events: Sender<WorkerEvent>,
     capture: Arc<Mutex<SpectrogramCapture>>,
 ) {
     std::thread::spawn(move || {
         debug!("spectrogram capture router ready");
         while let Ok(event) = worker_events.recv() {
-            match &event {
-                crate::worker::WorkerEvent::Spectrum(spectrum) => {
-                    if let Some(mut cap) = lock_capture(&capture) {
-                        cap.ingest_spectrum(spectrum);
-                        cap.maybe_auto_save();
-                    }
-                }
-                crate::worker::WorkerEvent::Connected(info) => {
-                    if let Some(mut cap) = lock_capture(&capture) {
-                        cap.on_session_connect(&info.serial);
-                    }
-                }
-                crate::worker::WorkerEvent::Reconnecting => {
-                    if let Some(mut cap) = lock_capture(&capture) {
-                        cap.on_reconnect();
-                    }
-                }
-                crate::worker::WorkerEvent::Disconnected => {
-                    if let Some(mut cap) = lock_capture(&capture) {
-                        cap.on_disconnect();
-                    }
-                }
-                _ => {}
-            }
+            lock_capture(&capture).on_worker_event(&event);
             if ui_events.send(event).is_err() {
                 break;
             }
         }
         info!("spectrogram capture router stopped");
     });
-}
-
-fn lock_capture(
-    capture: &Arc<Mutex<SpectrogramCapture>>,
-) -> Option<MutexGuard<'_, SpectrogramCapture>> {
-    match capture.lock() {
-        Ok(guard) => Some(guard),
-        Err(error) => {
-            warn!("capture mutex poisoned, recovering");
-            Some(error.into_inner())
-        }
-    }
-}
-
-fn lock_capture_progress(
-    progress: &Arc<Mutex<CaptureProgress>>,
-) -> Option<MutexGuard<'_, CaptureProgress>> {
-    match progress.lock() {
-        Ok(guard) => Some(guard),
-        Err(error) => {
-            warn!("capture progress mutex poisoned, recovering");
-            Some(error.into_inner())
-        }
-    }
 }

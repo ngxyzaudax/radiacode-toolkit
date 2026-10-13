@@ -5,6 +5,7 @@ use tracing::{debug, warn};
 
 use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::capture::SpectrogramCapture;
+use crate::spectrogram::capture_lock::lock_progress;
 use crate::spectrogram::capture_progress::CaptureProgress;
 use crate::spectrogram::gap::ClassifiedRow;
 use crate::spectrogram::library;
@@ -60,13 +61,7 @@ pub fn maybe_auto_save_capture(capture: &mut SpectrogramCapture) {
     }
     let recordings_dir = capture.settings.recordings_dir.clone();
     let recording = capture.recording.as_ref();
-    let mut progress = match capture.progress.lock() {
-        Ok(guard) => guard,
-        Err(error) => {
-            warn!("capture progress mutex poisoned during auto-save, recovering");
-            error.into_inner()
-        }
-    };
+    let mut progress = lock_progress(&capture.progress);
     let due = progress
         .last_auto_save
         .map(|t| t.elapsed() >= Duration::from_secs(60))

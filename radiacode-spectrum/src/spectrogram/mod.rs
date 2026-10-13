@@ -1,7 +1,10 @@
 pub mod axes;
 pub mod baseline;
 pub mod capture;
-pub mod capture_progress;
+mod capture_lock;
+mod capture_progress;
+#[cfg(test)]
+mod capture_progress_tests;
 pub mod color_scheme;
 pub mod colormap;
 pub mod controls_action;
@@ -23,7 +26,8 @@ mod peak_cursor_tests;
 pub mod preview;
 pub mod rcspg;
 pub mod recording;
-pub mod recording_seed;
+mod recording_control;
+mod recording_seed;
 pub mod settings;
 pub mod state;
 pub mod storage;

@@ -1,8 +1,7 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-
-use std::sync::Arc;
 
 use crate::spectrogram::baseline::IngestBaseline;
 use crate::spectrogram::model::SpectrogramSeries;
@@ -48,6 +47,66 @@ impl CaptureProgress {
 
     pub fn is_dirty(&self) -> bool {
         self.dirty.load(Ordering::Acquire)
+    }
+
+    pub fn begin_capture(&mut self, skip_next_sample: bool) {
+        self.capture_enabled = true;
+        self.skip_next_sample = skip_next_sample;
+        self.last_auto_save = None;
+        self.error.clear();
+        self.mark_dirty();
+    }
+
+    pub fn pause_capture(&mut self) {
+        self.capture_enabled = false;
+        self.error.clear();
+        self.mark_dirty();
+    }
+
+    pub fn on_session_connect(&mut self) {
+        self.capture_enabled = true;
+        self.skip_next_sample = true;
+        self.mark_dirty();
+    }
+
+    pub fn on_reconnect(&mut self) {
+        self.skip_next_sample = true;
+        self.reconnect_baseline_pending = true;
+        self.baseline = None;
+        self.last_ingest_at = None;
+        self.mark_dirty();
+    }
+
+    pub fn on_disconnect(&mut self) {
+        self.live_series = None;
+        self.capture_enabled = false;
+        self.skip_next_sample = false;
+        self.last_auto_save = None;
+        self.reset_ingest_tracking();
+    }
+
+    pub fn reset_accumulation(&mut self) {
+        if let Some(series) = self.live_series.as_mut() {
+            Arc::make_mut(series).rows.clear();
+        }
+        self.skip_next_sample = true;
+        self.error.clear();
+        self.reset_ingest_tracking();
+    }
+
+    fn reset_ingest_tracking(&mut self) {
+        self.last_ingested_sequence = 0;
+        self.reconnect_baseline_pending = false;
+        self.last_ingest_at = None;
+        self.baseline = None;
+        self.mark_dirty();
+    }
+
+    pub fn set_live_interval_secs(&mut self, interval_secs: f64) {
+        if let Some(series) = self.live_series.as_mut() {
+            Arc::make_mut(series).header.interval_secs = interval_secs;
+        }
+        self.mark_dirty();
     }
 }
 
