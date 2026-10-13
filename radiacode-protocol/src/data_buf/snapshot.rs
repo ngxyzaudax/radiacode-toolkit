@@ -54,14 +54,6 @@ pub fn snapshot_from_frame(frame: &DataBufFrame) -> DataBufSnapshot {
     snapshot
 }
 
-pub fn latest_rare_status(data: &[u8]) -> Option<RareStatus> {
-    latest_snapshot(data).rare
-}
-
-pub fn latest_real_time_rates(data: &[u8]) -> Option<RealTimeRates> {
-    latest_snapshot(data).rates
-}
-
 pub fn real_time_records(frame: &DataBufFrame) -> impl Iterator<Item = &RealTimeData> {
     frame.records.iter().filter_map(|record| match record {
         DataBufRecord::RealTime(record) => Some(record),

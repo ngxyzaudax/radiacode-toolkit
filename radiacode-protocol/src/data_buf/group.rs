@@ -44,8 +44,4 @@ impl RecordKind {
             _ => 0,
         }
     }
-
-    pub fn is_monitor_rates(self) -> bool {
-        matches!(self, Self::RealTimeData | Self::RawData | Self::DoseRateDb)
-    }
 }

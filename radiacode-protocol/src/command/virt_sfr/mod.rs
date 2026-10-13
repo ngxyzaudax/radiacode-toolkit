@@ -1,7 +1,11 @@
 mod addresses;
 mod extract;
 mod kinds;
+#[cfg(test)]
+mod tests;
 
+#[cfg(test)]
+pub(crate) use addresses::ALL_REGISTERS;
 pub use extract::{extract_vsfr_f32, extract_vsfr_u32, resolve_value_kind};
 pub use kinds::{SfrValueKind, catalog_registers, static_value_kind};
 

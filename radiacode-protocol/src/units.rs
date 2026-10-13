@@ -42,10 +42,6 @@ impl CountDisplayUnit {
             Self::Cps => 0,
         }
     }
-
-    pub fn is_cpm(self) -> bool {
-        matches!(self, Self::Cpm)
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -1,7 +1,4 @@
-use super::{
-    DataBufRecord, DecodeWarningKind, RecordKind, Seq, decode_data_buf, latest_real_time_rates,
-    latest_snapshot,
-};
+use super::{DataBufRecord, DecodeWarningKind, RecordKind, Seq, decode_data_buf, latest_snapshot};
 
 #[test]
 fn parses_rare_data_record() {
@@ -23,7 +20,7 @@ fn parses_real_time_data_record() {
     bytes.extend_from_slice(&count_rate);
     bytes.extend_from_slice(&dose_rate);
     bytes.extend_from_slice(&[10u8, 0, 20, 0, 0, 0, 0]);
-    let rates = latest_real_time_rates(&bytes).expect("rates");
+    let rates = latest_snapshot(&bytes).rates.expect("rates");
     assert!((rates.count_rate_cps - 12.5).abs() < 0.001);
     assert!((rates.dose_rate_rh - 0.000_125).abs() < 1e-9);
     assert!((rates.count_rate_err_pct - 1.0).abs() < 0.001);

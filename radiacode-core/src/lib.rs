@@ -46,9 +46,9 @@ pub use radiacode_protocol::{
 pub use radiacode_protocol::{
     count_display_from_cps, decode_count_alarm, decode_cp1251, decode_dose_accum,
     decode_dose_alarm, dose_display_from_rh, encode_count_alarm, encode_dose_accum,
-    encode_dose_alarm, extract_vsfr_f32, extract_vsfr_u32, latest_rare_status,
-    latest_real_time_rates, latest_snapshot, parse_configuration_ini, parse_sfr_file,
-    resolve_value_kind, sfr_supports_leds_on, validate_catalog,
+    encode_dose_alarm, extract_vsfr_f32, extract_vsfr_u32, latest_snapshot,
+    parse_configuration_ini, parse_sfr_file, resolve_value_kind, sfr_supports_leds_on,
+    validate_catalog,
 };
 pub use rate_units::{count_unit_label, dose_accum_unit_label, dose_unit_label};
 pub use session_restore::SessionRestore;

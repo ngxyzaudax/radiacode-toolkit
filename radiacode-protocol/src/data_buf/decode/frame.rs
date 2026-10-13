@@ -11,7 +11,6 @@ const MAX_RESYNCS_PER_FRAME: u32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeWarningKind {
-    HeaderUnderrun,
     PayloadUnderrun,
     UnknownRecord {
         entity: u8,
@@ -47,7 +46,7 @@ pub fn decode_data_buf(data: &[u8]) -> DataBufFrame {
     let mut expected_seq: Option<Seq> = None;
     while buffer.size() >= 7 {
         let offset = data.len().saturating_sub(buffer.size());
-        let Some(header) = parse_header(&mut buffer, offset) else {
+        let Some(header) = parse_header(&mut buffer) else {
             break;
         };
         if frame.first_header_seq.is_none() {
@@ -110,8 +109,7 @@ pub fn decode_data_buf(data: &[u8]) -> DataBufFrame {
     frame
 }
 
-fn parse_header(buffer: &mut BytesBuffer, offset: usize) -> Option<RecordHeader> {
-    let _ = offset;
+fn parse_header(buffer: &mut BytesBuffer) -> Option<RecordHeader> {
     let seq = Seq::new(buffer.take_u8().ok()?);
     let entity = buffer.take_u8().ok()?;
     let group = buffer.take_u8().ok()?;
