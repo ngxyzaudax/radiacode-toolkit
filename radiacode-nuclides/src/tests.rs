@@ -1,5 +1,5 @@
 use crate::catalog::{catalog, nuclide_count};
-use crate::chain::decay_chain;
+use crate::chain_graph::decay_graph;
 use crate::match_peaks::{
     MatchParams, PeakIdentification, SpectrumPeak, match_peaks, tolerance_kev,
 };
@@ -98,18 +98,21 @@ fn top_candidates_contain(identification: &PeakIdentification, name: &str) -> bo
 }
 
 #[test]
-fn u238_chain_reaches_stable_lead() {
+fn u238_graph_reaches_stable_lead() {
     if catalog().nuclides.iter().all(|entry| entry.id != u238_id()) {
         return;
     }
-    let chain = decay_chain(u238_id(), 24);
-    assert!(chain.len() >= 2);
-    assert_eq!(chain[0].display_name, "U-238");
-    let last = chain.last().expect("terminal");
+    let graph = decay_graph(u238_id(), 64);
+    assert!(graph.nodes.len() >= 2);
+    assert_eq!(graph.nodes[graph.focus_index].display_name, "U-238");
     assert!(
-        last.display_name.contains("Pb") || last.decay_mode.is_none(),
-        "last step was {}",
-        last.display_name
+        graph.nodes.iter().any(|node| node.display_name == "Pb-206"),
+        "expected Pb-206 in {:?}",
+        graph
+            .nodes
+            .iter()
+            .map(|node| &node.display_name)
+            .collect::<Vec<_>>()
     );
 }
 

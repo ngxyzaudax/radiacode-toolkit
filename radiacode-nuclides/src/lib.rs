@@ -26,7 +26,7 @@ pub use activity::{
     total_gamma_yield_pct,
 };
 pub use catalog::{catalog, nuclide_by_id, nuclide_count, nuclide_index};
-pub use chain::{ChainStep, decay_branch_label, decay_chain, decay_mode_label};
+pub use chain::decay_mode_label;
 pub use chain_graph::{ChainEdge, ChainNode, DecayGraph, decay_graph};
 pub use chain_lines::{
     AttributedLine, chain_lines, strongest_chain_line, strongest_chain_peak_kev,
@@ -55,9 +55,7 @@ pub use series::{
     series_for_member,
 };
 pub use series_search::{ChainFilters, search_chains};
-pub use source_summary::{
-    ChainEvidence, NuclideEvidence, SourceSummary, collect_nuclide_evidence, summarize_sources,
-};
+pub use source_summary::{ChainEvidence, NuclideEvidence, SourceSummary, collect_nuclide_evidence};
 pub use topology::{
     decay_catalog, has_emissions, topology_decays, topology_display_name, topology_entry,
     topology_half_life_secs, topology_parents,
