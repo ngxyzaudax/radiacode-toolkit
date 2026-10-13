@@ -15,7 +15,7 @@ pub fn select_nuclides(candidates: &[Candidate]) -> Vec<Candidate> {
         })
         .cloned()
         .collect::<Vec<_>>();
-    selected.sort_by(|left, right| fetch_rank(left).cmp(&fetch_rank(right)));
+    selected.sort_by_key(fetch_rank);
     selected
 }
 

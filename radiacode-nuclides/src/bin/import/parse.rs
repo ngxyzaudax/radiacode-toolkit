@@ -1,45 +1,38 @@
-use std::collections::HashMap;
+use radiacode_nuclides::NuclideId;
 
-use radiacode_nuclides::{DecayBranch, DecayMode, GammaLine, NuclideId, RadiationKind};
+use super::parse_decay::parse_decay_branches;
+use super::{Candidate, CsvRow};
 
-use super::{Candidate, MAX_GAMMA_ENERGY, MIN_GAMMA_INTENSITY};
+const GROUND_STATE_TOLERANCE_KEV: f64 = 0.001;
 
-pub fn parse_ground_states(rows: &[HashMap<String, String>]) -> Vec<Candidate> {
+pub fn parse_ground_states(rows: &[CsvRow]) -> Vec<Candidate> {
     rows.iter().filter_map(parse_ground_row).collect()
 }
 
-fn parse_ground_row(row: &HashMap<String, String>) -> Option<Candidate> {
-    let energy = row
-        .get("energy")
-        .and_then(|value| value.parse::<f64>().ok())
-        .unwrap_or(0.0);
-    if energy.abs() > 0.001 {
+fn parse_ground_row(row: &CsvRow) -> Option<Candidate> {
+    let energy = parse_row_f64(row, "energy").unwrap_or(0.0);
+    if energy.abs() > GROUND_STATE_TOLERANCE_KEV {
         return None;
     }
-    let z = parse_u8(row.get("z")?)?;
-    let n = parse_u16(row.get("n")?)?;
-    if z == 0 {
-        return None;
-    }
+    let (z, n) = parse_nuclide_zn(row, "z", "n").filter(|(z, _)| *z != 0)?;
     let symbol = row.get("symbol")?.trim().to_string();
     if symbol.is_empty() {
         return None;
     }
     let id = NuclideId::new(z, n, 0);
-    let decays = parse_decay_branches(row, id);
     Some(Candidate {
         id,
         symbol,
         mass_number: id.mass_number(),
         half_life_secs: parse_half_life_secs(row),
         half_life_text: half_life_text_from_row(row),
-        decays,
+        decays: parse_decay_branches(row, id),
         force_include: false,
         level_energy_kev: 0.0,
     })
 }
 
-pub fn half_life_text_from_row(row: &HashMap<String, String>) -> String {
+pub fn half_life_text_from_row(row: &CsvRow) -> String {
     row.get("half_life")
         .map(|value| value.trim())
         .filter(|value| !value.is_empty())
@@ -47,122 +40,25 @@ pub fn half_life_text_from_row(row: &HashMap<String, String>) -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-fn parse_half_life_secs(row: &HashMap<String, String>) -> Option<f64> {
-    row.get("half_life_sec")
-        .and_then(|value| value.parse::<f64>().ok())
-        .filter(|value| value.is_finite() && *value > 0.0)
+pub fn parse_half_life_secs(row: &CsvRow) -> Option<f64> {
+    parse_row_f64(row, "half_life_sec").filter(|value| value.is_finite() && *value > 0.0)
 }
 
-pub fn parse_decay_branches(row: &HashMap<String, String>, parent: NuclideId) -> Vec<DecayBranch> {
-    [
-        ("decay_1", "decay_1_%"),
-        ("decay_2", "decay_2_%"),
-        ("decay_3", "decay_3_%"),
-    ]
-    .iter()
-    .filter_map(|(mode_key, branch_key)| {
-        let mode_text = row.get(*mode_key)?;
-        if mode_text.trim().is_empty() {
-            return None;
-        }
-        let mode = parse_decay_mode(mode_text);
-        if mode == DecayMode::Unknown {
-            return None;
-        }
-        let branching = row
-            .get(*branch_key)
-            .and_then(|value| value.parse::<f64>().ok())
-            .unwrap_or(100.0);
-        let daughter = daughter_from_mode(parent, mode)?;
-        Some(DecayBranch {
-            mode,
-            branching_pct: branching,
-            daughter,
-        })
-    })
-    .collect()
+pub fn parse_row_f64(row: &CsvRow, key: &str) -> Option<f64> {
+    row.get(key)
+        .and_then(|value| value.trim().parse::<f64>().ok())
 }
 
-pub fn daughter_from_mode(parent: NuclideId, mode: DecayMode) -> Option<NuclideId> {
-    let z = i16::from(parent.z);
-    let n = parent.n as i16;
-    let (next_z, next_n) = match mode {
-        DecayMode::Alpha if z >= 2 && n >= 2 => (z - 2, n - 2),
-        DecayMode::BetaMinus => (z + 1, n - 1),
-        DecayMode::BetaPlus | DecayMode::ElectronCapture if z >= 1 => (z - 1, n + 1),
-        DecayMode::Isomeric => (z, n),
-        DecayMode::Proton if z >= 1 => (z - 1, n),
-        DecayMode::Neutron if n >= 1 => (z, n - 1),
-        _ => return None,
-    };
-    if next_z <= 0 || next_n < 0 {
-        return None;
-    }
-    Some(NuclideId::new(next_z as u8, next_n as u16, 0))
+pub fn parse_nuclide_zn(row: &CsvRow, z_key: &str, n_key: &str) -> Option<(u8, u16)> {
+    let z = parse_u8(row.get(z_key)?)?;
+    let n = parse_u16(row.get(n_key)?)?;
+    Some((z, n))
 }
 
-pub fn parse_radiation_row(
-    row: &HashMap<String, String>,
-    kind: RadiationKind,
-    parent_level_energy_kev: f64,
-) -> Option<GammaLine> {
-    let parent_energy = row
-        .get("p_energy")
-        .and_then(|value| value.parse::<f64>().ok())
-        .unwrap_or(0.0);
-    if (parent_energy - parent_level_energy_kev).abs() > 0.001 {
-        return None;
-    }
-    let energy = row.get("energy")?.parse::<f64>().ok()?;
-    if !energy.is_finite() || energy <= 0.0 || energy > MAX_GAMMA_ENERGY {
-        return None;
-    }
-    let intensity = row
-        .get("intensity")
-        .and_then(|value| value.parse::<f64>().ok())
-        .unwrap_or(0.0);
-    if intensity < MIN_GAMMA_INTENSITY {
-        return None;
-    }
-    let decay = row
-        .get("decay")
-        .map(|value| parse_decay_mode(value))
-        .unwrap_or(DecayMode::Unknown);
-    Some(GammaLine {
-        energy_kev: energy,
-        intensity_pct: intensity,
-        decay,
-        kind,
-    })
-}
-
-pub fn parse_decay_mode(value: &str) -> DecayMode {
-    let upper = value.trim().to_ascii_uppercase();
-    if upper.contains("IT") || upper.contains("ISOMERIC") {
-        return DecayMode::Isomeric;
-    }
-    if upper.contains("SF") {
-        return DecayMode::SpontaneousFission;
-    }
-    if upper == "A" || upper.starts_with("ALPHA") {
-        return DecayMode::Alpha;
-    }
-    if upper.contains("EC") {
-        return DecayMode::ElectronCapture;
-    }
-    if upper.contains("B+") || upper.contains("BP") {
-        return DecayMode::BetaPlus;
-    }
-    if upper.contains("B-") || upper.contains("BM") || upper.starts_with("2B") {
-        return DecayMode::BetaMinus;
-    }
-    if upper == "P" {
-        return DecayMode::Proton;
-    }
-    if upper == "N" {
-        return DecayMode::Neutron;
-    }
-    DecayMode::Unknown
+pub fn parse_parent_level(row: &CsvRow) -> Option<(u8, u16, f64)> {
+    let (z, n) = parse_nuclide_zn(row, "p_z", "p_n")?;
+    let energy_kev = parse_row_f64(row, "p_energy")?;
+    Some((z, n, energy_kev))
 }
 
 pub fn display_name(symbol: &str, mass_number: u16, metastable: u8) -> String {

@@ -40,6 +40,7 @@ jobs:
             libssl-dev \
             libdbus-1-dev
       - run: cargo test --workspace
+      - run: cargo test -p radiacode-nuclides --features import
 
   clippy:
     name: Clippy
@@ -64,6 +65,7 @@ jobs:
             libssl-dev \
             libdbus-1-dev
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo clippy -p radiacode-nuclides --features import --all-targets -- -D warnings
 
   coverage:
     name: Coverage
