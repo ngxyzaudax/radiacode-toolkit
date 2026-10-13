@@ -1,92 +1,69 @@
 use tracing::debug;
 
 use crate::device::RadiaCode;
+use crate::device_config::{CONFIG_REGISTERS, alarm_limits_from_words, alarm_register_pairs};
 use crate::error::Result;
-use crate::rate_units::{
-    decode_count_alarm, decode_dose_accum, decode_dose_alarm, encode_count_alarm,
-    encode_dose_accum, encode_dose_alarm,
-};
 use crate::types::{AlarmLimits, AlarmLimitsUpdate};
 use radiacode_protocol::VirtSfr;
-use radiacode_protocol::{
-    CountDisplayUnit, DoseDisplayUnit, RawCountsPer10s, RawMicroRoentgenPerHour,
-};
+
+const ALARM_REGISTER_COUNT: usize = 8;
 
 pub async fn alarm_limits(device: &mut RadiaCode) -> Result<AlarmLimits> {
-    let ids = [
-        VirtSfr::CrLev1Cp10s,
-        VirtSfr::CrLev2Cp10s,
-        VirtSfr::DrLev1UrH,
-        VirtSfr::DrLev2UrH,
-        VirtSfr::DsLev1Ur,
-        VirtSfr::DsLev2Ur,
-        VirtSfr::DsUnits,
-        VirtSfr::CrUnits,
-    ];
-    let values = device.read_vsfr_batch(&ids).await?;
-    let dose_unit = DoseDisplayUnit::from_device_flag(values[6]);
-    let count_unit = CountDisplayUnit::from_device_flag(values[7]);
-    let limits = AlarmLimits {
-        l1_count_rate: decode_count_alarm(RawCountsPer10s::new(values[0]), count_unit),
-        l2_count_rate: decode_count_alarm(RawCountsPer10s::new(values[1]), count_unit),
-        l1_dose_rate: decode_dose_alarm(RawMicroRoentgenPerHour::new(values[2]), dose_unit),
-        l2_dose_rate: decode_dose_alarm(RawMicroRoentgenPerHour::new(values[3]), dose_unit),
-        l1_dose: decode_dose_accum(values[4], dose_unit),
-        l2_dose: decode_dose_accum(values[5], dose_unit),
-        dose_unit,
-        count_unit,
-    };
+    let values = device
+        .read_vsfr_batch(&CONFIG_REGISTERS[..ALARM_REGISTER_COUNT])
+        .await?;
+    let limits = alarm_limits_from_words(&values);
     debug!(?limits, "alarm limits loaded");
     Ok(limits)
 }
 
 pub async fn set_alarm_limits(device: &mut RadiaCode, update: &AlarmLimitsUpdate) -> Result<()> {
     let current = alarm_limits(device).await?;
-    let dose_unit = update.dose_unit.unwrap_or(current.dose_unit);
-    let count_unit = update.count_unit.unwrap_or(current.count_unit);
-    let mut pairs = Vec::new();
-    if let Some(value) = update.l1_count_rate {
-        pairs.push((
-            VirtSfr::CrLev1Cp10s,
-            encode_count_alarm(value, count_unit).as_u32(),
-        ));
-    }
-    if let Some(value) = update.l2_count_rate {
-        pairs.push((
-            VirtSfr::CrLev2Cp10s,
-            encode_count_alarm(value, count_unit).as_u32(),
-        ));
-    }
-    if let Some(value) = update.l1_dose_rate {
-        pairs.push((
-            VirtSfr::DrLev1UrH,
-            encode_dose_alarm(value, dose_unit).as_u32(),
-        ));
-    }
-    if let Some(value) = update.l2_dose_rate {
-        pairs.push((
-            VirtSfr::DrLev2UrH,
-            encode_dose_alarm(value, dose_unit).as_u32(),
-        ));
-    }
-    if let Some(value) = update.l1_dose {
-        pairs.push((VirtSfr::DsLev1Ur, encode_dose_accum(value, dose_unit)));
-    }
-    if let Some(value) = update.l2_dose {
-        pairs.push((VirtSfr::DsLev2Ur, encode_dose_accum(value, dose_unit)));
-    }
-    if let Some(value) = update.dose_unit {
-        pairs.push((VirtSfr::DsUnits, value.to_device_flag()));
-    }
-    if let Some(value) = update.count_unit {
-        pairs.push((VirtSfr::CrUnits, value.to_device_flag()));
-    }
+    let pairs = updated_alarm_pairs(&current, update);
     if pairs.is_empty() {
         return Ok(());
     }
     device.write_vsfr_batch(&pairs).await?;
     debug!(count = pairs.len(), "alarm limits written");
     Ok(())
+}
+
+pub(crate) fn merge_alarm_update(current: &AlarmLimits, update: &AlarmLimitsUpdate) -> AlarmLimits {
+    AlarmLimits {
+        l1_count_rate: update.l1_count_rate.unwrap_or(current.l1_count_rate),
+        l2_count_rate: update.l2_count_rate.unwrap_or(current.l2_count_rate),
+        l1_dose_rate: update.l1_dose_rate.unwrap_or(current.l1_dose_rate),
+        l2_dose_rate: update.l2_dose_rate.unwrap_or(current.l2_dose_rate),
+        l1_dose: update.l1_dose.unwrap_or(current.l1_dose),
+        l2_dose: update.l2_dose.unwrap_or(current.l2_dose),
+        dose_unit: update.dose_unit.unwrap_or(current.dose_unit),
+        count_unit: update.count_unit.unwrap_or(current.count_unit),
+    }
+}
+
+fn provided_fields(update: &AlarmLimitsUpdate) -> [bool; ALARM_REGISTER_COUNT] {
+    [
+        update.l1_count_rate.is_some(),
+        update.l2_count_rate.is_some(),
+        update.l1_dose_rate.is_some(),
+        update.l2_dose_rate.is_some(),
+        update.l1_dose.is_some(),
+        update.l2_dose.is_some(),
+        update.dose_unit.is_some(),
+        update.count_unit.is_some(),
+    ]
+}
+
+pub(crate) fn updated_alarm_pairs(
+    current: &AlarmLimits,
+    update: &AlarmLimitsUpdate,
+) -> Vec<(VirtSfr, u32)> {
+    let merged = merge_alarm_update(current, update);
+    alarm_register_pairs(&merged)
+        .into_iter()
+        .zip(provided_fields(update))
+        .filter_map(|(pair, provided)| provided.then_some(pair))
+        .collect()
 }
 
 impl RadiaCode {

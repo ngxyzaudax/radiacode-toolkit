@@ -2,17 +2,23 @@ mod adjust;
 pub(crate) mod candidates;
 mod chains;
 mod completeness;
-mod lead_chain;
+pub(crate) mod lead_chain;
 mod rerank;
 mod verdict;
+mod verdict_peaks;
+mod verdict_select;
 mod window;
+
+#[cfg(test)]
+mod verdict_tests;
 
 use crate::identify::candidates::{peak_candidates, rank_candidates};
 use crate::identify::chains::score_chains;
 use crate::identify::lead_chain::leading_chain_for_rerank;
 use crate::identify::verdict::build_verdict;
 use crate::match_peaks::{MatchParams, PeakIdentification, SpectrumPeak};
-use crate::source_summary::{SourceSummary, collect_nuclide_evidence};
+use crate::series::is_natural_series_head;
+use crate::source_summary::{ChainEvidence, SourceSummary, collect_nuclide_evidence};
 
 pub use verdict::{Confidence, SourceVerdict, VerdictKind};
 pub use window::AnalysisWindow;
@@ -51,14 +57,12 @@ pub fn analyze_peaks(
             }
         })
         .collect();
-    let identifications =
-        adjust::apply_completeness_adjustments(identifications, window, params);
-    let (identifications, _nuclides, chains) =
-        score_and_rerank(identifications, window, params);
-    let identifications = refine_natural_chain_rerank(identifications, window, params, &chains);
+    let identifications = adjust::apply_completeness_adjustments(identifications, window, params);
+    let (identifications, chains) = score_and_rerank(identifications, window, params);
+    let identifications = refine_natural_chain_rerank(identifications, &chains);
     let nuclides = collect_nuclide_evidence(&identifications, TOP_CANDIDATES_PER_PEAK);
     let chains = score_chains(&identifications, window, params, &nuclides);
-    let verdict = build_verdict(&identifications, window, &chains, &nuclides);
+    let verdict = build_verdict(&identifications, &chains, &nuclides);
     let mut sources = SourceSummary {
         nuclides,
         chains,
@@ -76,7 +80,7 @@ fn score_and_rerank(
     identifications: Vec<PeakIdentification>,
     window: AnalysisWindow,
     params: MatchParams,
-) -> (Vec<PeakIdentification>, Vec<crate::source_summary::NuclideEvidence>, Vec<crate::source_summary::ChainEvidence>) {
+) -> (Vec<PeakIdentification>, Vec<ChainEvidence>) {
     let nuclides = collect_nuclide_evidence(&identifications, TOP_CANDIDATES_PER_PEAK);
     let chains = score_chains(&identifications, window, params, &nuclides);
     let identifications = if let Some(chain) = leading_chain_for_rerank(&chains) {
@@ -86,23 +90,15 @@ fn score_and_rerank(
     };
     let nuclides = collect_nuclide_evidence(&identifications, TOP_CANDIDATES_PER_PEAK);
     let chains = score_chains(&identifications, window, params, &nuclides);
-    (identifications, nuclides, chains)
+    (identifications, chains)
 }
 
 fn refine_natural_chain_rerank(
     identifications: Vec<PeakIdentification>,
-    window: AnalysisWindow,
-    params: MatchParams,
-    chains: &[crate::source_summary::ChainEvidence],
+    chains: &[ChainEvidence],
 ) -> Vec<PeakIdentification> {
-    let Some(chain) = leading_chain_for_rerank(chains) else {
-        return identifications;
-    };
-    if !crate::series::is_natural_series_head(chain.head) {
-        return identifications;
+    match leading_chain_for_rerank(chains).filter(|chain| is_natural_series_head(chain.head)) {
+        Some(chain) => rerank::rerank_for_chain_head(identifications, chain.head),
+        None => identifications,
     }
-    let identifications = rerank::rerank_for_chain_head(identifications, chain.head);
-    let nuclides = collect_nuclide_evidence(&identifications, TOP_CANDIDATES_PER_PEAK);
-    let _chains = score_chains(&identifications, window, params, &nuclides);
-    identifications
 }

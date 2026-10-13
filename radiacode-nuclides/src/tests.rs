@@ -1,17 +1,15 @@
-use crate::catalog::{catalog, nuclide_count};
-use crate::chain::decay_chain;
+use crate::catalog::catalog;
 use crate::match_peaks::{
     MatchParams, PeakIdentification, SpectrumPeak, match_peaks, tolerance_kev,
 };
-use crate::model::{Nuclide, NuclideId as Id};
-
-fn u238_id() -> Id {
-    Id::new(92, 146, 0)
-}
+use crate::model::Nuclide;
 
 #[test]
 fn catalog_parses_and_has_entries() {
-    assert!(nuclide_count() > 300, "catalogue should have >300 nuclides");
+    assert!(
+        catalog().nuclides.len() > 300,
+        "catalogue should have >300 nuclides"
+    );
     let energies = catalog()
         .nuclides
         .iter()
@@ -95,22 +93,6 @@ fn top_candidates_contain(identification: &PeakIdentification, name: &str) -> bo
         .iter()
         .take(3)
         .any(|candidate| candidate.display_name.starts_with(name))
-}
-
-#[test]
-fn u238_chain_reaches_stable_lead() {
-    if catalog().nuclides.iter().all(|entry| entry.id != u238_id()) {
-        return;
-    }
-    let chain = decay_chain(u238_id(), 24);
-    assert!(chain.len() >= 2);
-    assert_eq!(chain[0].display_name, "U-238");
-    let last = chain.last().expect("terminal");
-    assert!(
-        last.display_name.contains("Pb") || last.decay_mode.is_none(),
-        "last step was {}",
-        last.display_name
-    );
 }
 
 fn nuclide_by_symbol(symbol: &str) -> Option<&Nuclide> {

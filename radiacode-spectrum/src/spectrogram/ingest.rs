@@ -3,18 +3,13 @@ use tracing::{debug, warn};
 use crate::energy::{energy_grid, sample_indices};
 use crate::model::SpectrumView;
 use crate::spectrogram::capture::SpectrogramCapture;
+use crate::spectrogram::capture_lock::lock_progress;
 use crate::spectrogram::gap::{self, classify_row};
 use crate::spectrogram::ingest_append::append_classified_row_capture;
 use crate::spectrogram::ingest_baseline::{ensure_live_series, store_baseline_capture};
 
 pub fn ingest_capture(capture: &mut SpectrogramCapture, spectrum: &SpectrumView, sequence: u64) {
-    let mut progress = match capture.progress.lock() {
-        Ok(guard) => guard,
-        Err(error) => {
-            warn!("capture progress mutex poisoned during ingest, recovering");
-            error.into_inner()
-        }
-    };
+    let mut progress = lock_progress(&capture.progress);
     if sequence <= progress.last_ingested_sequence {
         return;
     }
@@ -105,10 +100,8 @@ pub fn ingest_spectrum(
     device_serial: Option<&str>,
     sequence: u64,
 ) {
-    if sequence == state.last_ingested_sequence {
-        return;
-    }
-    if let Ok(mut capture) = state.capture.lock() {
+    {
+        let mut capture = crate::spectrogram::capture_lock::lock_capture(&state.capture);
         capture.device_serial = device_serial.map(str::to_string);
         ingest_capture(&mut capture, spectrum, sequence);
     }

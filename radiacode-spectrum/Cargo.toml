@@ -2,6 +2,7 @@
 name = "radiacode-spectrum"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.92"
 description = "Spectrum analysis program for RadiaCode detectors"
 license = "AGPL-3.0-only"
 
@@ -24,4 +25,6 @@ crossbeam-channel = "0.5"
 rfd = "0.15"
 
 [dev-dependencies]
+radiacode-core = { path = "../radiacode-core", features = ["test-support"] }
 tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "test-util"] }

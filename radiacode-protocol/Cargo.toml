@@ -2,6 +2,7 @@
 name = "radiacode-protocol"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.92"
 description = "RadiaCode wire protocol — framing, opcodes, and payload decoders"
 license = "AGPL-3.0-only"
 

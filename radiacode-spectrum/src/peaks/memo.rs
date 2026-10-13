@@ -54,3 +54,40 @@ impl Default for PeakMemo {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{PeakMemo, PeakMemoKey};
+    use crate::peaks::model::DetectionParams;
+
+    #[test]
+    fn key_changes_with_params_and_data_token() {
+        let params = DetectionParams::default();
+        let tuned = DetectionParams {
+            sigma_min: params.sigma_min + 1.0,
+            ..params
+        };
+        assert_eq!(PeakMemoKey::new(1, params), PeakMemoKey::new(1, params));
+        assert_ne!(PeakMemoKey::new(1, params), PeakMemoKey::new(2, params));
+        assert_ne!(PeakMemoKey::new(1, params), PeakMemoKey::new(1, tuned));
+    }
+
+    #[test]
+    fn memo_recomputes_only_when_key_changes() {
+        let mut memo = PeakMemo::new();
+        let mut computations = 0;
+        let key = PeakMemoKey::new(1, DetectionParams::default());
+        for _ in 0..3 {
+            memo.get_or_compute(key, || {
+                computations += 1;
+                Vec::new()
+            });
+        }
+        assert_eq!(computations, 1);
+        memo.get_or_compute(PeakMemoKey::new(2, DetectionParams::default()), || {
+            computations += 1;
+            Vec::new()
+        });
+        assert_eq!(computations, 2);
+    }
+}

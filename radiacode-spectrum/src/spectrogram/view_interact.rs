@@ -1,17 +1,28 @@
-use egui::Ui;
+use egui::{Pos2, Rect, Response, Ui, Vec2};
 use tracing::debug;
 
-use crate::plot_hover::{SpectrogramHoverInfo, spectrogram_hover_text};
 use crate::plot_zoom::{pinch_to_span_factor, scroll_y_to_span_factor};
 use crate::spectrogram::layout::SpectrogramLayout;
-use crate::spectrogram::model::SpectrogramSeries;
 use crate::spectrogram::state::SpectrogramState;
+use crate::spectrogram::view_range::SpectrogramViewRange;
+
+pub use crate::spectrogram::view_interact_hover::hover_details;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewGesture {
+    pub hovered: bool,
+    pub hover_pos: Option<Pos2>,
+    pub scroll_y: f32,
+    pub zoom_delta: f32,
+    pub drag_delta: Vec2,
+    pub dragged: bool,
+}
 
 pub fn handle_view_interaction(
     ui: &Ui,
-    response: &egui::Response,
-    grid_rect: egui::Rect,
-    image_rect: egui::Rect,
+    response: &Response,
+    grid_rect: Rect,
+    image_rect: Rect,
     layout: SpectrogramLayout,
     state: &mut SpectrogramState,
     total_rows: usize,
@@ -20,103 +31,119 @@ pub fn handle_view_interaction(
         state.reset_view();
         return;
     }
-
-    let (scroll, zoom_delta) = ui.input(|input| (input.smooth_scroll_delta, input.zoom_delta()));
-    let pointer_in_grid = response
-        .hover_pos()
-        .is_some_and(|position| grid_rect.contains(position));
-
-    let mut changed = false;
-    if response.hovered() && (zoom_delta - 1.0).abs() > 0.001 {
-        let factor = pinch_to_span_factor(zoom_delta);
-        zoom_at_pointer(response, image_rect, state, factor);
-        changed = true;
-    }
-
-    if response.hovered() && scroll.y.abs() > 0.0 {
-        let factor = scroll_y_to_span_factor(scroll.y);
-        zoom_at_pointer(response, image_rect, state, factor);
-        debug!(
-            factor,
-            energy_min = state.view_range.energy_min_kev,
-            energy_max = state.view_range.energy_max_kev,
-            "spectrogram energy zoom"
-        );
-        changed = true;
-    }
-
-    if response.dragged() {
-        let delta = response.drag_delta();
-        if !state.view_range.fit_full_spectrum && delta.x.abs() > 0.0 {
-            let span = state.view_range.energy_max_kev - state.view_range.energy_min_kev;
-            let width = image_rect.width().max(1.0) as f64;
-            let delta_kev = -(delta.x as f64 / width) * span;
-            state.view_range.pan_energy(delta_kev);
-        }
-        if pointer_in_grid && layout.cell_px > 0.0 {
-            let row_delta = (-delta.y / layout.cell_px).round() as i32;
-            if row_delta != 0 {
-                state
-                    .view_range
-                    .scroll_history(row_delta, total_rows, layout.display_rows);
-            }
-        }
-        changed = true;
-    }
-
+    let gesture = read_gesture(ui, response);
+    let changed = apply_gesture(
+        &gesture,
+        grid_rect,
+        image_rect,
+        layout,
+        &mut state.view_range,
+        total_rows,
+    );
     if changed {
         state.texture.dirty = true;
     }
 }
 
-fn zoom_at_pointer(
-    response: &egui::Response,
-    image_rect: egui::Rect,
-    state: &mut SpectrogramState,
-    factor: f64,
-) {
-    let anchor = response
-        .hover_pos()
-        .map(|pos| {
-            let t =
-                ((pos.x - image_rect.left()) / image_rect.width().max(1.0)).clamp(0.0, 1.0) as f64;
-            state.view_range.energy_min_kev
-                + (state.view_range.energy_max_kev - state.view_range.energy_min_kev) * t
-        })
-        .unwrap_or_else(|| {
-            0.5 * (state.view_range.energy_min_kev + state.view_range.energy_max_kev)
-        });
-    state.view_range.zoom_energy(anchor, factor);
+fn read_gesture(ui: &Ui, response: &Response) -> ViewGesture {
+    let (scroll, zoom_delta) = ui.input(|input| (input.smooth_scroll_delta, input.zoom_delta()));
+    ViewGesture {
+        hovered: response.hovered(),
+        hover_pos: response.hover_pos(),
+        scroll_y: scroll.y,
+        zoom_delta,
+        drag_delta: response.drag_delta(),
+        dragged: response.dragged(),
+    }
 }
 
-pub fn hover_details(
-    hover: egui::Pos2,
-    image_rect: egui::Rect,
-    series: &SpectrogramSeries,
-    visible: &[crate::spectrogram::model::SpectrogramRow],
-    row_start: usize,
-    source_cols: &[usize],
+pub fn apply_gesture(
+    gesture: &ViewGesture,
+    grid_rect: Rect,
+    image_rect: Rect,
+    layout: SpectrogramLayout,
+    view_range: &mut SpectrogramViewRange,
     total_rows: usize,
-) -> String {
-    if !image_rect.contains(hover) || visible.is_empty() || source_cols.is_empty() {
-        return String::new();
+) -> bool {
+    let zoomed = apply_zoom(gesture, image_rect, view_range);
+    let dragged = gesture.dragged
+        && apply_drag(
+            gesture, grid_rect, image_rect, layout, view_range, total_rows,
+        );
+    zoomed || dragged
+}
+
+fn apply_zoom(
+    gesture: &ViewGesture,
+    image_rect: Rect,
+    view_range: &mut SpectrogramViewRange,
+) -> bool {
+    if !gesture.hovered {
+        return false;
     }
-    let rel_x = ((hover.x - image_rect.left()) / image_rect.width().max(1.0)).clamp(0.0, 1.0);
-    let rel_y = ((hover.y - image_rect.top()) / image_rect.height().max(1.0)).clamp(0.0, 1.0);
-    let col = ((rel_x * source_cols.len() as f32) as usize).min(source_cols.len() - 1);
-    let row_index = ((rel_y * visible.len() as f32) as usize).min(visible.len() - 1);
-    let source_col = source_cols[col];
-    let row = &visible[row_index];
-    let absolute = row_start + row_index;
-    spectrogram_hover_text(&SpectrogramHoverInfo {
-        energy_kev: series.energies_kev.get(source_col).copied().unwrap_or(0.0),
-        counts: row.counts.get(source_col).copied().unwrap_or(0),
-        channel: source_col,
-        absolute_row: absolute,
-        total_rows,
-        age_secs: series.age_secs_before(absolute),
-        interval_secs: row.interval_secs,
-        row_total: row.row_total(),
-        kind: row.kind,
-    })
+    let mut changed = false;
+    if (gesture.zoom_delta - 1.0).abs() > 0.001 {
+        let factor = pinch_to_span_factor(gesture.zoom_delta);
+        zoom_at_pointer(gesture.hover_pos, image_rect, view_range, factor);
+        changed = true;
+    }
+    if gesture.scroll_y.abs() > 0.0 {
+        let factor = scroll_y_to_span_factor(gesture.scroll_y);
+        zoom_at_pointer(gesture.hover_pos, image_rect, view_range, factor);
+        debug!(
+            factor,
+            energy_min = view_range.energy_min_kev,
+            energy_max = view_range.energy_max_kev,
+            "spectrogram energy zoom"
+        );
+        changed = true;
+    }
+    changed
+}
+
+fn apply_drag(
+    gesture: &ViewGesture,
+    grid_rect: Rect,
+    image_rect: Rect,
+    layout: SpectrogramLayout,
+    view_range: &mut SpectrogramViewRange,
+    total_rows: usize,
+) -> bool {
+    let delta = gesture.drag_delta;
+    if !view_range.fit_full_spectrum && delta.x.abs() > 0.0 {
+        view_range.pan_energy(pan_delta_kev(delta.x, image_rect, view_range));
+    }
+    let pointer_in_grid = gesture
+        .hover_pos
+        .is_some_and(|position| grid_rect.contains(position));
+    if pointer_in_grid && layout.cell_px > 0.0 {
+        let row_delta = (-delta.y / layout.cell_px).round() as i32;
+        if row_delta != 0 {
+            view_range.scroll_history(row_delta, total_rows, layout.display_rows);
+        }
+    }
+    true
+}
+
+fn pan_delta_kev(drag_x: f32, image_rect: Rect, view_range: &SpectrogramViewRange) -> f64 {
+    let span = view_range.energy_max_kev - view_range.energy_min_kev;
+    let width = image_rect.width().max(1.0) as f64;
+    -(drag_x as f64 / width) * span
+}
+
+fn zoom_at_pointer(
+    hover_pos: Option<Pos2>,
+    image_rect: Rect,
+    view_range: &mut SpectrogramViewRange,
+    factor: f64,
+) {
+    let anchor = hover_pos
+        .map(|pos| energy_at_x(pos.x, image_rect, view_range))
+        .unwrap_or_else(|| 0.5 * (view_range.energy_min_kev + view_range.energy_max_kev));
+    view_range.zoom_energy(anchor, factor);
+}
+
+fn energy_at_x(x: f32, image_rect: Rect, view_range: &SpectrogramViewRange) -> f64 {
+    let t = ((x - image_rect.left()) / image_rect.width().max(1.0)).clamp(0.0, 1.0) as f64;
+    view_range.energy_min_kev + (view_range.energy_max_kev - view_range.energy_min_kev) * t
 }

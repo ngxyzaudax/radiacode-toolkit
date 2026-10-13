@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::energy::energy_grid;
 use crate::model::SpectrumView;
 use crate::spectrogram::capture::SpectrogramCapture;
+use crate::spectrogram::capture_lock::lock_progress;
 use crate::spectrogram::model::{SpectrogramHeader, SpectrogramSeries};
 use crate::spectrogram::storage::{RecordingWriter, header_now};
 
@@ -13,10 +14,7 @@ pub fn ensure_live_series(
     energies_kev: &[f64],
 ) {
     let interval = capture.settings.capture_interval();
-    let mut progress = capture
-        .progress
-        .lock()
-        .expect("capture progress lock poisoned");
+    let mut progress = lock_progress(&capture.progress);
     if progress.live_series.is_some() {
         return;
     }
@@ -34,16 +32,10 @@ pub fn recording_header(
     device_serial: Option<&str>,
     channel_count: u32,
 ) -> SpectrogramHeader {
-    capture
-        .progress
-        .lock()
-        .ok()
-        .and_then(|progress| {
-            progress
-                .live_series
-                .as_ref()
-                .map(|series| series.header.clone())
-        })
+    lock_progress(&capture.progress)
+        .live_series
+        .as_ref()
+        .map(|series| series.header.clone())
         .unwrap_or_else(|| {
             header_from_spectrum(
                 spectrum,

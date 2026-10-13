@@ -1,9 +1,12 @@
 mod session;
+mod session_init;
 mod vsfr;
 
 #[cfg(test)]
 #[path = "vsfr_tests.rs"]
 mod vsfr_tests;
+#[cfg(test)]
+mod vsfr_write_tests;
 
 use std::time::SystemTime;
 

@@ -1,10 +1,16 @@
 mod action;
 mod state;
+#[cfg(test)]
+mod state_tests;
 mod ui_alarm_card;
 mod ui_alarm_cells;
+mod ui_alarm_style;
 mod ui_alarms;
 mod ui_app;
-mod ui_columns;
+mod ui_app_capture;
+mod ui_app_matching;
+mod ui_column_application;
+mod ui_column_detector;
 mod ui_confirm;
 mod ui_device;
 mod ui_icons;

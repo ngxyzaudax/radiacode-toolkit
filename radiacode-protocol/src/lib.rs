@@ -2,8 +2,12 @@
 
 mod buffer;
 mod catalog;
+#[cfg(test)]
+mod catalog_tests;
 mod command;
 mod data_buf;
+#[cfg(test)]
+mod decoder_tests;
 mod error;
 mod fw_version;
 mod protocol;
@@ -31,8 +35,7 @@ pub use data_buf::{
     AccelData, DataBufFrame, DataBufRecord, DataBufSnapshot, DecodeWarning, DecodeWarningKind,
     DeviceTicks, DoseRateDb, EventId, EventRecord, RareData, RareStatus, RawData, RealTimeData,
     RealTimeRates, RecordHeader, RecordKind, SanityFailure, Seq, StatusFlags, decode_data_buf,
-    latest_rare_record, latest_rare_status, latest_real_time_rates, latest_snapshot,
-    real_time_records, snapshot_from_frame,
+    latest_rare_record, latest_snapshot, real_time_records, snapshot_from_frame,
 };
 pub use error::{Error, Result};
 pub use fw_version::decode_fw_version;
@@ -44,7 +47,7 @@ pub use rate_units::{
     count_display_from_cps, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
     dose_display_from_rh, encode_count_alarm, encode_dose_accum, encode_dose_alarm,
 };
-pub use sfr_catalog::sfr_supports_leds_on;
+pub use sfr_catalog::{sfr_entries_support_leds_on, sfr_supports_leds_on};
 pub use spectrum::decode_spectrum;
 pub use transport::Transport;
 pub use types::{DeviceVersions, FirmwareVersion, Spectrum, channel_to_energy};

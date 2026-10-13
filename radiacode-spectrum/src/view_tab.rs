@@ -6,7 +6,8 @@ pub enum ViewTab {
     Spectrum,
     Spectrogram,
     Compare,
-    Catalogue,
+    PeakId,
+    Sources,
     Settings,
     About,
 }
@@ -19,7 +20,8 @@ impl ViewTab {
             Self::Spectrum => "Spectrum",
             Self::Spectrogram => "Spectrogram",
             Self::Compare => "Compare",
-            Self::Catalogue => "Catalogue",
+            Self::PeakId => "Peak ID",
+            Self::Sources => "Sources",
             Self::Settings => "Settings",
             Self::About => "About",
         }

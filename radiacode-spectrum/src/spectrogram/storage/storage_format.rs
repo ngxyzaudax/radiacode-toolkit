@@ -78,6 +78,15 @@ pub(crate) fn read_row_counts(
     Ok(counts)
 }
 
+pub fn le_u32_words(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|word| u32::from_le_bytes(*word))
+        .collect()
+}
+
 pub(crate) fn write_u32(writer: &mut impl Write, value: u32) -> std::io::Result<()> {
     writer.write_all(&value.to_le_bytes())
 }

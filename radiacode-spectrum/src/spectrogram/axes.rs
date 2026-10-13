@@ -1,4 +1,4 @@
-use egui::{Align2, FontId, Ui};
+use egui::{Align2, FontId};
 
 use crate::spectrogram::model::SpectrogramSeries;
 use crate::spectrogram::preview::column_center_x;
@@ -6,12 +6,10 @@ use crate::theme::MUTED;
 
 pub fn draw_x_axis(
     painter: &egui::Painter,
-    ui: &Ui,
     image_rect: egui::Rect,
     series: &SpectrogramSeries,
     source_cols: &[usize],
 ) {
-    let _ = ui;
     if source_cols.is_empty() {
         return;
     }

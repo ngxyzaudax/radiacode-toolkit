@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::spectrogram::library_meta::load_meta;
 use crate::spectrogram::recording;
+use crate::spectrogram::recording_control;
 use crate::spectrogram::state::SpectrogramState;
 use crate::spectrogram::storage::list_recordings;
 
@@ -19,15 +20,15 @@ impl SpectrogramState {
     }
 
     pub fn pause_capture(&mut self) -> Result<(), String> {
-        let result = recording::pause_capture(self);
+        recording_control::pause_capture(self);
         self.sync_from_capture();
-        result
+        Ok(())
     }
 
     pub fn resume_capture(&mut self) -> Result<(), String> {
-        let result = recording::resume_capture(self);
+        recording_control::resume_capture(self);
         self.sync_from_capture();
-        result
+        Ok(())
     }
 
     pub fn start_recording(
@@ -41,7 +42,7 @@ impl SpectrogramState {
     }
 
     pub fn stop_recording(&mut self) -> Result<(), String> {
-        let result = recording::stop_recording(self);
+        let result = recording_control::stop_recording(self);
         self.sync_from_capture();
         if result.is_ok()
             && let Some(path) = self.paused_recording_path.clone()
@@ -81,6 +82,6 @@ impl SpectrogramState {
     }
 
     pub fn request_load(&mut self, path: PathBuf) {
-        recording::request_load(self, path);
+        recording_control::load_into_state(self, path);
     }
 }

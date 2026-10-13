@@ -9,14 +9,6 @@ impl StatusFlags {
     pub fn raw(self) -> u16 {
         self.0
     }
-
-    pub fn charging(self) -> bool {
-        self.0 & 0x2000 != 0
-    }
-
-    pub fn charge_complete(self) -> bool {
-        self.0 & 0x4000 != 0
-    }
 }
 
 #[repr(u8)]

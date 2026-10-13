@@ -4,7 +4,7 @@ fn main() {
             for device in devices {
                 println!(
                     "{} {} {}",
-                    device.transport_tag(),
+                    device.endpoint.transport().label(),
                     device.display_label(),
                     device.endpoint.address_label()
                 );

@@ -56,13 +56,6 @@ impl DiscoveredDevice {
             .or_else(|| self.serial.clone())
             .unwrap_or_else(|| "RadiaCode".into())
     }
-
-    pub fn transport_tag(&self) -> &'static str {
-        match self.endpoint.transport() {
-            TransportKind::Bluetooth => "Bluetooth",
-            TransportKind::Usb => "USB",
-        }
-    }
 }
 
 pub fn merge_discovered(

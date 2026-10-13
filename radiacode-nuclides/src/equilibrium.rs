@@ -14,7 +14,8 @@ pub struct MemberWeight {
 }
 
 pub fn equilibrium_weights(series: &ChainSeries) -> Vec<MemberWeight> {
-    let members: HashMap<NuclideId, ()> = series.members.iter().copied().map(|id| (id, ())).collect();
+    let members: HashMap<NuclideId, ()> =
+        series.members.iter().copied().map(|id| (id, ())).collect();
     let mut weights: HashMap<NuclideId, f64> = HashMap::from([(series.head, 1.0)]);
     let mut depths: HashMap<NuclideId, usize> = HashMap::from([(series.head, 0)]);
     let mut expanded = HashSet::new();
@@ -57,20 +58,4 @@ pub fn equilibrium_weights(series: &ChainSeries) -> Vec<MemberWeight> {
             .then_with(|| left.id.cmp(&right.id))
     });
     members
-}
-
-pub fn bottleneck_member(weights: &[MemberWeight], head: NuclideId) -> Option<&MemberWeight> {
-    weights
-        .iter()
-        .filter(|member| member.id != head)
-        .filter(|member| member.half_life_secs.is_some())
-        .max_by(|left, right| {
-            left.half_life_secs
-                .partial_cmp(&right.half_life_secs)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-}
-
-pub fn time_to_equilibrium_secs(weights: &[MemberWeight], head: NuclideId) -> Option<f64> {
-    bottleneck_member(weights, head).and_then(|member| member.half_life_secs.map(|secs| secs * 7.0))
 }

@@ -20,26 +20,18 @@ pub async fn status_from_snapshot(
     snapshot: &DataBufSnapshot,
     refresh_rssi: bool,
 ) -> Result<DeviceStatus> {
-    status_from_frame(device, snapshot, refresh_rssi).await
-}
-
-pub async fn status_from_frame(
-    device: &mut RadiaCode,
-    snapshot: &DataBufSnapshot,
-    refresh_rssi: bool,
-) -> Result<DeviceStatus> {
     let battery_percent = snapshot
         .rare
         .map(|status| status.battery_percent)
         .filter(valid_battery);
-    let temperature_c = snapshot
+    let temperature_c = match snapshot
         .rare
         .map(|status| status.temperature_c)
         .filter(valid_temperature)
-        .or(read_temperature_c(device)
-            .await
-            .ok()
-            .filter(valid_temperature));
+    {
+        Some(value) => Some(value),
+        None => read_temperature_c(device).await,
+    };
     let rssi_dbm = if refresh_rssi {
         device.sample_rssi_dbm().await
     } else {
@@ -52,8 +44,12 @@ pub async fn status_from_frame(
     })
 }
 
-async fn read_temperature_c(device: &mut RadiaCode) -> Result<f32> {
-    device.read_vsfr_f32(VirtSfr::TempDegC).await
+async fn read_temperature_c(device: &mut RadiaCode) -> Option<f32> {
+    device
+        .read_vsfr_f32(VirtSfr::TempDegC)
+        .await
+        .ok()
+        .filter(valid_temperature)
 }
 
 fn valid_battery(value: &f32) -> bool {

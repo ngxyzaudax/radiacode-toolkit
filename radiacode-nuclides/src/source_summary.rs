@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::identify::SourceVerdict;
 use crate::match_peaks::PeakIdentification;
 use crate::model::NuclideId;
-use crate::series::{ChainSeries, series_for_member};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NuclideEvidence {
@@ -50,16 +49,6 @@ impl SourceSummary {
     }
 }
 
-pub fn summarize_sources(identifications: &[PeakIdentification]) -> SourceSummary {
-    let nuclides = collect_nuclide_evidence(identifications, 1);
-    let chains = summarize_chains(&nuclides);
-    SourceSummary {
-        nuclides,
-        chains,
-        verdict: SourceVerdict::default(),
-    }
-}
-
 pub fn collect_nuclide_evidence(
     identifications: &[PeakIdentification],
     max_candidates: usize,
@@ -88,76 +77,4 @@ pub fn collect_nuclide_evidence(
         }
     }
     nuclide_totals.into_values().collect()
-}
-
-fn summarize_chains(nuclides: &[NuclideEvidence]) -> Vec<ChainEvidence> {
-    let mut grouped: HashMap<NuclideId, ChainEvidence> = HashMap::new();
-    for nuclide in nuclides {
-        let Some(series) = series_for_member(nuclide.id) else {
-            continue;
-        };
-        grouped
-            .entry(series.head)
-            .and_modify(|entry| {
-                entry.matched_members += 1;
-                entry.score += nuclide.score;
-                entry.members.push(nuclide.clone());
-            })
-            .or_insert_with(|| chain_evidence(series, nuclide));
-    }
-    grouped.into_values().collect()
-}
-
-fn chain_evidence(series: &ChainSeries, nuclide: &NuclideEvidence) -> ChainEvidence {
-    ChainEvidence {
-        head: series.head,
-        name: series.name.clone(),
-        family: series.family.clone(),
-        matched_members: 1,
-        score: nuclide.score,
-        members: vec![nuclide.clone()],
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::summarize_sources;
-    use crate::match_peaks::{NuclideMatch, PeakIdentification, SpectrumPeak};
-    use crate::model::NuclideId;
-
-    fn thorium_member(z: u8, n: u16, name: &str) -> PeakIdentification {
-        let id = NuclideId::new(z, n, 0);
-        PeakIdentification {
-            peak: SpectrumPeak {
-                energy_kev: 0.0,
-                counts: 100.0,
-            },
-            candidates: vec![NuclideMatch {
-                nuclide_id: id,
-                display_name: name.to_string(),
-                line_energy_kev: 0.0,
-                intensity_pct: 50.0,
-                delta_kev: 0.0,
-                score: 10.0,
-                matched_lines: 1,
-            }],
-        }
-    }
-
-    #[test]
-    fn thorium_lines_group_into_series() {
-        let identifications = vec![
-            thorium_member(82, 130, "Pb-212"),
-            thorium_member(83, 129, "Bi-212"),
-            thorium_member(81, 127, "Tl-208"),
-        ];
-        let summary = summarize_sources(&identifications);
-        assert!(
-            summary
-                .chains
-                .iter()
-                .any(|chain| chain.name.contains("Thorium")),
-            "expected thorium series in {summary:?}"
-        );
-    }
 }

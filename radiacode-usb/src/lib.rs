@@ -13,4 +13,10 @@ pub use usb_error::is_connection_lost;
 #[cfg(test)]
 mod discovery_tests;
 #[cfg(test)]
+mod identity_tests;
+#[cfg(test)]
+mod read_tests;
+#[cfg(test)]
+mod udev_tests;
+#[cfg(test)]
 mod usb_error_tests;

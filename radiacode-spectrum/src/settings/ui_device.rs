@@ -19,7 +19,7 @@ pub fn draw_device_info(ui: &mut Ui, info: Option<&DeviceInfo>) {
         meta_chip(ui, "Model", &info.model);
         meta_chip(ui, "Serial", &info.serial);
         meta_chip(ui, "Firmware", &info.firmware);
-        meta_chip(ui, "Link", info.transport_label());
+        meta_chip(ui, "Link", info.transport.label());
         if let Some(battery) = info.battery_percent {
             meta_chip(ui, "Battery", &format!("{battery:.0}%"));
         }

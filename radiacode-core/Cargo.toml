@@ -2,6 +2,7 @@
 name = "radiacode-core"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.92"
 description = "RadiaCode device client and domain models"
 license = "AGPL-3.0-only"
 
@@ -14,5 +15,8 @@ time = { version = "0.3", features = ["local-offset"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 tracing = "0.1"
 
+[features]
+test-support = []
+
 [dev-dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "test-util"] }

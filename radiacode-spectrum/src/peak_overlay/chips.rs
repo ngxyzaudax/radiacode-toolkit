@@ -18,7 +18,7 @@ pub fn draw_ranked_chips(ui: &mut Ui, sources: &SourceSummary) -> Option<Spectru
         for chain in chains {
             let label = format!("{} - {} members", chain.name, chain.matched_members);
             if ui.button(label).clicked() {
-                action = Some(SpectrumPlotAction::OpenCatalogueChain(chain.head));
+                action = Some(SpectrumPlotAction::ShowSourceFor(chain.head));
             }
         }
         for nuclide in nuclides {
@@ -29,7 +29,7 @@ pub fn draw_ranked_chips(ui: &mut Ui, sources: &SourceSummary) -> Option<Spectru
                 if nuclide.matched_lines == 1 { "" } else { "s" }
             );
             if ui.button(label).clicked() {
-                action = Some(SpectrumPlotAction::OpenCatalogue(nuclide.id));
+                action = Some(SpectrumPlotAction::ShowSourceFor(nuclide.id));
             }
         }
     });
@@ -38,7 +38,11 @@ pub fn draw_ranked_chips(ui: &mut Ui, sources: &SourceSummary) -> Option<Spectru
 }
 
 fn ranked_chains(sources: &SourceSummary) -> Vec<&radiacode_nuclides::ChainEvidence> {
-    let top_score = sources.chains.first().map(|chain| chain.score).unwrap_or(0.0);
+    let top_score = sources
+        .chains
+        .first()
+        .map(|chain| chain.score)
+        .unwrap_or(0.0);
     let floor = top_score * CHAIN_SCORE_FLOOR_FRAC;
     sources
         .chains

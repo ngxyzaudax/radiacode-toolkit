@@ -26,7 +26,7 @@ pub fn draw_about_view(ui: &mut Ui) {
     ui.add_space(SPACE_LG);
     ui.label(RichText::new("Nuclear data").strong());
     ui.label(
-        RichText::new("Nuclide catalogue and gamma lines sourced from IAEA Livechart / ENSDF.")
+        RichText::new("Gamma source library and lines sourced from IAEA Livechart / ENSDF.")
             .small()
             .color(MUTED),
     );

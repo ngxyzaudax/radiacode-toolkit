@@ -42,7 +42,10 @@ fn ag108m_rejected_at_727_without_supporting_lines() {
         .first()
         .map(|candidate| candidate.display_name.as_str())
         .unwrap_or("");
-    assert_ne!(best, "Ag-108m", "Ag-108m should not win without 434/614 keV lines");
+    assert_ne!(
+        best, "Ag-108m",
+        "Ag-108m should not win without 434/614 keV lines"
+    );
 }
 
 fn thorium_fixture_peaks() -> Vec<SpectrumPeak> {

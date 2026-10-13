@@ -80,7 +80,9 @@ fn missing_line_penalty(
         .gammas
         .iter()
         .filter(|gamma| gamma.kind == RadiationKind::Gamma)
-        .filter(|gamma| counts_for_completeness(gamma.energy_kev, gamma.intensity_pct, window, params))
+        .filter(|gamma| {
+            counts_for_completeness(gamma.energy_kev, gamma.intensity_pct, window, params)
+        })
         .filter(|gamma| !peak_explains_line(gamma.energy_kev, identifications, params))
         .map(|gamma| (gamma.intensity_pct / 100.0) * params.absence_penalty)
         .sum()
@@ -92,9 +94,9 @@ fn peak_explains_line(
     params: MatchParams,
 ) -> bool {
     let tolerance = tolerance_kev(line_energy_kev, params);
-    identifications.iter().any(|identification| {
-        (identification.peak.energy_kev - line_energy_kev).abs() <= tolerance
-    })
+    identifications
+        .iter()
+        .any(|identification| (identification.peak.energy_kev - line_energy_kev).abs() <= tolerance)
 }
 
 const HYPOTHESIS_MAX_RANK: usize = 3;

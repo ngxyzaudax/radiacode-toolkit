@@ -51,7 +51,7 @@ pub fn apply_energy_axis_navigation(plot_ui: &mut PlotUi) -> (f64, f64) {
     (min_x, max_x)
 }
 
-fn energy_zoom_factor(scroll_y: f32, zoom_delta: f32) -> Option<f64> {
+pub(crate) fn energy_zoom_factor(scroll_y: f32, zoom_delta: f32) -> Option<f64> {
     if scroll_y.abs() > 0.0 {
         Some(scroll_y_to_span_factor(scroll_y))
     } else if (zoom_delta - 1.0).abs() > 0.001 {
@@ -71,20 +71,5 @@ pub fn snap_energy_range_if_near_full(min_x: f64, max_x: f64) -> (f64, f64) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{ZOOM_IN_FACTOR, ZOOM_OUT_FACTOR, scroll_y_to_span_factor, zoom_energy_span};
-
-    #[test]
-    fn scroll_up_zooms_in() {
-        assert_eq!(scroll_y_to_span_factor(1.0), ZOOM_IN_FACTOR);
-        let (min, max) = zoom_energy_span(0.0, 1000.0, 500.0, ZOOM_IN_FACTOR);
-        assert!((max - min - 850.0).abs() < 0.01);
-    }
-
-    #[test]
-    fn scroll_down_zooms_out() {
-        assert_eq!(scroll_y_to_span_factor(-1.0), ZOOM_OUT_FACTOR);
-        let (min, max) = zoom_energy_span(100.0, 200.0, 150.0, ZOOM_OUT_FACTOR);
-        assert!(max - min > 100.0);
-    }
-}
+#[path = "plot_zoom_tests.rs"]
+mod plot_zoom_tests;

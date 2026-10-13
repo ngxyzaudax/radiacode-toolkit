@@ -67,21 +67,21 @@ pub fn spectrogram_hover_text(info: &SpectrogramHoverInfo) -> String {
     )
 }
 
-fn format_counts_value(displayed: f64, scale: YScale) -> String {
+pub fn format_counts_value(displayed: f64, scale: YScale) -> String {
     match scale {
         YScale::Linear => format!("{displayed:.1}"),
         YScale::Logarithmic => format!("{:.1}", 10_f64.powf(displayed)),
     }
 }
 
-fn format_rate_value(displayed: f64, scale: YScale, log_floor: f64) -> String {
+pub fn format_rate_value(displayed: f64, scale: YScale, log_floor: f64) -> String {
     match scale {
         YScale::Linear => format!("{displayed:.2} cps"),
         YScale::Logarithmic => format!("{:.3} cps", 10_f64.powf(displayed) * log_floor.max(1e-12)),
     }
 }
 
-fn format_relative_intensity_value(displayed: f64, scale: YScale) -> String {
+pub fn format_relative_intensity_value(displayed: f64, scale: YScale) -> String {
     match scale {
         YScale::Linear => format!("{displayed:.3}"),
         YScale::Logarithmic => format!("{:.4}", 10_f64.powf(displayed)),
@@ -107,16 +107,5 @@ fn spectrogram_kind_line(kind: RowKind, total: u64) -> String {
         RowKind::LiveSpike { rate_factor } => {
             format!("kind: live spike\n{rate_factor:.1}× recent median\nrow total {total}")
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::format_spectrum_hover;
-
-    #[test]
-    fn spectrum_hover_uses_shared_header() {
-        let label = format_spectrum_hover(662.0, "Counts", "1234.5");
-        assert_eq!(label, "662.0 keV\nCounts: 1234.5");
     }
 }

@@ -27,7 +27,9 @@ pub use device_config::{
     AlarmSignalMode, BacklightOffTime, DeviceConfig, DisplayDirection, SignalFlags,
     apply_device_config, load_device_config, sync_device_clock,
 };
-pub use device_diagnostics::{FirmwareSignature, fw_signature, sfr_file_text, status, text_message};
+pub use device_diagnostics::{
+    FirmwareSignature, fw_signature, sfr_file_text, status, text_message,
+};
 pub use device_language::DeviceLanguage;
 pub use device_model::{model_from_advertisement, model_from_serial, serial_from_advertisement};
 pub use discovery::{
@@ -42,11 +44,11 @@ pub use radiacode_protocol::{
     framed_request_header, response_matches_request, strip_echoed_header,
 };
 pub use radiacode_protocol::{
-    count_display_from_cps, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
-    decode_cp1251, dose_display_from_rh, encode_count_alarm, encode_dose_accum,
-    encode_dose_alarm, extract_vsfr_f32, extract_vsfr_u32, latest_rare_status,
-    latest_real_time_rates, latest_snapshot, parse_configuration_ini, parse_sfr_file,
-    resolve_value_kind, sfr_supports_leds_on, validate_catalog,
+    count_display_from_cps, decode_count_alarm, decode_cp1251, decode_dose_accum,
+    decode_dose_alarm, dose_display_from_rh, encode_count_alarm, encode_dose_accum,
+    encode_dose_alarm, extract_vsfr_f32, extract_vsfr_u32, latest_snapshot,
+    parse_configuration_ini, parse_sfr_file, resolve_value_kind, sfr_supports_leds_on,
+    validate_catalog,
 };
 pub use rate_units::{count_unit_label, dose_accum_unit_label, dose_unit_label};
 pub use session_restore::SessionRestore;
@@ -57,9 +59,28 @@ pub use types::{
 };
 pub use vsfr_batch::{extract_vsfr_value, read_vsfr_batch_raw};
 
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
+
+#[cfg(test)]
+mod data_buf_cursor_tests;
+#[cfg(test)]
+mod device_calib_tests;
+#[cfg(test)]
+mod device_config_apply_tests;
 #[cfg(test)]
 mod device_config_tests;
 #[cfg(test)]
+mod device_info_tests;
+#[cfg(test)]
+mod discovery_tests;
+#[cfg(test)]
+mod live_rates_tests;
+#[cfg(test)]
 mod monitor_poll_tests;
 #[cfg(test)]
+mod session_reconnect_tests;
+#[cfg(test)]
 mod session_restore_tests;
+#[cfg(test)]
+mod session_tests;

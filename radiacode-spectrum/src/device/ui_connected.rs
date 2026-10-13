@@ -44,7 +44,7 @@ pub fn draw_connected(
             RichText::new(format!(
                 "Firmware {} · {} · {}",
                 info.firmware,
-                info.transport_label(),
+                info.transport.label(),
                 info.address
             ))
             .small()

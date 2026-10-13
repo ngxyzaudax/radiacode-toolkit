@@ -1,8 +1,8 @@
+use crate::catalog::energy_index;
 use crate::catalog::nuclide_by_id;
+use crate::index::IndexedLine;
 use crate::match_peaks::{MatchParams, NuclideMatch, SpectrumPeak, tolerance_kev};
 use crate::plausibility::is_plausible;
-use crate::index::IndexedLine;
-use crate::catalog::energy_index;
 
 pub fn peak_candidates(peak: SpectrumPeak, params: MatchParams) -> Vec<NuclideMatch> {
     let tolerance = tolerance_kev(peak.energy_kev, params);

@@ -6,6 +6,8 @@ mod startup;
 mod tab_navigation;
 mod ui_stats;
 mod view_state;
+#[cfg(test)]
+mod view_state_tests;
 
 pub use quit_hotkey::quit_hotkey_pressed;
 pub use shutdown::{CloseAction, ShutdownSequence};

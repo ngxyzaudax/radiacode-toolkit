@@ -91,7 +91,12 @@ fn max_intensity_near(nuclide: &Nuclide, energy_kev: f64) -> Result<f64, String>
         .filter(|line| (line.energy_kev - energy_kev).abs() < 0.2)
         .map(|line| line.intensity_pct)
         .max_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal))
-        .ok_or_else(|| format!("{} missing line near {energy_kev} keV", nuclide.display_name))
+        .ok_or_else(|| {
+            format!(
+                "{} missing line near {energy_kev} keV",
+                nuclide.display_name
+            )
+        })
 }
 
 fn assert_present(catalog: &Catalog, name: &str) -> Result<(), String> {
@@ -100,9 +105,7 @@ fn assert_present(catalog: &Catalog, name: &str) -> Result<(), String> {
 
 fn assert_no_stable_with_gammas(catalog: &Catalog) -> Result<(), String> {
     for nuclide in &catalog.nuclides {
-        let stable = nuclide
-            .half_life_text
-            .eq_ignore_ascii_case("stable")
+        let stable = nuclide.half_life_text.eq_ignore_ascii_case("stable")
             || nuclide.half_life_text.eq_ignore_ascii_case("STABLE");
         if stable && !nuclide.gammas.is_empty() {
             return Err(format!(

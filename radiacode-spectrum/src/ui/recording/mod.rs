@@ -3,6 +3,8 @@ mod filter;
 mod library_pane;
 mod list;
 mod manage;
+mod manage_editor;
+mod manage_ops;
 mod search;
 mod select;
 

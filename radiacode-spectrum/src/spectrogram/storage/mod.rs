@@ -8,7 +8,9 @@ pub use recording_writer::{RecordingWriter, open_recording_append, write_recordi
 pub use storage_dir::{
     default_spectrograms_dir, ensure_dir, list_recordings, spectrograms_dir, timestamp_filename,
 };
-pub use storage_format::header_now;
+pub use storage_format::{header_now, le_u32_words};
 
+#[cfg(test)]
+mod storage_dir_tests;
 #[cfg(test)]
 mod storage_tests;

@@ -2,6 +2,7 @@
 name = "radiacode-bluetooth"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.92"
 description = "Bluetooth LE transport for RadiaCode radiation detectors"
 license = "AGPL-3.0-only"
 
@@ -21,4 +22,4 @@ bdaddr = "0.2.0-alpha.4"
 btmgmt = "0.3.0-alpha.4"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "test-util"] }

@@ -26,8 +26,7 @@ impl DeviceTicks {
     }
 
     pub fn wall_clock_time(self, base: SystemTime) -> SystemTime {
-        base.checked_add(self.as_duration())
-            .unwrap_or(base)
+        base.checked_add(self.as_duration()).unwrap_or(base)
     }
 }
 

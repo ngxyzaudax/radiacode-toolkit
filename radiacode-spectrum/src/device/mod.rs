@@ -10,6 +10,9 @@ mod ui_discovery;
 mod ui_empty;
 mod ui_view;
 
+#[cfg(test)]
+mod link_tests;
+
 pub use link_health::MonitorLinkHealth;
 pub use link_quality::LinkQuality;
 pub use ui_view::{DeviceAction, DeviceViewProps, draw_device_view};

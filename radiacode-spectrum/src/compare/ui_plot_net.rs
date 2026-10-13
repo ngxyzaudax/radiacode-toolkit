@@ -20,11 +20,8 @@ pub fn draw_net_plot(ui: &mut Ui, params: SpectrumPlotDrawParams<'_>, plot_heigh
     let net_values: Vec<_> = params
         .samples
         .iter()
-        .filter_map(|sample| {
-            sample.subtraction.as_ref().map(|subtraction| {
-                smoothed_net(sample, subtraction, background, params.smooth_window)
-            })
-        })
+        .filter(|sample| sample.subtraction.is_some())
+        .map(|sample| smoothed_net(sample, background, params.smooth_window))
         .collect();
     if net_values.is_empty() {
         ui.label(RichText::new("No comparable samples for net plot.").color(MUTED));

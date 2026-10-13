@@ -7,6 +7,8 @@ mod markers;
 mod markers_item;
 mod spectrogram;
 mod verdict;
+#[cfg(test)]
+mod verdict_tests;
 
 pub use action::SpectrumPlotAction;
 pub use classification_panel::{CLASSIFICATION_STRIP_HEIGHT, draw_classification_strip};

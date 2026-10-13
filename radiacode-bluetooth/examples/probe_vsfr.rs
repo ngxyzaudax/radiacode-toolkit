@@ -17,7 +17,10 @@ async fn main() {
     println!("connecting to {address}");
     let mut device = connect(&address).await.expect("connect");
     let config = device.load_device_config().await.expect("load config");
-    println!("loaded config: brightness={} display_dir={:?} sound_on={}", config.brightness, config.display_dir, config.sound_on);
+    println!(
+        "loaded config: brightness={} display_dir={:?} sound_on={}",
+        config.brightness, config.display_dir, config.sound_on
+    );
     for (label, id) in [
         ("DispBrt", VirtSfr::DispBrt),
         ("DispDir", VirtSfr::DispDir),
@@ -55,11 +58,7 @@ async fn main() {
         .poll_monitor(&units, &mut cursor, false)
         .await
         .expect("poll after");
-    let dose_after = after
-        .0
-        .accumulated
-        .map(|sample| sample.dose)
-        .unwrap_or(0.0);
+    let dose_after = after.0.accumulated.map(|sample| sample.dose).unwrap_or(0.0);
     println!("accumulated dose after reset: {dose_after}");
     println!(
         "dose_reset cleared dose: {}",

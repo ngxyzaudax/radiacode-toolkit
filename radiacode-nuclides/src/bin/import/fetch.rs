@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use rayon::prelude::*;
 
-use super::isomer::RadiationBundle;
+use super::bundle::RadiationBundle;
 use super::{API_BASE, USER_AGENT};
 
 pub fn fetch_csv(url: &str) -> Result<Vec<HashMap<String, String>>, Box<dyn std::error::Error>> {

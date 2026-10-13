@@ -122,6 +122,6 @@ pub fn static_value_kind(register: VirtSfr) -> Option<SfrValueKind> {
         | VirtSfr::VibroCtrl
         | VirtSfr::AlarmMode
         | VirtSfr::LedsCtrl
-        |         VirtSfr::SoundButton => Some(SfrValueKind::U32),
+        | VirtSfr::SoundButton => Some(SfrValueKind::U32),
     }
 }

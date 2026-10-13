@@ -86,13 +86,7 @@ fn normal_row_preserves_sub_threshold_gap_interval() {
         ingested_at: Instant::now(),
     };
     let cumulative = vec![100; 512];
-    let classified = classify_row(
-        &spectrum(100, 9),
-        &baseline,
-        &cumulative,
-        1.0,
-        &[20 * 512],
-    );
+    let classified = classify_row(&spectrum(100, 9), &baseline, &cumulative, 1.0, &[20 * 512]);
     assert!(matches!(classified.kind, RowKind::Normal));
     assert!((classified.interval_secs - 9.0).abs() < 0.1);
 }

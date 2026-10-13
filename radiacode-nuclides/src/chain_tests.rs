@@ -1,11 +1,9 @@
 use std::collections::HashSet;
 
-use crate::chain_graph::decay_graph;
 use crate::chain_lines::chain_lines;
 use crate::equilibrium::equilibrium_weights;
 use crate::model::NuclideId;
 use crate::series::{chain_series, chain_series_by_head};
-use crate::series_search::{ChainFilters, search_chains};
 use crate::topology::{topology_entry, topology_parents};
 
 fn th232_id() -> NuclideId {
@@ -25,18 +23,6 @@ fn topology_contains_thorium_gap_members() {
     ] {
         assert!(topology_entry(id).is_some(), "missing {id:?}");
     }
-}
-
-#[test]
-fn th232_graph_reaches_high_energy_daughters() {
-    let graph = decay_graph(th232_id(), 64);
-    let names: Vec<_> = graph
-        .nodes
-        .iter()
-        .map(|node| node.display_name.as_str())
-        .collect();
-    assert!(names.contains(&"Pb-212"));
-    assert!(names.contains(&"Tl-208"));
 }
 
 #[test]
@@ -106,21 +92,6 @@ fn derived_heads_have_no_parents() {
             continue;
         }
         assert!(topology_parents(series.head).is_empty());
-    }
-}
-
-#[test]
-fn chain_search_matches_thorium_family() {
-    for query in ["thorium", "Th-232", "4n"] {
-        let results = search_chains(&ChainFilters {
-            query: query.to_string(),
-        });
-        assert!(
-            results
-                .iter()
-                .any(|&index| chain_series()[index].head == th232_id()),
-            "query {query} should match Th-232 series"
-        );
     }
 }
 

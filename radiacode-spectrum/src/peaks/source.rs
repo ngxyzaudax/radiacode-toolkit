@@ -43,22 +43,3 @@ pub fn peaks_from_channel_totals(
 ) -> Vec<DetectedPeak> {
     detect_peaks(energies, totals, params)
 }
-
-#[allow(dead_code)]
-pub fn peaks_from_spectrogram_series(
-    series: &SpectrogramSeries,
-    params: DetectionParams,
-) -> Vec<DetectedPeak> {
-    if series.rows.is_empty() {
-        return Vec::new();
-    }
-    let channel_count = series.header.channel_count as usize;
-    let totals = crate::spectrogram::preview::channel_totals(series);
-    let energies: Vec<f64> = series
-        .energies_kev
-        .iter()
-        .take(channel_count)
-        .copied()
-        .collect();
-    peaks_from_channel_totals(&energies, &totals, params)
-}
