@@ -1,4 +1,4 @@
-use crate::chain_lines::{chain_lines, strongest_chain_line, strongest_chain_peak_kev};
+use crate::chain_lines::chain_lines;
 use crate::equilibrium::MemberWeight;
 use crate::identify::lead_chain::leading_chain_for_rerank;
 use crate::model::NuclideId;
@@ -37,8 +37,6 @@ fn evidence(head: NuclideId, matched_members: u32, score: f64) -> ChainEvidence 
 fn unknown_members_are_skipped() {
     let weights = [member(NuclideId::new(1, 200, 0), 1.0)];
     assert!(chain_lines(&weights).is_empty());
-    assert!(strongest_chain_peak_kev(&weights).is_none());
-    assert!(strongest_chain_line(&[]).is_none());
 }
 
 #[test]
@@ -46,8 +44,7 @@ fn lines_are_sorted_by_scaled_intensity_and_scaled_by_weight() {
     let weights = [member(ba137m_id(), 0.5)];
     let lines = chain_lines(&weights);
     assert!(!lines.is_empty());
-    let strongest = strongest_chain_line(&lines).expect("line");
-    assert_eq!(strongest, &lines[0]);
+    let strongest = &lines[0];
     assert!((strongest.line.energy_kev - 661.7).abs() < 1.0);
     assert!((strongest.scaled_intensity_pct - strongest.line.intensity_pct * 0.5).abs() < 1e-9);
     assert!(
@@ -55,16 +52,6 @@ fn lines_are_sorted_by_scaled_intensity_and_scaled_by_weight() {
             .windows(2)
             .all(|pair| pair[0].scaled_intensity_pct >= pair[1].scaled_intensity_pct)
     );
-    assert_eq!(
-        strongest_chain_peak_kev(&weights),
-        Some(strongest.line.energy_kev)
-    );
-}
-
-#[test]
-fn zero_weight_members_contribute_no_peak() {
-    let weights = [member(cs137_id(), 0.0), member(ba137m_id(), 0.0)];
-    assert!(strongest_chain_peak_kev(&weights).is_none());
 }
 
 #[test]

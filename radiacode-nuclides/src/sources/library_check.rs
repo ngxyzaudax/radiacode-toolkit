@@ -1,0 +1,88 @@
+use super::model::{GammaSource, SourceCategory, component, member};
+
+pub const CHECK_SOURCES: &[GammaSource] = &[
+    GammaSource {
+        key: "cs137",
+        name: "Caesium-137",
+        category: SourceCategory::Check,
+        found_in: "Check and calibration sources, density and level gauges, Chernobyl and Fukushima fallout",
+        components: &[component(&[member(55, 82, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "co60",
+        name: "Cobalt-60",
+        category: SourceCategory::Check,
+        found_in: "Check sources, industrial radiography, irradiators, contaminated scrap steel",
+        components: &[component(&[member(27, 33, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "am241",
+        name: "Americium-241",
+        category: SourceCategory::Check,
+        found_in: "Ionisation smoke detectors, thickness gauges, check sources",
+        components: &[component(&[member(95, 146, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "ba133",
+        name: "Barium-133",
+        category: SourceCategory::Check,
+        found_in: "Calibration sources, nuclear security training sources",
+        components: &[component(&[member(56, 77, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "na22",
+        name: "Sodium-22",
+        category: SourceCategory::Check,
+        found_in: "Calibration sources, positron sources for PET and research",
+        components: &[component(&[member(11, 11, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "eu152",
+        name: "Europium-152",
+        category: SourceCategory::Check,
+        found_in: "Multi-line energy calibration sources, activated concrete",
+        components: &[component(&[member(63, 89, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "co57",
+        name: "Cobalt-57",
+        category: SourceCategory::Check,
+        found_in: "Gamma camera flood sources, Mössbauer sources, low-energy calibration",
+        components: &[component(&[member(27, 30, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "cd109",
+        name: "Cadmium-109",
+        category: SourceCategory::Check,
+        found_in: "X-ray fluorescence analysers, low-energy calibration sources",
+        components: &[component(&[member(48, 61, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "mn54",
+        name: "Manganese-54",
+        category: SourceCategory::Check,
+        found_in: "Calibration sources, reactor activation product in steel",
+        components: &[component(&[member(25, 29, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "bi207",
+        name: "Bismuth-207",
+        category: SourceCategory::Check,
+        found_in: "Calibration and conversion electron sources",
+        components: &[component(&[member(83, 124, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "y88",
+        name: "Yttrium-88",
+        category: SourceCategory::Check,
+        found_in: "High-energy calibration sources",
+        components: &[component(&[member(39, 49, 0, 1.0)])],
+    },
+    GammaSource {
+        key: "zn65",
+        name: "Zinc-65",
+        category: SourceCategory::Check,
+        found_in: "Calibration sources, reactor activation product",
+        components: &[component(&[member(30, 35, 0, 1.0)])],
+    },
+];

@@ -59,19 +59,3 @@ pub fn equilibrium_weights(series: &ChainSeries) -> Vec<MemberWeight> {
     });
     members
 }
-
-pub fn bottleneck_member(weights: &[MemberWeight], head: NuclideId) -> Option<&MemberWeight> {
-    weights
-        .iter()
-        .filter(|member| member.id != head)
-        .filter(|member| member.half_life_secs.is_some())
-        .max_by(|left, right| {
-            left.half_life_secs
-                .partial_cmp(&right.half_life_secs)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-}
-
-pub fn time_to_equilibrium_secs(weights: &[MemberWeight], head: NuclideId) -> Option<f64> {
-    bottleneck_member(weights, head).and_then(|member| member.half_life_secs.map(|secs| secs * 7.0))
-}

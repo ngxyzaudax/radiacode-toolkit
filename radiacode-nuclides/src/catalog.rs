@@ -24,16 +24,8 @@ pub fn nuclide_by_id(id: NuclideId) -> Option<&'static Nuclide> {
         .map(|&index| &parsed.catalog.nuclides[index])
 }
 
-pub fn nuclide_index(id: NuclideId) -> Option<usize> {
-    parsed().by_id.get(&id).copied()
-}
-
 pub(crate) fn energy_index() -> &'static EnergyIndex {
     &parsed().energy_index
-}
-
-pub fn nuclide_count() -> usize {
-    parsed().catalog.nuclides.len()
 }
 
 fn parsed() -> &'static ParsedCatalog {

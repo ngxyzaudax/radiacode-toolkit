@@ -1,30 +1,10 @@
-use crate::chain::decay_mode_label;
 use crate::elements::{element_symbol, nuclide_display_name};
 use crate::model::{DecayMode, GammaLine, NuclideId, RadiationKind};
-
-const ALL_MODES: [(DecayMode, &str); 9] = [
-    (DecayMode::Alpha, "alpha"),
-    (DecayMode::BetaMinus, "beta-"),
-    (DecayMode::BetaPlus, "beta+"),
-    (DecayMode::ElectronCapture, "EC"),
-    (DecayMode::Isomeric, "IT"),
-    (DecayMode::SpontaneousFission, "SF"),
-    (DecayMode::Proton, "p"),
-    (DecayMode::Neutron, "n"),
-    (DecayMode::Unknown, "?"),
-];
 
 #[test]
 fn mass_number_sums_protons_and_neutrons() {
     assert_eq!(NuclideId::new(92, 146, 0).mass_number(), 238);
     assert_eq!(NuclideId::new(1, 0, 0).mass_number(), 1);
-}
-
-#[test]
-fn decay_mode_labels_are_distinct_and_stable() {
-    for (mode, label) in ALL_MODES {
-        assert_eq!(decay_mode_label(mode), label);
-    }
 }
 
 #[test]

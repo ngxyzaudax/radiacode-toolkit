@@ -8,7 +8,7 @@ pub struct NuclideId {
 }
 
 impl NuclideId {
-    pub fn new(z: u8, n: u16, metastable: u8) -> Self {
+    pub const fn new(z: u8, n: u16, metastable: u8) -> Self {
         Self { z, n, metastable }
     }
 
