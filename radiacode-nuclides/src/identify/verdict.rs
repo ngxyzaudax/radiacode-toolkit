@@ -153,9 +153,7 @@ fn chosen_nuclide_for_verdict(
         })
 }
 
-fn dominant_high_energy_nuclide(
-    identifications: &[PeakIdentification],
-) -> Option<NuclideEvidence> {
+fn dominant_high_energy_nuclide(identifications: &[PeakIdentification]) -> Option<NuclideEvidence> {
     const HIGH_ENERGY_KEV: f64 = 1200.0;
     identifications
         .iter()
@@ -179,9 +177,7 @@ fn nuclide_evidence_from_match(candidate: &NuclideMatch) -> NuclideEvidence {
     }
 }
 
-fn strongest_peak_nuclide_match(
-    identifications: &[PeakIdentification],
-) -> Option<&NuclideMatch> {
+fn strongest_peak_nuclide_match(identifications: &[PeakIdentification]) -> Option<&NuclideMatch> {
     identifications
         .iter()
         .max_by(|left, right| {
@@ -218,10 +214,7 @@ fn select_nuclide_verdict<'a>(
         })
 }
 
-fn peak_strength_for_nuclide(
-    identifications: &[PeakIdentification],
-    id: NuclideId,
-) -> f64 {
+fn peak_strength_for_nuclide(identifications: &[PeakIdentification], id: NuclideId) -> f64 {
     identifications
         .iter()
         .filter(|identification| {
@@ -286,8 +279,8 @@ fn confidence_label(confidence: Confidence) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::confidence_from_fraction;
     use super::Confidence;
+    use super::confidence_from_fraction;
 
     #[test]
     fn confidence_thresholds() {

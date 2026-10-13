@@ -156,17 +156,12 @@ fn event_followed_by_real_time_decodes_both_without_resync() {
     assert_eq!(frame.resync_count, 0);
     assert!(matches!(&frame.records[0], DataBufRecord::Event(_)));
     assert!(matches!(&frame.records[1], DataBufRecord::RealTime(_)));
-    assert!(
-        !frame
-            .warnings
-            .iter()
-            .any(|warning| matches!(
-                warning.kind,
-                DecodeWarningKind::SeqJump { .. }
-                    | DecodeWarningKind::UnknownRecord { .. }
-                    | DecodeWarningKind::TruncatedTail
-            ))
-    );
+    assert!(!frame.warnings.iter().any(|warning| matches!(
+        warning.kind,
+        DecodeWarningKind::SeqJump { .. }
+            | DecodeWarningKind::UnknownRecord { .. }
+            | DecodeWarningKind::TruncatedTail
+    )));
 }
 
 #[test]

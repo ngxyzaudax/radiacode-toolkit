@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 use crate::app_config::AppConfig;
-use crate::identify::{analyze_peaks, analysis_window_from_energies, match_params_from_config};
+use crate::identify::{analysis_window_from_energies, analyze_peaks, match_params_from_config};
 use crate::peaks::resolution::fwhm_kev;
 use crate::peaks::{DetectionParams, detect_peaks};
 use radiacode_nuclides::{VerdictKind, tolerance_kev};

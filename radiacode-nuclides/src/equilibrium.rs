@@ -14,7 +14,8 @@ pub struct MemberWeight {
 }
 
 pub fn equilibrium_weights(series: &ChainSeries) -> Vec<MemberWeight> {
-    let members: HashMap<NuclideId, ()> = series.members.iter().copied().map(|id| (id, ())).collect();
+    let members: HashMap<NuclideId, ()> =
+        series.members.iter().copied().map(|id| (id, ())).collect();
     let mut weights: HashMap<NuclideId, f64> = HashMap::from([(series.head, 1.0)]);
     let mut depths: HashMap<NuclideId, usize> = HashMap::from([(series.head, 0)]);
     let mut expanded = HashSet::new();

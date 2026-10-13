@@ -131,9 +131,12 @@ pub fn draw_app_matching(ui: &mut Ui, state: &mut SettingsState) -> bool {
         .changed();
     changed |= ui
         .add(
-            egui::Slider::new(&mut state.app.match_min_supported_half_life_secs, 1.0..=86400.0)
-                .logarithmic(true)
-                .text("Min supported half-life (s)"),
+            egui::Slider::new(
+                &mut state.app.match_min_supported_half_life_secs,
+                1.0..=86400.0,
+            )
+            .logarithmic(true)
+            .text("Min supported half-life (s)"),
         )
         .changed();
     if changed {

@@ -4,8 +4,8 @@ use tracing::{debug, info, warn};
 
 use radiacode_protocol::Error as ProtocolError;
 use radiacode_protocol::{
-    BytesBuffer, Command, Sequence, Transport, VirtSfr, VirtString, build_request,
-    parse_sfr_file, request_header, strip_echoed_header,
+    BytesBuffer, Command, Sequence, Transport, VirtSfr, VirtString, build_request, parse_sfr_file,
+    request_header, strip_echoed_header,
 };
 
 use crate::error::{Error, Result};

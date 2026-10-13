@@ -21,7 +21,10 @@ async fn main() {
         .await
         .expect("batch raw");
     println!("batch raw words: {batch_raw:?}");
-    let batch_decoded = device.read_vsfr_batch(&probe_ids).await.expect("batch decoded");
+    let batch_decoded = device
+        .read_vsfr_batch(&probe_ids)
+        .await
+        .expect("batch decoded");
     println!("batch decoded: {batch_decoded:?}");
     for id in probe_ids {
         let single = device.read_vsfr_u32(id).await.expect("single read");

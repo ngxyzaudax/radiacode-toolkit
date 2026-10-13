@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use radiacode_nuclides::{DecayBranch, DecayMode, GammaLine, NuclideId, RadiationKind};
 
 use super::parse::{
-    half_life_text_from_row, parse_decay_mode, parse_radiation_row, parse_u16, parse_u8,
+    half_life_text_from_row, parse_decay_mode, parse_radiation_row, parse_u8, parse_u16,
 };
 use super::{Candidate, MAX_GAMMA_ENERGY, MIN_GAMMA_INTENSITY};
 
@@ -14,10 +14,7 @@ pub struct RadiationBundle {
     pub beta_plus_rows: Vec<HashMap<String, String>>,
 }
 
-pub fn gammas_for_level(
-    bundle: &RadiationBundle,
-    level_energy_kev: f64,
-) -> Vec<GammaLine> {
+pub fn gammas_for_level(bundle: &RadiationBundle, level_energy_kev: f64) -> Vec<GammaLine> {
     let mut lines = Vec::new();
     for row in &bundle.gamma_rows {
         if let Some(line) = parse_radiation_row(row, RadiationKind::Gamma, level_energy_kev) {
@@ -409,5 +406,7 @@ fn build_daughter_isomer(
 pub fn has_catalog_gammas(bundle: &RadiationBundle, level_energy_kev: f64) -> bool {
     gammas_for_level(bundle, level_energy_kev)
         .iter()
-        .any(|line| line.intensity_pct >= MIN_GAMMA_INTENSITY && line.energy_kev <= MAX_GAMMA_ENERGY)
+        .any(|line| {
+            line.intensity_pct >= MIN_GAMMA_INTENSITY && line.energy_kev <= MAX_GAMMA_ENERGY
+        })
 }

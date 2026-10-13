@@ -51,10 +51,8 @@ pub fn analyze_peaks(
             }
         })
         .collect();
-    let identifications =
-        adjust::apply_completeness_adjustments(identifications, window, params);
-    let (identifications, _nuclides, chains) =
-        score_and_rerank(identifications, window, params);
+    let identifications = adjust::apply_completeness_adjustments(identifications, window, params);
+    let (identifications, _nuclides, chains) = score_and_rerank(identifications, window, params);
     let identifications = refine_natural_chain_rerank(identifications, window, params, &chains);
     let nuclides = collect_nuclide_evidence(&identifications, TOP_CANDIDATES_PER_PEAK);
     let chains = score_chains(&identifications, window, params, &nuclides);
@@ -76,7 +74,11 @@ fn score_and_rerank(
     identifications: Vec<PeakIdentification>,
     window: AnalysisWindow,
     params: MatchParams,
-) -> (Vec<PeakIdentification>, Vec<crate::source_summary::NuclideEvidence>, Vec<crate::source_summary::ChainEvidence>) {
+) -> (
+    Vec<PeakIdentification>,
+    Vec<crate::source_summary::NuclideEvidence>,
+    Vec<crate::source_summary::ChainEvidence>,
+) {
     let nuclides = collect_nuclide_evidence(&identifications, TOP_CANDIDATES_PER_PEAK);
     let chains = score_chains(&identifications, window, params, &nuclides);
     let identifications = if let Some(chain) = leading_chain_for_rerank(&chains) {

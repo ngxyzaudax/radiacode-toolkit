@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::spectrogram::model::{RowKind, SpectrogramHeader, SpectrogramRow, SpectrogramSeries};
+use crate::spectrogram::storage::le_u32_words;
 
 pub fn import_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
     let content = std::fs::read_to_string(path)?;
@@ -97,28 +98,31 @@ fn decode_historical_spectrum(line: &str) -> std::io::Result<HistoricalSpectrum>
         .strip_prefix("Spectrum:")
         .ok_or_else(|| invalid("missing spectrum prefix"))?
         .replace(' ', "");
-    let bytes: Vec<u8> = (0..hex.len())
-        .step_by(2)
-        .map(|index| u8::from_str_radix(&hex[index..index + 2], 16))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| invalid(&error.to_string()))?;
+    let bytes = decode_hex_bytes(&hex)?;
     if bytes.len() < 16 {
         return Err(invalid("spectrum line too short"));
     }
-    let _duration = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+    let words = le_u32_words(&bytes);
     let calibration = [
-        f32::from_le_bytes(bytes[4..8].try_into().unwrap()),
-        f32::from_le_bytes(bytes[8..12].try_into().unwrap()),
-        f32::from_le_bytes(bytes[12..16].try_into().unwrap()),
+        f32::from_bits(words[1]),
+        f32::from_bits(words[2]),
+        f32::from_bits(words[3]),
     ];
-    let counts = bytes[16..]
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-        .collect();
     Ok(HistoricalSpectrum {
         calibration,
-        counts,
+        counts: words[4..].to_vec(),
     })
+}
+
+fn decode_hex_bytes(hex: &str) -> std::io::Result<Vec<u8>> {
+    if !hex.is_ascii() || !hex.len().is_multiple_of(2) {
+        return Err(invalid("spectrum hex payload malformed"));
+    }
+    (0..hex.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(&hex[index..index + 2], 16))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| invalid(&error.to_string()))
 }
 
 fn parse_header_field<'a>(line: &'a str, key: &str) -> Option<&'a str> {

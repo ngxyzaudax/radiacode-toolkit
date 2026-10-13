@@ -107,7 +107,8 @@ fn apply_coherence_bonus(
         let hypothesis = nuclide_hypothesis_score(member.id, identifications, window, params);
         weighted += hypothesis * equilibrium.sqrt();
     }
-    let member_factor = 1.0 + MEMBER_COHERENCE_BONUS * (chain.matched_members.saturating_sub(1) as f64);
+    let member_factor =
+        1.0 + MEMBER_COHERENCE_BONUS * (chain.matched_members.saturating_sub(1) as f64);
     chain.score = weighted * member_factor;
     if is_natural_series_head(chain.head) {
         chain.score *= NATURAL_SERIES_BOOST;

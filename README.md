@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.85%2B-orange?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+" /></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.92%2B-orange?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.92+" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License AGPL-3.0" /></a>
   <img src="https://img.shields.io/badge/platform-Linux-1793D1?style=flat-square&logo=linux&logoColor=white" alt="Platform Linux" />
   <img src="https://img.shields.io/badge/GUI-egui%20%2B%20eframe-646464?style=flat-square" alt="GUI egui + eframe" />
@@ -63,7 +63,7 @@ Per-tab demos and notes: [`docs/`](./docs/README.md). Wire format: [`docs/protoc
 
 ### Requirements
 
-- Rust **1.85+**
+- Rust **1.92+**
 - Linux with USB and/or Bluetooth as needed
 - Build dependencies: `libusb` headers and OpenGL/EGL for the GUI
 

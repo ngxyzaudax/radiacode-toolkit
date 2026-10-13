@@ -53,10 +53,7 @@ pub fn analysis_window_from_energies(energies_kev: &[f64]) -> AnalysisWindow {
     if energies_kev.is_empty() {
         return AnalysisWindow::default();
     }
-    let min_kev = energies_kev
-        .iter()
-        .copied()
-        .fold(f64::INFINITY, f64::min);
+    let min_kev = energies_kev.iter().copied().fold(f64::INFINITY, f64::min);
     let max_kev = energies_kev.iter().copied().fold(0.0_f64, f64::max);
     AnalysisWindow {
         min_kev: min_kev.min(max_kev),

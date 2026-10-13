@@ -7,8 +7,8 @@ use radiacode_nuclides::{Catalog, DecayCatalog, NuclideId};
 use rayon::ThreadPoolBuilder;
 
 use import::build::{
-    apply_bundle_decays, build_nuclide, data_path, decays_path, ensure_critical_nuclides,
-    enrich_candidates_decays, import_limit, import_structure_only, import_workers,
+    apply_bundle_decays, build_nuclide, data_path, decays_path, enrich_candidates_decays,
+    ensure_critical_nuclides, import_limit, import_structure_only, import_workers,
     level_energy_for_candidate, nuclide_slug, structure_only_mode, topology_entry_from_candidate,
     upsert_topology_candidate,
 };
@@ -53,7 +53,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|candidate| nuclide_slug(candidate.id))
         .collect();
-    println!("Fetching radiation for {} parent nuclides...", parent_slugs.len());
+    println!(
+        "Fetching radiation for {} parent nuclides...",
+        parent_slugs.len()
+    );
     let parent_bundles = pool.install(|| fetch_radiation_bundles(&parent_slugs));
     let mut level_index = build_level_index_from_bundles(&parent_bundles);
     let mut nuclides = Vec::new();
@@ -73,15 +76,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let bundle_decays =
             level_branches_from_bundle(&candidate, level_energy, bundle, &level_index);
         apply_bundle_decays(&mut candidate, bundle_decays);
-        let mut pending_isomers = isomer_candidates_from_bundle(
-            &candidate,
-            bundle,
-            &mut level_index,
-        );
-        pending_isomers.extend(daughter_isomer_candidates_from_bundle(
-            bundle,
-            &level_index,
-        ));
+        let mut pending_isomers =
+            isomer_candidates_from_bundle(&candidate, bundle, &mut level_index);
+        pending_isomers.extend(daughter_isomer_candidates_from_bundle(bundle, &level_index));
         for isomer in pending_isomers {
             if seen_ids.insert(isomer.id) {
                 pending_isomer_fetches.push(isomer);
@@ -157,7 +154,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into_iter()
         .collect();
     if !enrich_slugs.is_empty() {
-        println!("Enriching decays for {} topology entries...", enrich_slugs.len());
+        println!(
+            "Enriching decays for {} topology entries...",
+            enrich_slugs.len()
+        );
         let enrich_bundles = pool.install(|| fetch_radiation_bundles(&enrich_slugs));
         enrich_candidates_decays(&mut topology_candidates, &level_index, &enrich_bundles);
     }

@@ -3,7 +3,7 @@ use crate::compare::spectrum::CollapsedSpectrum;
 use crate::compare::state::ComparedSample;
 use crate::compare::ui_plot_bars::PlotPeakOverlay;
 use crate::compare::ui_plot_values::{smoothed_background, smoothed_net, smoothed_sample};
-use crate::identify::{analyze_peaks, analysis_window_from_energies};
+use crate::identify::{analysis_window_from_energies, analyze_peaks};
 use crate::peaks::DetectionParams;
 use crate::peaks::{PeakMemoKey, detect_peaks, peaks_from_collapsed};
 
@@ -67,11 +67,7 @@ pub fn build_peak_overlay(
         let display_values = smoothed_background(background, smooth_window);
         (background.energies_kev.clone(), display_values)
     };
-    let analysis = analyze_peaks(
-        &peaks,
-        config,
-        analysis_window_from_energies(&energies),
-    );
+    let analysis = analyze_peaks(&peaks, config, analysis_window_from_energies(&energies));
     Some(BuiltPeakOverlay {
         peak_count: analysis.peaks.len(),
         identifications: analysis.identifications,

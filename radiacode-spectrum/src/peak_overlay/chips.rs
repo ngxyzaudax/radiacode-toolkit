@@ -38,7 +38,11 @@ pub fn draw_ranked_chips(ui: &mut Ui, sources: &SourceSummary) -> Option<Spectru
 }
 
 fn ranked_chains(sources: &SourceSummary) -> Vec<&radiacode_nuclides::ChainEvidence> {
-    let top_score = sources.chains.first().map(|chain| chain.score).unwrap_or(0.0);
+    let top_score = sources
+        .chains
+        .first()
+        .map(|chain| chain.score)
+        .unwrap_or(0.0);
     let floor = top_score * CHAIN_SCORE_FLOOR_FRAC;
     sources
         .chains

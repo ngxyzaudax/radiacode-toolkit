@@ -14,11 +14,7 @@ fn pick_subword(raw: u32, width: u32) -> u32 {
     let mask = (1u32 << width) - 1;
     let low = raw & mask;
     let high = raw >> (32 - width);
-    if high != 0 && low == 0 {
-        high
-    } else {
-        low
-    }
+    if high != 0 && low == 0 { high } else { low }
 }
 
 pub fn extract_vsfr_f32(raw: u32, kind: SfrValueKind) -> f32 {
@@ -28,14 +24,11 @@ pub fn extract_vsfr_f32(raw: u32, kind: SfrValueKind) -> f32 {
     }
 }
 
-pub fn resolve_value_kind(
-    register: VirtSfr,
-    entries: &[SfrCatalogEntry],
-) -> Option<SfrValueKind> {
+pub fn resolve_value_kind(register: VirtSfr, entries: &[SfrCatalogEntry]) -> Option<SfrValueKind> {
     entries
         .iter()
         .find(|entry| entry.address == u32::from(register))
-        .map(|entry| device_entry_kind(entry))
+        .map(device_entry_kind)
         .or_else(|| register.static_value_kind())
 }
 
@@ -54,7 +47,7 @@ fn device_entry_kind(entry: &SfrCatalogEntry) -> SfrValueKind {
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_vsfr_u32, SfrValueKind};
+    use super::{SfrValueKind, extract_vsfr_u32};
 
     #[test]
     fn extracts_u8_from_high_byte() {
@@ -78,6 +71,9 @@ mod tests {
 
     #[test]
     fn passes_through_u32() {
-        assert_eq!(extract_vsfr_u32(0x1234_5678, SfrValueKind::U32), 0x1234_5678);
+        assert_eq!(
+            extract_vsfr_u32(0x1234_5678, SfrValueKind::U32),
+            0x1234_5678
+        );
     }
 }

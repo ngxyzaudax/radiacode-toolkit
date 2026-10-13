@@ -28,7 +28,9 @@ pub use activity::{
 pub use catalog::{catalog, nuclide_by_id, nuclide_count, nuclide_index};
 pub use chain::{ChainStep, decay_branch_label, decay_chain, decay_mode_label};
 pub use chain_graph::{ChainEdge, ChainNode, DecayGraph, decay_graph};
-pub use chain_lines::{AttributedLine, chain_lines, strongest_chain_line, strongest_chain_peak_kev};
+pub use chain_lines::{
+    AttributedLine, chain_lines, strongest_chain_line, strongest_chain_peak_kev,
+};
 pub use elements::{element_symbol, nuclide_display_name};
 pub use equilibrium::{
     MemberWeight, bottleneck_member, equilibrium_weights, time_to_equilibrium_secs,
@@ -37,7 +39,6 @@ pub use half_life::format_half_life;
 pub use identify::{
     AnalysisWindow, Confidence, PeakAnalysisResult, SourceVerdict, VerdictKind, analyze_peaks,
 };
-pub use plausibility::{is_plausible, supported_half_life_secs};
 pub use index::IndexedLine;
 pub use match_peaks::{
     MatchParams, NuclideMatch, PeakIdentification, SpectrumPeak, best_match, match_peaks,
@@ -47,6 +48,7 @@ pub use model::{
     Catalog, DecayBranch, DecayCatalog, DecayMode, GammaLine, Nuclide, NuclideId, RadiationKind,
     TopologyEntry,
 };
+pub use plausibility::{is_plausible, supported_half_life_secs};
 pub use search::{SearchFilters, search_nuclides};
 pub use series::{
     ChainSeries, chain_series, chain_series_by_head, family_label, is_natural_series_head,

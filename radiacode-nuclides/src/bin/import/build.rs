@@ -7,7 +7,10 @@ use radiacode_nuclides::{
 };
 
 use super::fetch::{fetch_csv, fetch_radiation_bundles};
-use super::isomer::{gammas_for_level, level_branches_from_bundle, merge_decay_branches, register_level, RadiationBundle};
+use super::isomer::{
+    RadiationBundle, gammas_for_level, level_branches_from_bundle, merge_decay_branches,
+    register_level,
+};
 use super::parse::{display_name, parse_ground_states};
 use super::select::chain_closure_ids;
 use super::{API_BASE, Candidate};
@@ -201,7 +204,6 @@ pub fn enrich_candidates_decays(
             continue;
         };
         let level_energy = level_energy_for_candidate(candidate);
-        candidate.decays =
-            level_branches_from_bundle(candidate, level_energy, bundle, level_index);
+        candidate.decays = level_branches_from_bundle(candidate, level_energy, bundle, level_index);
     }
 }

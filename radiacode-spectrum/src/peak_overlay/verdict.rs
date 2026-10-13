@@ -5,7 +5,11 @@ use crate::theme::{ACCENT, MUTED};
 
 pub fn draw_verdict(ui: &mut Ui, sources: &SourceSummary) {
     let color = verdict_color(sources.verdict.confidence, sources.verdict.kind);
-    ui.label(RichText::new(&sources.verdict.headline).strong().color(color));
+    ui.label(
+        RichText::new(&sources.verdict.headline)
+            .strong()
+            .color(color),
+    );
 }
 
 fn verdict_color(confidence: Confidence, kind: VerdictKind) -> egui::Color32 {

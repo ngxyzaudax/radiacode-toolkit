@@ -1,6 +1,6 @@
 use crate::identify::candidates::rank_candidates;
-use crate::identify::completeness::completeness_for_nuclide;
 use crate::identify::completeness::CompletenessScore;
+use crate::identify::completeness::completeness_for_nuclide;
 use crate::identify::window::AnalysisWindow;
 use crate::match_peaks::{MatchParams, PeakIdentification};
 
@@ -12,16 +12,11 @@ pub fn apply_completeness_adjustments(
     let snapshot = identifications.clone();
     for identification in &mut identifications {
         for candidate in &mut identification.candidates {
-            let completeness = completeness_for_nuclide(
-                candidate.nuclide_id,
-                &snapshot,
-                window,
-                params,
-            );
+            let completeness =
+                completeness_for_nuclide(candidate.nuclide_id, &snapshot, window, params);
             candidate.score = adjusted_candidate_score(candidate.score, &completeness);
         }
-        identification.candidates =
-            rank_candidates(std::mem::take(&mut identification.candidates));
+        identification.candidates = rank_candidates(std::mem::take(&mut identification.candidates));
     }
     identifications
 }

@@ -2,6 +2,7 @@
 name = "radiacode-bluetooth"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.92"
 description = "Bluetooth LE transport for RadiaCode radiation detectors"
 license = "AGPL-3.0-only"
 
