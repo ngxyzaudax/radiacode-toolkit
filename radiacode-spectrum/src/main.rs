@@ -6,6 +6,8 @@ mod compare;
 mod device;
 mod dosimeter;
 mod energy;
+#[cfg(test)]
+mod energy_tests;
 mod events;
 mod icon;
 mod identify;
