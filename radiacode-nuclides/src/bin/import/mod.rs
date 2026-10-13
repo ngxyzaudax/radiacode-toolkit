@@ -17,6 +17,8 @@ pub mod state;
 pub mod validate;
 
 #[cfg(test)]
+mod bundle_tests;
+#[cfg(test)]
 mod isomer_tests;
 #[cfg(test)]
 mod level_tests;

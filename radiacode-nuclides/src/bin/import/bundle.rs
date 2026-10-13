@@ -54,13 +54,22 @@ pub fn parent_energy_matches(row: &CsvRow, level_energy_kev: f64) -> bool {
 }
 
 pub fn gammas_for_level(bundle: &RadiationBundle, level_energy_kev: f64) -> Vec<GammaLine> {
-    let gammas = bundle
-        .gamma_rows
-        .iter()
-        .filter_map(|row| parse_radiation_row(row, RadiationKind::Gamma, level_energy_kev));
-    let xrays = bundle
+    let xrays: Vec<GammaLine> = bundle
         .xray_rows
         .iter()
-        .filter_map(|row| parse_radiation_row(row, RadiationKind::XRay, level_energy_kev));
-    gammas.chain(xrays).collect()
+        .filter_map(|row| parse_radiation_row(row, RadiationKind::XRay, level_energy_kev))
+        .collect();
+    bundle
+        .gamma_rows
+        .iter()
+        .filter_map(|row| parse_radiation_row(row, RadiationKind::Gamma, level_energy_kev))
+        .filter(|gamma| !duplicates_xray(gamma, &xrays))
+        .chain(xrays.iter().cloned())
+        .collect()
+}
+
+fn duplicates_xray(gamma: &GammaLine, xrays: &[GammaLine]) -> bool {
+    xrays.iter().any(|xray| {
+        xray.energy_kev == gamma.energy_kev && xray.intensity_pct == gamma.intensity_pct
+    })
 }
