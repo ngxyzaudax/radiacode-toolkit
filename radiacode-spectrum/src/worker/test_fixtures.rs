@@ -5,7 +5,8 @@ use crossbeam_channel::{Receiver, Sender, unbounded};
 use radiacode_core::test_support::encode::{rare_record, real_time_record, spectrum_v0_payload};
 use radiacode_core::test_support::{DeviceHandle, ScriptedReply, VirtualDevice, open_device};
 use radiacode_core::{
-    AlarmLimits, Command, CountDisplayUnit, DeviceEndpoint, DoseDisplayUnit, VirtSfr, VirtString,
+    AlarmLimits, AlarmSignalMode, BacklightOffTime, Command, CountDisplayUnit, DeviceConfig,
+    DeviceEndpoint, DisplayDirection, DoseDisplayUnit, SignalFlags, VirtSfr, VirtString,
 };
 
 use super::epoch::SessionEpoch;
@@ -22,6 +23,23 @@ pub fn alarm_limits() -> AlarmLimits {
         l2_dose: 2000.0,
         dose_unit: DoseDisplayUnit::MicroSievertPerHour,
         count_unit: CountDisplayUnit::Cps,
+    }
+}
+
+pub fn device_config() -> DeviceConfig {
+    DeviceConfig {
+        alarms: alarm_limits(),
+        alarm_mode: AlarmSignalMode::Once,
+        brightness: 5,
+        backlight_off: BacklightOffTime::Sec5,
+        display_dir: DisplayDirection::Auto,
+        sound_on: true,
+        vibro_on: false,
+        leds_on: false,
+        leds_supported: false,
+        leds_uses_device_ctrl: false,
+        sound_ctrl: SignalFlags::from_raw(0x1f9d),
+        vibro_ctrl: SignalFlags::from_raw(0x1fff),
     }
 }
 

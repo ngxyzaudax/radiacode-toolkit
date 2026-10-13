@@ -27,7 +27,7 @@ mod ops_tests;
 #[cfg(test)]
 mod run_loop_tests;
 #[cfg(test)]
-mod test_fixtures;
+pub(crate) mod test_fixtures;
 
 pub use messages::{WorkerCommand, WorkerEvent};
 

@@ -12,6 +12,8 @@ mod identify;
 mod layout;
 mod logging;
 mod model;
+#[cfg(test)]
+mod model_tests;
 mod monitor;
 mod monitor_window;
 mod pc_alarm;
