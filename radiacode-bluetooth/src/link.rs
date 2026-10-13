@@ -5,7 +5,7 @@ use btleplug::platform::{Adapter, Peripheral};
 use tokio::time::timeout;
 use tracing::{debug, warn};
 
-use crate::adapter::normalize_mac;
+use crate::address::{address_matches, normalize_mac};
 
 const STALE_DISCONNECT_COOLDOWN: Duration = Duration::from_millis(500);
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(2);
@@ -25,12 +25,11 @@ pub async fn disconnect_stale(peripheral: &Peripheral) {
 }
 
 pub async fn disconnect_cached_peripheral(adapter: &Adapter, mac: &str) {
-    let target = match normalize_mac(mac) {
-        Ok(value) => value,
-        Err(_) => return,
+    let Ok(target) = normalize_mac(mac) else {
+        return;
     };
     for peripheral in adapter.peripherals().await.unwrap_or_default() {
-        if peripheral.address().to_string().to_lowercase() != target {
+        if !address_matches(&peripheral.address().to_string(), &target) {
             continue;
         }
         if peripheral.is_connected().await.unwrap_or(false) {

@@ -2,14 +2,14 @@ use std::time::Duration;
 
 use btleplug::api::{Central, Peripheral as _, PeripheralProperties, ScanFilter};
 use btleplug::platform::Peripheral;
-use radiacode_core::{
-    DeviceEndpoint, DiscoveredDevice, model_from_advertisement, serial_from_advertisement,
-};
+use radiacode_core::DiscoveredDevice;
 use tracing::{debug, info};
 
 use crate::adapter::default_adapter;
+use crate::advertisement::{
+    Advertisement, discovered_device, is_radiacode_advertisement, sort_and_dedup,
+};
 use crate::ble_error::BleError;
-use crate::uuids;
 
 pub async fn scan_radiacode_devices(
     duration: Duration,
@@ -25,22 +25,13 @@ pub async fn scan_radiacode_devices(
         peripheral_count = peripherals.len(),
         "scan collected peripherals"
     );
-
     let mut found = Vec::new();
     for peripheral in peripherals {
-        let Some(props) = readable_properties(&peripheral).await else {
-            continue;
-        };
-        if let Some(device) = matched_radiacode(&peripheral, props) {
+        if let Some(device) = matched_radiacode(&peripheral).await {
             found.push(device);
         }
     }
-    found.sort_by(|left, right| {
-        left.endpoint
-            .address_label()
-            .cmp(right.endpoint.address_label())
-    });
-    found.dedup_by(|left, right| left.endpoint == right.endpoint);
+    let found = sort_and_dedup(found);
     info!(count = found.len(), "ble scan complete");
     Ok(found)
 }
@@ -59,42 +50,22 @@ async fn readable_properties(peripheral: &Peripheral) -> Option<PeripheralProper
     }
 }
 
-fn advertises_radiacode(props: &PeripheralProperties) -> bool {
-    let advertises_service = props.services.contains(&uuids::SERVICE);
-    let name_matches = props
-        .local_name
-        .as_deref()
-        .is_some_and(|n| n.to_ascii_lowercase().contains("radiacode"));
-    advertises_service || name_matches
-}
-
-fn matched_radiacode(
-    peripheral: &Peripheral,
-    props: PeripheralProperties,
-) -> Option<DiscoveredDevice> {
-    if !advertises_radiacode(&props) {
+async fn matched_radiacode(peripheral: &Peripheral) -> Option<DiscoveredDevice> {
+    let props = readable_properties(peripheral).await?;
+    let advertisement = Advertisement {
+        address: peripheral.address().to_string(),
+        local_name: props.local_name,
+        services: props.services,
+        rssi: props.rssi,
+    };
+    if !is_radiacode_advertisement(&advertisement) {
         return None;
     }
-    let local_name = props.local_name.clone();
-    let serial = local_name.as_deref().and_then(serial_from_advertisement);
-    let model = local_name.as_deref().and_then(model_from_advertisement);
-    let address = peripheral.address().to_string();
     debug!(
-        %address,
-        ?local_name,
-        rssi = ?props.rssi,
+        address = %advertisement.address,
+        local_name = ?advertisement.local_name,
+        rssi = ?advertisement.rssi,
         "matched radiacode advertisement"
     );
-    let label = model
-        .clone()
-        .or_else(|| serial.clone())
-        .or(local_name)
-        .unwrap_or_else(|| "RadiaCode".into());
-    Some(DiscoveredDevice {
-        endpoint: DeviceEndpoint::Bluetooth { address },
-        label,
-        serial,
-        model,
-        rssi: props.rssi,
-    })
+    Some(discovered_device(advertisement))
 }
