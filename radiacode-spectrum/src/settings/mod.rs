@@ -1,5 +1,7 @@
 mod action;
 mod state;
+#[cfg(test)]
+mod state_tests;
 mod ui_alarm_card;
 mod ui_alarm_cells;
 mod ui_alarm_style;
