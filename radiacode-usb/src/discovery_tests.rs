@@ -19,8 +19,8 @@ fn discovered_device_display_label_prefers_label() {
 }
 
 #[test]
-fn discovered_device_transport_tag_usb() {
+fn discovered_device_transport_label_usb() {
     let device = usb_device("RC-001", "RC-001");
-    assert_eq!(device.transport_tag(), "USB");
+    assert_eq!(device.endpoint.transport().label(), "USB");
     assert_eq!(device.endpoint.transport(), TransportKind::Usb);
 }

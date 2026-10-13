@@ -1,4 +1,5 @@
 mod session;
+mod session_init;
 mod vsfr;
 
 #[cfg(test)]

@@ -4,12 +4,12 @@ use crate::device::RadiaCode;
 use crate::error::{Error, Result};
 use crate::rate_units::{count_display_from_cps, dose_display_from_rh};
 use crate::types::{AlarmLimits, LiveRates};
-use radiacode_protocol::{RealTimeRates, VirtString, decode_data_buf, latest_snapshot};
+use radiacode_protocol::{RealTimeRates, VirtString, decode_data_buf, snapshot_from_frame};
 
 pub async fn live_rates(device: &mut RadiaCode, units: &AlarmLimits) -> Result<LiveRates> {
     let response = device.read_virt_string(VirtString::DataBuf).await?;
     let frame = decode_data_buf(response.data());
-    let snapshot = latest_snapshot(response.data());
+    let snapshot = snapshot_from_frame(&frame);
     let rates = snapshot
         .rates
         .ok_or(Error::MonitorDataPending)

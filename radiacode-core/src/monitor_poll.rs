@@ -6,7 +6,7 @@ use crate::data_buf_cursor::DataBufCursor;
 use crate::device::RadiaCode;
 use crate::error::Result;
 use crate::rate_units::{count_display_from_cps, dose_display_from_rh};
-use crate::status_read::status_from_frame;
+use crate::status_read::status_from_snapshot;
 use crate::types::{AccumulatedDose, AlarmLimits, DeviceStatus, MonitorPollSample, TimedRates};
 use radiacode_protocol::{
     VirtString, decode_data_buf, latest_rare_record, real_time_records, snapshot_from_frame,
@@ -22,7 +22,7 @@ pub async fn poll_monitor(
     let frame = decode_data_buf(response.data());
     let seq_gaps = cursor.observe_frame(&frame);
     let snapshot = snapshot_from_frame(&frame);
-    let status = status_from_frame(device, &snapshot, refresh_rssi).await?;
+    let status = status_from_snapshot(device, &snapshot, refresh_rssi).await?;
     let rates = real_time_records(&frame)
         .map(|record| TimedRates {
             device_ts: record.header.ts,

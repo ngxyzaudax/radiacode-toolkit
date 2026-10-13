@@ -44,7 +44,7 @@ pub use rate_units::{
     count_display_from_cps, decode_count_alarm, decode_dose_accum, decode_dose_alarm,
     dose_display_from_rh, encode_count_alarm, encode_dose_accum, encode_dose_alarm,
 };
-pub use sfr_catalog::sfr_supports_leds_on;
+pub use sfr_catalog::{sfr_entries_support_leds_on, sfr_supports_leds_on};
 pub use spectrum::decode_spectrum;
 pub use transport::Transport;
 pub use types::{DeviceVersions, FirmwareVersion, Spectrum, channel_to_energy};

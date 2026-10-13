@@ -60,8 +60,19 @@ pub use types::{
 pub use vsfr_batch::{extract_vsfr_value, read_vsfr_batch_raw};
 
 #[cfg(test)]
+pub(crate) mod test_support;
+
+#[cfg(test)]
+mod data_buf_cursor_tests;
+#[cfg(test)]
 mod device_config_tests;
+#[cfg(test)]
+mod device_info_tests;
+#[cfg(test)]
+mod discovery_tests;
 #[cfg(test)]
 mod monitor_poll_tests;
 #[cfg(test)]
 mod session_restore_tests;
+#[cfg(test)]
+mod session_tests;
