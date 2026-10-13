@@ -5,6 +5,7 @@ use super::test_harness::{AppHarness, has_command};
 use crate::events::test_fixtures::spectrum_view;
 use crate::spectrogram::controls_action::SpectrogramControlsAction;
 use crate::spectrogram::model::SpectrogramDisplay;
+use crate::spectrogram::storage::ensure_dir;
 use crate::spectrogram::test_fixtures::write_fixture_recording;
 use crate::usb_access::{UsbAccessAction, UsbAccessPrompt};
 use crate::worker::{WorkerCommand, WorkerEvent};
