@@ -9,6 +9,8 @@ mod chain_scene;
 #[cfg(test)]
 mod chain_spectrum_tests;
 mod chain_state;
+#[cfg(test)]
+mod chain_state_tests;
 mod chain_view_cache;
 mod detail_layout;
 mod state;
