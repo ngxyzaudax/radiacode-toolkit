@@ -108,7 +108,7 @@ fn report_connect_failure(events: &Sender<WorkerEvent>, endpoint: &DeviceEndpoin
     let _ = events.send(WorkerEvent::Disconnected);
 }
 
-fn connect_failure_event(endpoint: &DeviceEndpoint, error: &Error) -> WorkerEvent {
+pub(super) fn connect_failure_event(endpoint: &DeviceEndpoint, error: &Error) -> WorkerEvent {
     if error.is_usb_permission_denied() {
         WorkerEvent::UsbPermissionRequired {
             endpoint: endpoint.clone(),

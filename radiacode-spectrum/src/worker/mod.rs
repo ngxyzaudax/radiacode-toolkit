@@ -25,6 +25,8 @@ mod timers;
 #[cfg(test)]
 mod ops_config_tests;
 #[cfg(test)]
+mod ops_connect_tests;
+#[cfg(test)]
 mod ops_monitor_tests;
 #[cfg(test)]
 mod ops_spectrum_tests;
