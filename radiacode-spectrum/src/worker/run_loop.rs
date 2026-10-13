@@ -3,7 +3,7 @@ use std::sync::atomic::AtomicU64;
 
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use super::batch::{CoalescedBatch, recv_batch};
 use super::epoch::{SessionEpoch, end_session};
@@ -121,7 +121,7 @@ pub async fn run_command(command: WorkerCommand, ctx: &mut WorkerContext) {
         }
         WorkerCommand::SyncDeviceClock => handle_sync_device_clock(events, session, &epoch).await,
         WorkerCommand::SetCaptureInterval(_) | WorkerCommand::SetMonitorPollInterval(_) => {
-            unreachable!("interval commands are handled in the worker select loop")
+            warn!(?command, "interval command reached run_command; ignored")
         }
     }
     session.clear_if_device_lost();

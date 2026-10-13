@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::batch::CoalescedBatch;
 use super::epoch::SessionEpoch;
 use super::messages::{WorkerCommand, WorkerEvent};
-use super::run_loop::{WorkerContext, run_command, run_fetch_batch};
+use super::run_loop::{WorkerContext, run_command, run_fetch_batch, worker_loop};
 use super::test_fixtures::{Harness, configured_device, count_events};
 
 fn context_from(harness: Harness) -> (WorkerContext, crossbeam_channel::Receiver<WorkerEvent>) {
@@ -71,4 +71,47 @@ async fn fetch_monitor_command_runs_single_poll() {
         1
     );
     assert_eq!(ctx.session.monitor_polls, 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn interval_commands_are_ignored_by_run_command() {
+    let (mut ctx, events) = context_from(Harness::connected(configured_device()).await);
+    run_command(WorkerCommand::SetCaptureInterval(7.0), &mut ctx).await;
+    run_command(WorkerCommand::SetMonitorPollInterval(3), &mut ctx).await;
+    let events: Vec<WorkerEvent> = events.try_iter().collect();
+    assert_eq!(events.len(), 4);
+    assert!(
+        events
+            .iter()
+            .all(|event| matches!(event, WorkerEvent::Busy(_)))
+    );
+    assert!(ctx.session.has_device());
+}
+
+#[tokio::test(start_paused = true)]
+async fn worker_loop_processes_commands_until_channel_closes() {
+    let (ctx, events) = context_from(Harness::connected(configured_device()).await);
+    let (commands, command_rx) = tokio::sync::mpsc::unbounded_channel();
+    commands
+        .send(WorkerCommand::SetCaptureInterval(2.0))
+        .unwrap();
+    commands
+        .send(WorkerCommand::SetMonitorPollInterval(5))
+        .unwrap();
+    commands.send(WorkerCommand::FetchMonitor).unwrap();
+    commands.send(WorkerCommand::Disconnect).unwrap();
+    drop(commands);
+    worker_loop(command_rx, ctx).await;
+    let events: Vec<WorkerEvent> = events.try_iter().collect();
+    assert_eq!(
+        count_events(&events, |event| matches!(
+            event,
+            WorkerEvent::MonitorPollComplete
+        )),
+        1
+    );
+    assert_eq!(
+        count_events(&events, |event| matches!(event, WorkerEvent::Disconnected)),
+        1
+    );
 }

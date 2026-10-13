@@ -5,6 +5,8 @@ mod capture_lock;
 mod capture_progress;
 #[cfg(test)]
 mod capture_progress_tests;
+#[cfg(test)]
+mod capture_tests;
 pub mod color_scheme;
 pub mod colormap;
 pub mod controls_action;
