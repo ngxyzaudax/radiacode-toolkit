@@ -2,6 +2,7 @@ mod action;
 mod state;
 mod ui_alarm_card;
 mod ui_alarm_cells;
+mod ui_alarm_style;
 mod ui_alarms;
 mod ui_app;
 mod ui_columns;
