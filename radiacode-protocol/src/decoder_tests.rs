@@ -80,7 +80,7 @@ fn spectrum_v1_decodes_every_vlen_branch() {
     payload.extend_from_slice(&[0x01, 0x00, 0x00]);
     payload.extend_from_slice(&((1u16 << 4) | 5).to_le_bytes());
     payload.extend_from_slice(&(-8i32).to_le_bytes());
-    payload.extend_from_slice(&((2u16 << 4) | 0).to_le_bytes());
+    payload.extend_from_slice(&(2u16 << 4).to_le_bytes());
     let spectrum = decode_spectrum(&mut BytesBuffer::new(payload), 1).unwrap();
     assert_eq!(spectrum.counts, vec![10, 7, 307, 308, 300, 0, 0]);
     assert_eq!(spectrum.duration.as_secs(), 7);
