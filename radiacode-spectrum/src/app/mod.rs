@@ -18,6 +18,7 @@ mod actions_spectrogram;
 mod commands;
 mod connection;
 mod content;
+mod content_live;
 mod events;
 mod frame;
 mod lifecycle;
