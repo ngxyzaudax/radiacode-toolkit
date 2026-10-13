@@ -24,6 +24,8 @@ mod peak_snap;
 mod peaks;
 mod persist;
 mod plot_hover;
+#[cfg(test)]
+mod plot_hover_tests;
 mod plot_style;
 mod plot_zoom;
 mod scale;
