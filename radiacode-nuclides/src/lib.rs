@@ -64,4 +64,6 @@ pub use topology::{
 #[cfg(test)]
 mod identify_tests;
 #[cfg(test)]
+mod model_tests;
+#[cfg(test)]
 mod tests;

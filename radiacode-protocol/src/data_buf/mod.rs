@@ -10,6 +10,8 @@ mod snapshot;
 #[cfg(test)]
 mod event_tests;
 #[cfg(test)]
+mod flags_tests;
+#[cfg(test)]
 mod record_payload_tests;
 #[cfg(test)]
 mod record_tests;
