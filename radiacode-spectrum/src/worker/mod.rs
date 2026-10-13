@@ -23,7 +23,11 @@ mod session;
 mod timers;
 
 #[cfg(test)]
-mod ops_tests;
+mod ops_config_tests;
+#[cfg(test)]
+mod ops_monitor_tests;
+#[cfg(test)]
+mod ops_spectrum_tests;
 #[cfg(test)]
 mod run_loop_tests;
 #[cfg(test)]

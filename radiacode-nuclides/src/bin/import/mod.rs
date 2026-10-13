@@ -17,7 +17,13 @@ pub mod state;
 pub mod validate;
 
 #[cfg(test)]
-mod tests;
+mod isomer_tests;
+#[cfg(test)]
+mod level_tests;
+#[cfg(test)]
+mod parse_tests;
+#[cfg(test)]
+mod test_fixtures;
 
 use std::collections::HashMap;
 

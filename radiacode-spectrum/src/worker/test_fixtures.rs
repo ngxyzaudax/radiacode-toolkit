@@ -123,3 +123,19 @@ pub fn epoch_of(live_epoch: &Arc<AtomicU64>) -> SessionEpoch {
 pub fn count_events(events: &[WorkerEvent], matcher: fn(&WorkerEvent) -> bool) -> usize {
     events.iter().filter(|event| matcher(event)).count()
 }
+
+pub fn is_monitor_sample(event: &WorkerEvent) -> bool {
+    matches!(event, WorkerEvent::MonitorSample(_))
+}
+
+pub fn is_spectrum(event: &WorkerEvent) -> bool {
+    matches!(event, WorkerEvent::Spectrum(_))
+}
+
+pub fn is_error(event: &WorkerEvent) -> bool {
+    matches!(event, WorkerEvent::Error(_))
+}
+
+pub fn is_disconnected(event: &WorkerEvent) -> bool {
+    matches!(event, WorkerEvent::Disconnected)
+}
