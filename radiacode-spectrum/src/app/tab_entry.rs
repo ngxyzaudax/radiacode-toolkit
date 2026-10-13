@@ -10,10 +10,13 @@ impl SpectrumApp {
         match active {
             ViewTab::Spectrogram => self.enter_spectrogram_tab(),
             ViewTab::Compare => self.enter_compare_tab(),
-            ViewTab::Catalogue => self.catalogue.on_tab_enter(),
             ViewTab::Monitor => self.enter_monitor_tab(),
             ViewTab::Settings => self.enter_device_config_tab(),
-            ViewTab::Device | ViewTab::Spectrum | ViewTab::About => {}
+            ViewTab::Device
+            | ViewTab::Spectrum
+            | ViewTab::PeakId
+            | ViewTab::Sources
+            | ViewTab::About => {}
         }
     }
 

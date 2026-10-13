@@ -36,7 +36,7 @@ pub fn draw_classification_strip(
                     ui.add_space(4.0);
                     let action = draw_ranked_chips(ui, sources);
                     ui.label(
-                        RichText::new("Click a source to open it in the catalogue.")
+                        RichText::new("Click a source to see its gamma signature.")
                             .small()
                             .color(MUTED),
                     );

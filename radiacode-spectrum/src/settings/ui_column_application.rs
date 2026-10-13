@@ -3,8 +3,8 @@ use egui::{RichText, Ui};
 use crate::settings::action::SettingsAction;
 use crate::settings::state::SettingsState;
 use crate::settings::ui_app::{
-    draw_app_alerts, draw_app_appearance, draw_app_capture, draw_app_catalogue,
-    draw_app_connection, draw_app_matching, draw_app_monitor_window, draw_app_polling,
+    draw_app_alerts, draw_app_appearance, draw_app_capture, draw_app_connection, draw_app_matching,
+    draw_app_monitor_window, draw_app_polling,
 };
 use crate::settings::ui_layout::settings_section;
 use crate::theme::MUTED;
@@ -17,7 +17,7 @@ struct AppSection {
     draw: AppSectionDrawer,
 }
 
-const APP_SECTIONS: [AppSection; 7] = [
+const APP_SECTIONS: [AppSection; 6] = [
     AppSection {
         title: "Polling",
         hint: "How often live data is refreshed.",
@@ -30,13 +30,8 @@ const APP_SECTIONS: [AppSection; 7] = [
     },
     AppSection {
         title: "Peak detection and identification",
-        hint: "Sensitivity, detector resolution, and nuclide matching tolerance.",
+        hint: "Sensitivity, detector resolution (also used by Peak ID and Sources), and matching tolerance.",
         draw: draw_app_matching,
-    },
-    AppSection {
-        title: "Catalogue preview",
-        hint: "Synthetic gamma spectrum resolution in the nuclide catalogue.",
-        draw: draw_app_catalogue,
     },
     AppSection {
         title: "Appearance",

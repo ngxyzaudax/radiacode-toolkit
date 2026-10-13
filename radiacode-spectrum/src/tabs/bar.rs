@@ -14,11 +14,8 @@ pub fn draw_tab_bar(ui: &mut Ui, active: ViewTab) -> Option<ViewTab> {
             ViewTab::Spectrogram.label(),
         );
         ui.selectable_value(&mut selected, ViewTab::Compare, ViewTab::Compare.label());
-        ui.selectable_value(
-            &mut selected,
-            ViewTab::Catalogue,
-            ViewTab::Catalogue.label(),
-        );
+        ui.selectable_value(&mut selected, ViewTab::PeakId, ViewTab::PeakId.label());
+        ui.selectable_value(&mut selected, ViewTab::Sources, ViewTab::Sources.label());
         ui.selectable_value(&mut selected, ViewTab::Settings, ViewTab::Settings.label());
         ui.selectable_value(&mut selected, ViewTab::About, ViewTab::About.label());
     });

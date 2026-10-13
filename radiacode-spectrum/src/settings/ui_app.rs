@@ -47,18 +47,6 @@ pub fn draw_app_alerts(ui: &mut Ui, state: &mut SettingsState) -> bool {
     toggle_switch(ui, &mut state.app.pc_alarm_repeat, "Beep on alarm")
 }
 
-pub fn draw_app_catalogue(ui: &mut Ui, state: &mut SettingsState) -> bool {
-    let changed = ui
-        .add(
-            egui::Slider::new(&mut state.app.catalogue_fwhm_pct, 1.0..=20.0)
-                .text("Resolution FWHM @ 662 keV")
-                .suffix("%")
-                .fixed_decimals(1),
-        )
-        .changed();
-    clamp_if_changed(state, changed)
-}
-
 pub fn draw_app_appearance(ui: &mut Ui, state: &mut SettingsState) -> bool {
     let changed = ui
         .add(

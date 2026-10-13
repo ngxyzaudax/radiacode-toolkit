@@ -2,7 +2,6 @@ use egui::{Context, Ui};
 
 use super::SpectrumApp;
 use crate::about::draw_about_view;
-use crate::catalogue::draw_catalogue_view;
 use crate::compare::draw_compare_view;
 use crate::device::{DeviceViewProps, draw_device_view};
 use crate::layout::page_scroll;
@@ -17,7 +16,8 @@ impl SpectrumApp {
             ViewTab::Settings => self.draw_settings_tab(ui),
             ViewTab::About => page_scroll(ui, "about_page", draw_about_view),
             ViewTab::Compare => self.draw_compare_tab(ui),
-            ViewTab::Catalogue => self.draw_catalogue_tab(ui),
+            ViewTab::PeakId => self.draw_peak_id_tab(ui),
+            ViewTab::Sources => self.draw_sources_tab(ui),
             ViewTab::Monitor | ViewTab::Spectrum | ViewTab::Spectrogram => {
                 self.draw_live_tab(ui, ctx)
             }
@@ -66,12 +66,6 @@ impl SpectrumApp {
         );
         if let Some(action) = action {
             self.handle_spectrum_plot_action(action);
-        }
-    }
-
-    fn draw_catalogue_tab(&mut self, ui: &mut Ui) {
-        if draw_catalogue_view(ui, &mut self.catalogue, &mut self.settings.app) {
-            self.settings.persist_app();
         }
     }
 

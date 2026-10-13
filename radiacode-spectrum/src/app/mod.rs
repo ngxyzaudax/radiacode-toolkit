@@ -1,11 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use crate::catalogue::CatalogueState;
 use crate::compare::CompareState;
 use crate::events::AppState;
 use crate::model::ConnectionState;
 use crate::monitor::AlarmLevel;
+use crate::peak_id::PeakIdState;
 use crate::settings::SettingsState;
+use crate::sources_tab::SourcesState;
 use crate::spectrogram::SpectrogramState;
 use crate::spectrogram::capture::SpectrogramCapture;
 use crate::spectrum::{ShutdownSequence, SpectrumViewState, StartupChrome, TabNavigation};
@@ -13,12 +14,14 @@ use crate::usb_access::UsbAccessPrompt;
 use crate::worker::{WorkerHandle, spawn_worker};
 
 mod actions_device;
+mod actions_reference;
 mod actions_settings;
 mod actions_spectrogram;
 mod commands;
 mod connection;
 mod content;
 mod content_live;
+mod content_reference;
 mod events;
 mod frame;
 mod lifecycle;
@@ -30,6 +33,8 @@ mod connection_tests;
 #[cfg(test)]
 mod events_tests;
 #[cfg(test)]
+mod reference_actions_tests;
+#[cfg(test)]
 mod spectrogram_actions_tests;
 #[cfg(test)]
 mod test_harness;
@@ -40,7 +45,8 @@ pub struct SpectrumApp {
     settings: SettingsState,
     spectrogram: SpectrogramState,
     compare: CompareState,
-    catalogue: CatalogueState,
+    peak_id: PeakIdState,
+    sources: SourcesState,
     tabs: TabNavigation,
     view: SpectrumViewState,
     chrome: StartupChrome,
@@ -71,7 +77,8 @@ impl SpectrumApp {
             settings,
             spectrogram,
             compare,
-            catalogue: CatalogueState::new(),
+            peak_id: PeakIdState::new(),
+            sources: SourcesState::new(),
             tabs: TabNavigation::new(),
             view: SpectrumViewState::new(),
             chrome: StartupChrome::new(),

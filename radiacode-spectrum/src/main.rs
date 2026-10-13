@@ -1,7 +1,6 @@
 mod about;
 mod app;
 mod app_config;
-mod catalogue;
 mod compare;
 mod device;
 mod dosimeter;
@@ -19,6 +18,7 @@ mod model_tests;
 mod monitor;
 mod monitor_window;
 mod pc_alarm;
+mod peak_id;
 mod peak_overlay;
 mod peak_snap;
 mod peaks;
@@ -31,6 +31,7 @@ mod plot_zoom;
 mod scale;
 mod settings;
 mod smooth;
+mod sources_tab;
 mod spectrogram;
 mod spectrum;
 mod synthetic_spectrum;
@@ -57,6 +58,15 @@ use window::{min_inner_size, startup_inner_size, startup_viewport_builder};
 
 fn main() -> ExitCode {
     logging::init();
+    std::panic::set_hook(Box::new(|panic| {
+        error!(%panic, "application panic");
+        let backtrace = std::backtrace::Backtrace::force_capture();
+        error!(%backtrace, "panic backtrace");
+        let _ = std::fs::write(
+            "/tmp/radiacode-spectrum-panic.log",
+            format!("{panic}\n{backtrace}"),
+        );
+    }));
     info!("radiacode-spectrum starting");
     let options = eframe::NativeOptions {
         viewport: startup_viewport_builder()

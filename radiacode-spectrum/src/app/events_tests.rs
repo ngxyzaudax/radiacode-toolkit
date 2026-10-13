@@ -1,6 +1,5 @@
 use super::test_harness::{AppHarness, edited, has_command, loaded_harness};
 use crate::monitor::MonitorLeaveChoice;
-use crate::peak_overlay::SpectrumPlotAction;
 use crate::settings::{SettingsAction, SettingsDeviceOp};
 use crate::view_tab::ViewTab;
 use crate::worker::test_fixtures::device_config;
@@ -119,15 +118,4 @@ fn spectrogram_settings_change_syncs_capture_interval_when_changed() {
         command,
         WorkerCommand::SetCaptureInterval(_)
     )));
-}
-
-#[test]
-fn plot_actions_open_catalogue_tab() {
-    let mut harness = AppHarness::new();
-    let u238 = radiacode_nuclides::NuclideId::new(92, 146, 0);
-    harness
-        .app
-        .handle_spectrum_plot_action(SpectrumPlotAction::OpenCatalogue(u238));
-    assert_eq!(harness.app.tabs.active, ViewTab::Catalogue);
-    assert_eq!(harness.app.catalogue.selected, Some(u238));
 }

@@ -1,7 +1,9 @@
+mod flex;
 mod paint;
 
 use egui::{Align2, Color32, Pos2, Rect, Vec2};
 
+pub use flex::{ColumnSpec, bar_cell, column, flex_table_layout, text_cell};
 pub use paint::{draw_table_header, draw_table_row};
 
 pub const TABLE_ROW_HEIGHT: f32 = 22.0;

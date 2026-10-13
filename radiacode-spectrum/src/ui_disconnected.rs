@@ -26,7 +26,8 @@ pub fn tab_works_offline(tab: crate::view_tab::ViewTab) -> bool {
         crate::view_tab::ViewTab::Device
             | crate::view_tab::ViewTab::Settings
             | crate::view_tab::ViewTab::Compare
-            | crate::view_tab::ViewTab::Catalogue
+            | crate::view_tab::ViewTab::PeakId
+            | crate::view_tab::ViewTab::Sources
             | crate::view_tab::ViewTab::About
     )
 }
