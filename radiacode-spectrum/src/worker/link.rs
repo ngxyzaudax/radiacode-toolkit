@@ -43,7 +43,13 @@ pub fn should_reconnect(error: &Error, session_endpoint: Option<&DeviceEndpoint>
 
 #[cfg(test)]
 mod tests {
-    use super::should_reconnect;
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicU64;
+
+    use super::{reconnect_endpoint, should_reconnect};
+    use crate::worker::epoch::{SessionEpoch, end_session};
+    use radiacode_core::test_support::VirtualDevice;
+    use radiacode_core::test_support::open_device;
     use radiacode_core::{DeviceEndpoint, Error};
 
     fn endpoint() -> DeviceEndpoint {
@@ -69,5 +75,16 @@ mod tests {
             Some(&endpoint())
         ));
         assert!(!should_reconnect(&Error::DeviceNotFound, Some(&endpoint())));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reconnect_is_refused_once_session_ended() {
+        let live = Arc::new(AtomicU64::new(0));
+        let epoch = SessionEpoch::capture(&live);
+        end_session(&live);
+        let (device, _handle) = open_device(VirtualDevice::default()).await;
+        let restore = device.session_restore().expect("session restore");
+        let outcome = reconnect_endpoint(&endpoint(), &epoch, &restore).await;
+        assert!(matches!(outcome, Err(error) if error.is_connection_lost()));
     }
 }
