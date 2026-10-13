@@ -11,13 +11,7 @@ use crate::usb_access::{UsbAccessAction, UsbAccessPrompt};
 use crate::worker::{WorkerCommand, WorkerEvent};
 
 fn recordings_dir(harness: &AppHarness) -> std::path::PathBuf {
-    harness
-        .app
-        .spectrogram
-        .settings
-        .recordings_dir
-        .clone()
-        .into()
+    ensure_dir(&harness.app.spectrogram.settings.recordings_dir).expect("recordings dir")
 }
 
 #[test]
