@@ -8,7 +8,11 @@ mod resolution;
 mod source;
 
 #[cfg(test)]
+mod detect_fixtures;
+#[cfg(test)]
 mod detect_tests;
+#[cfg(test)]
+mod identify_fixture_tests;
 
 pub use curve::sample_curve_y;
 pub use detect::detect_peaks;

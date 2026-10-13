@@ -3,7 +3,13 @@ mod router;
 mod state;
 
 #[cfg(test)]
+mod router_fixture;
+#[cfg(test)]
+mod router_outcome_tests;
+#[cfg(test)]
 mod router_tests;
+#[cfg(test)]
+mod state_schedule_tests;
 #[cfg(test)]
 mod state_tests;
 #[cfg(test)]

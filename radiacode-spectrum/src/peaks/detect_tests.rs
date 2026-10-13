@@ -1,38 +1,7 @@
-use serde::Deserialize;
-
 use crate::app_config::AppConfig;
 use crate::identify::{analysis_window_from_energies, analyze_peaks, match_params_from_config};
-use crate::peaks::resolution::fwhm_kev;
+use crate::peaks::detect_fixtures::{fixture_counts, has_peak_near, load_fixture};
 use crate::peaks::{DetectionParams, detect_peaks};
-use radiacode_nuclides::{VerdictKind, tolerance_kev};
-
-#[derive(Debug, Deserialize)]
-struct FixtureSpectrum {
-    energies_kev: Vec<f64>,
-    counts: Vec<u64>,
-}
-
-fn load_fixture(name: &str) -> FixtureSpectrum {
-    let raw = match name {
-        "thoriated_rods" => include_str!("../../data/spectra/thoriated_rods.json"),
-        "background_indoor_outdoor" => {
-            include_str!("../../data/spectra/background_indoor_outdoor.json")
-        }
-        other => panic!("unknown fixture {other}"),
-    };
-    serde_json::from_str(raw).expect("fixture json")
-}
-
-fn fixture_counts(fixture: &FixtureSpectrum) -> Vec<f64> {
-    fixture.counts.iter().map(|&value| value as f64).collect()
-}
-
-fn has_peak_near(peaks: &[crate::peaks::DetectedPeak], energy_kev: f64, fwhm_pct: f64) -> bool {
-    let tolerance = 0.5 * fwhm_kev(energy_kev, fwhm_pct);
-    peaks
-        .iter()
-        .any(|peak| (peak.energy_kev - energy_kev).abs() <= tolerance)
-}
 
 #[test]
 fn thoriated_rods_finds_thorium_lines() {
@@ -55,60 +24,6 @@ fn background_finds_potassium() {
     assert!(
         has_peak_near(&peaks, 1460.8, params.detector_fwhm_pct),
         "missing K-40 peak in {peaks:?}"
-    );
-}
-
-#[test]
-fn thoriated_rods_identifies_thorium_series() {
-    let fixture = load_fixture("thoriated_rods");
-    let params = DetectionParams::default();
-    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
-    let config = AppConfig::default();
-    let window = analysis_window_from_energies(&fixture.energies_kev);
-    let analysis = analyze_peaks(&peaks, &config, window);
-    let top_chain = analysis
-        .sources
-        .chains
-        .first()
-        .expect("expected at least one chain");
-    assert!(
-        top_chain.name.contains("Thorium"),
-        "expected thorium series first, got {top_chain:?} in {:?}",
-        analysis.sources.chains
-    );
-    assert!(
-        top_chain.matched_members >= 3,
-        "expected >=3 thorium members, got {top_chain:?}"
-    );
-    assert!(
-        analysis.sources.verdict.headline.contains("Thorium"),
-        "verdict headline: {}",
-        analysis.sources.verdict.headline
-    );
-}
-
-#[test]
-fn background_identifies_k40_nuclide() {
-    let fixture = load_fixture("background_indoor_outdoor");
-    let params = DetectionParams::default();
-    let peaks = detect_peaks(&fixture.energies_kev, &fixture_counts(&fixture), params);
-    let config = AppConfig::default();
-    let window = analysis_window_from_energies(&fixture.energies_kev);
-    let analysis = analyze_peaks(&peaks, &config, window);
-    assert_ne!(
-        analysis.sources.verdict.kind,
-        VerdictKind::Chain,
-        "background should not classify as a junk chain: {}",
-        analysis.sources.verdict.headline
-    );
-    assert!(
-        analysis
-            .sources
-            .nuclides
-            .iter()
-            .any(|nuclide| nuclide.display_name.starts_with("K-40")),
-        "expected K-40 in nuclide evidence {:?}",
-        analysis.sources.nuclides
     );
 }
 
@@ -167,21 +82,6 @@ fn sensitivity_slider_changes_peak_count() {
         strict_peaks.len(),
         sensitive_peaks.len()
     );
-}
-
-#[test]
-fn detector_fwhm_slider_changes_match_tolerance() {
-    let narrow = AppConfig {
-        detector_fwhm_pct: 4.0,
-        ..Default::default()
-    };
-    let wide = AppConfig {
-        detector_fwhm_pct: 15.0,
-        ..Default::default()
-    };
-    let narrow_tol = tolerance_kev(727.0, match_params_from_config(&narrow));
-    let wide_tol = tolerance_kev(727.0, match_params_from_config(&wide));
-    assert!(wide_tol > narrow_tol);
 }
 
 #[test]
