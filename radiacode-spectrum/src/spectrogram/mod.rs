@@ -17,6 +17,8 @@ mod ingest_baseline;
 pub mod layout;
 pub mod library;
 pub mod library_meta;
+#[cfg(test)]
+mod library_tests;
 pub mod model;
 pub mod overlays;
 pub mod peak_analysis;
@@ -32,6 +34,8 @@ mod recording_seed;
 pub mod settings;
 pub mod state;
 pub mod storage;
+#[cfg(test)]
+pub(crate) mod test_fixtures;
 pub mod texture;
 pub mod texture_sync;
 pub mod time_axis;

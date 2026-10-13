@@ -3,6 +3,8 @@ mod plot_series_build;
 mod selection;
 pub mod spectrum;
 mod state;
+#[cfg(test)]
+mod state_tests;
 mod subtract;
 mod ui_pane;
 mod ui_plot;
