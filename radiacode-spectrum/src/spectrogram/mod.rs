@@ -51,6 +51,9 @@ pub mod ui_transport;
 mod ui_transport_reset;
 pub mod ui_view;
 pub mod view_interact;
+mod view_interact_hover;
+#[cfg(test)]
+mod view_interact_tests;
 pub mod view_range;
 mod view_range_energy;
 mod view_range_rows;

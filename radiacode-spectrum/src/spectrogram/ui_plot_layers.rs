@@ -1,4 +1,4 @@
-use egui::{Painter, Pos2, Rect, Response, Ui};
+use egui::{Painter, Pos2, Rect, Response};
 
 use crate::identify::PeakAnalysis;
 use crate::peak_overlay::draw_spectrogram_peaks;
@@ -28,7 +28,7 @@ pub struct SeriesLayers<'a> {
     pub follow_live: bool,
 }
 
-pub fn draw_series_layers(ui: &Ui, response: &Response, painter: &Painter, layers: SeriesLayers) {
+pub fn draw_series_layers(response: &Response, painter: &Painter, layers: SeriesLayers) {
     draw_preview_layer(response, painter, &layers);
     let (effective_hover, focused) = hover_target(response, &layers);
     if let Some(analysis) = layers.peak_analysis {
@@ -63,7 +63,6 @@ pub fn draw_series_layers(ui: &Ui, response: &Response, painter: &Painter, layer
     );
     draw_x_axis(
         painter,
-        ui,
         layers.layout.image_rect,
         layers.series,
         layers.source_cols,

@@ -91,5 +91,5 @@ pub fn draw_plot(
         total_rows,
         follow_live: state.view_range.follow_live,
     };
-    draw_series_layers(ui, response, &painter, layers);
+    draw_series_layers(response, &painter, layers);
 }
