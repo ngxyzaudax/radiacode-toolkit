@@ -52,6 +52,34 @@ impl WorkerHandle {
     pub fn end_session(&self) {
         epoch::end_session(&self.session_epoch);
     }
+
+    #[cfg(test)]
+    pub fn session_generation(&self) -> u64 {
+        self.session_epoch.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+#[cfg(test)]
+pub struct TestWorker {
+    pub handle: WorkerHandle,
+    pub commands: tokio::sync::mpsc::UnboundedReceiver<WorkerCommand>,
+    pub events: crossbeam_channel::Sender<WorkerEvent>,
+}
+
+#[cfg(test)]
+pub fn test_worker() -> TestWorker {
+    let (commands, command_rx) = unbounded_channel();
+    let (event_tx, event_rx) = unbounded();
+    let handle = WorkerHandle {
+        commands,
+        events: event_rx,
+        session_epoch: Arc::new(AtomicU64::new(0)),
+    };
+    TestWorker {
+        handle,
+        commands: command_rx,
+        events: event_tx,
+    }
 }
 
 pub fn spawn_worker(capture: Arc<Mutex<SpectrogramCapture>>) -> WorkerHandle {

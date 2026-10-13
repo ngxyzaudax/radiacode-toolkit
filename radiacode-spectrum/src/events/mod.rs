@@ -13,7 +13,7 @@ mod state_schedule_tests;
 #[cfg(test)]
 mod state_tests;
 #[cfg(test)]
-mod test_fixtures;
+pub(crate) mod test_fixtures;
 
 pub use router::{EventOutcome, EventRouter};
 pub use state::AppState;

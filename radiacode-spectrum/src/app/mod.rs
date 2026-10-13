@@ -25,6 +25,13 @@ mod lifecycle;
 mod tab_entry;
 mod usb_access;
 
+#[cfg(test)]
+mod connection_tests;
+#[cfg(test)]
+mod events_tests;
+#[cfg(test)]
+mod test_harness;
+
 pub struct SpectrumApp {
     worker: WorkerHandle,
     state: AppState,
@@ -45,12 +52,19 @@ pub struct SpectrumApp {
 impl SpectrumApp {
     pub fn new() -> Self {
         let capture = Arc::new(Mutex::new(SpectrogramCapture::new()));
+        Self::with_worker(spawn_worker(Arc::clone(&capture)), capture)
+    }
+
+    pub(crate) fn with_worker(
+        worker: WorkerHandle,
+        capture: Arc<Mutex<SpectrogramCapture>>,
+    ) -> Self {
         let settings = SettingsState::new();
-        let spectrogram = initial_spectrogram(&settings, Arc::clone(&capture));
+        let spectrogram = initial_spectrogram(&settings, capture);
         let mut compare = CompareState::new();
         compare.refresh_library(&settings.spectrogram.recordings_dir);
         Self {
-            worker: spawn_worker(capture),
+            worker,
             state: AppState::new(),
             settings,
             spectrogram,
