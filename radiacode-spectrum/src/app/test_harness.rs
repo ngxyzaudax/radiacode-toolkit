@@ -1,13 +1,15 @@
 use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceEndpoint, DiscoveredDevice, TransportKind};
+use radiacode_core::{DeviceConfig, DeviceEndpoint, DiscoveredDevice, TransportKind};
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use super::SpectrumApp;
 use crate::events::test_fixtures::{device_info, isolated_data_dir};
 use crate::model::{ConnectionState, DeviceInfo};
 use crate::spectrogram::capture::SpectrogramCapture;
+use crate::view_tab::ViewTab;
+use crate::worker::test_fixtures::device_config;
 use crate::worker::{WorkerCommand, WorkerEvent, test_worker};
 
 pub struct AppHarness {
@@ -82,4 +84,20 @@ pub fn discovered_bluetooth(rssi: Option<i16>) -> DiscoveredDevice {
 
 pub fn has_command(commands: &[WorkerCommand], matcher: fn(&WorkerCommand) -> bool) -> bool {
     commands.iter().any(matcher)
+}
+
+pub fn edited(config: DeviceConfig) -> DeviceConfig {
+    DeviceConfig {
+        brightness: config.brightness + 1,
+        ..config
+    }
+}
+
+pub fn loaded_harness() -> AppHarness {
+    let mut harness = AppHarness::connected();
+    harness.app.tabs.active = ViewTab::Settings;
+    harness.app.start_device_load();
+    harness.deliver(WorkerEvent::DeviceConfig(device_config()));
+    harness.drain_commands();
+    harness
 }

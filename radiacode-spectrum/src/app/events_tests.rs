@@ -1,28 +1,10 @@
-use radiacode_core::DeviceConfig;
-
-use super::test_harness::{AppHarness, has_command};
+use super::test_harness::{AppHarness, edited, has_command, loaded_harness};
 use crate::monitor::MonitorLeaveChoice;
 use crate::peak_overlay::SpectrumPlotAction;
 use crate::settings::{SettingsAction, SettingsDeviceOp};
 use crate::view_tab::ViewTab;
 use crate::worker::test_fixtures::device_config;
 use crate::worker::{WorkerCommand, WorkerEvent};
-
-fn edited(config: DeviceConfig) -> DeviceConfig {
-    DeviceConfig {
-        brightness: config.brightness + 1,
-        ..config
-    }
-}
-
-fn loaded_harness() -> AppHarness {
-    let mut harness = AppHarness::connected();
-    harness.app.tabs.active = ViewTab::Settings;
-    harness.app.start_device_load();
-    harness.deliver(WorkerEvent::DeviceConfig(device_config()));
-    harness.drain_commands();
-    harness
-}
 
 #[test]
 fn entering_settings_tab_loads_device_config_when_connected() {
