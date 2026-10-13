@@ -12,6 +12,7 @@ mod ui_dose_plot;
 mod ui_leave_confirm;
 mod ui_live_readout;
 mod ui_plot_row;
+mod ui_plot_stack;
 mod ui_plot_toolbar;
 mod ui_rate_plot;
 mod ui_save_button;
