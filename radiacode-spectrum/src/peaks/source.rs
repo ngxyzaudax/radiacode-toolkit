@@ -43,4 +43,3 @@ pub fn peaks_from_channel_totals(
 ) -> Vec<DetectedPeak> {
     detect_peaks(energies, totals, params)
 }
-

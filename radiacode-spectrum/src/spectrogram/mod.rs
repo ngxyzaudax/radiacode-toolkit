@@ -33,6 +33,8 @@ pub mod time_axis;
 pub mod transport_gating;
 pub mod ui_library;
 pub mod ui_plot_area;
+mod ui_plot_hover;
+mod ui_plot_layers;
 pub mod ui_settings;
 pub mod ui_toolbar;
 pub mod ui_transport;
