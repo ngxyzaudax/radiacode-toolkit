@@ -1,16 +1,22 @@
-use radiacode_core::{DeviceEndpoint, DiscoveredDevice, model_from_serial};
-use rusb::{Context, UsbContext};
+use radiacode_core::DiscoveredDevice;
+use rusb::{Context, Device};
 use tracing::{debug, info};
 
-use crate::constants::{PID, VID};
 use crate::usb_error::UsbError;
 
-use super::io::{open_handle, read_string};
+use super::identity::{UsbIdentity, discovered_device, sort_and_dedup};
+use super::open::{open_handle, radiacode_devices, read_string};
 
 pub fn scan_usb_devices() -> std::result::Result<Vec<DiscoveredDevice>, UsbError> {
     info!("starting usb scan");
     let context = Context::new()?;
-    collect_devices(&context)
+    let found: Vec<DiscoveredDevice> = radiacode_devices(&context)?
+        .iter()
+        .map(|device| discovered_device(identity_of(device)))
+        .collect();
+    let found = sort_and_dedup(found);
+    info!(count = found.len(), "usb scan complete");
+    Ok(found)
 }
 
 pub fn usb_permission_denied() -> bool {
@@ -20,56 +26,28 @@ pub fn usb_permission_denied() -> bool {
     matches!(open_handle(&context, None), Err(UsbError::PermissionDenied))
 }
 
-fn collect_devices(context: &Context) -> std::result::Result<Vec<DiscoveredDevice>, UsbError> {
-    let mut found = Vec::new();
-    for device in context.devices()?.iter() {
-        let descriptor = match device.device_descriptor() {
-            Ok(value) => value,
-            Err(_) => continue,
-        };
-        if descriptor.vendor_id() != VID || descriptor.product_id() != PID {
-            continue;
-        }
-        let handle = device.open().ok();
-        let serial = read_string(
+fn identity_of(device: &Device<Context>) -> UsbIdentity {
+    let descriptor = device.device_descriptor().ok();
+    let handle = device.open().ok();
+    let serial = descriptor.as_ref().and_then(|descriptor| {
+        read_string(
             handle.as_ref(),
-            &device,
+            device,
             descriptor.serial_number_string_index(),
-        );
-        let product = read_string(handle.as_ref(), &device, descriptor.product_string_index());
-        let serial = serial.filter(|value| !value.is_empty());
-        let product = product.filter(|value| !value.is_empty());
-        let model = serial.as_deref().map(model_from_serial);
-        let label = model
-            .clone()
-            .or_else(|| serial.clone())
-            .or(product.clone())
-            .unwrap_or_else(|| "RadiaCode".into());
-        let endpoint_serial = serial
-            .clone()
-            .unwrap_or_else(|| format!("usb-{}", device.address()));
-        debug!(
-            ?serial,
-            ?product,
-            address = device.address(),
-            "matched usb radiacode"
-        );
-        found.push(DiscoveredDevice {
-            endpoint: DeviceEndpoint::Usb {
-                serial: endpoint_serial,
-            },
-            label,
-            serial,
-            model,
-            rssi: None,
-        });
-    }
-    found.sort_by(|left, right| {
-        left.endpoint
-            .address_label()
-            .cmp(right.endpoint.address_label())
+        )
     });
-    found.dedup_by(|left, right| left.endpoint == right.endpoint);
-    info!(count = found.len(), "usb scan complete");
-    Ok(found)
+    let product = descriptor.as_ref().and_then(|descriptor| {
+        read_string(handle.as_ref(), device, descriptor.product_string_index())
+    });
+    debug!(
+        ?serial,
+        ?product,
+        address = device.address(),
+        "matched usb radiacode"
+    );
+    UsbIdentity {
+        address: device.address(),
+        serial,
+        product,
+    }
 }

@@ -8,8 +8,8 @@ pub enum UsbError {
     PermissionDenied,
     #[error("usb read returned empty payload")]
     EmptyRead,
-    #[error("usb response length mismatch")]
-    LengthMismatch,
+    #[error("usb response header mismatch")]
+    ResponseMismatch,
     #[error("usb transport error: {0}")]
     Transport(String),
     #[error(transparent)]
@@ -20,7 +20,7 @@ pub fn map_usb_error(error: UsbError) -> radiacode_core::Error {
     match error {
         UsbError::DeviceNotFound => radiacode_core::Error::DeviceNotFound,
         UsbError::PermissionDenied => radiacode_core::Error::UsbPermissionDenied,
-        UsbError::EmptyRead | UsbError::LengthMismatch => {
+        UsbError::EmptyRead | UsbError::ResponseMismatch => {
             radiacode_core::Error::from(radiacode_protocol::Error::ConnectionClosed)
         }
         UsbError::Transport(message) => {
@@ -41,7 +41,7 @@ pub fn map_usb_error(error: UsbError) -> radiacode_core::Error {
 
 pub fn map_usb_protocol_error(error: UsbError) -> radiacode_protocol::Error {
     match error {
-        UsbError::EmptyRead | UsbError::LengthMismatch | UsbError::Usb(rusb::Error::NoDevice) => {
+        UsbError::EmptyRead | UsbError::ResponseMismatch | UsbError::Usb(rusb::Error::NoDevice) => {
             radiacode_protocol::Error::ConnectionClosed
         }
         UsbError::Transport(message) => radiacode_protocol::Error::TransportUnavailable(message),
