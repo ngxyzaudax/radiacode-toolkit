@@ -2,7 +2,7 @@ mod adjust;
 pub(crate) mod candidates;
 mod chains;
 mod completeness;
-mod lead_chain;
+pub(crate) mod lead_chain;
 mod rerank;
 mod verdict;
 mod verdict_peaks;

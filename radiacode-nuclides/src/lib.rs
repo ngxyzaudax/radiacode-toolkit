@@ -6,6 +6,8 @@ mod chain_graph;
 mod chain_graph_tests;
 mod chain_lines;
 #[cfg(test)]
+mod chain_lines_tests;
+#[cfg(test)]
 mod chain_tests;
 mod elements;
 mod equilibrium;
