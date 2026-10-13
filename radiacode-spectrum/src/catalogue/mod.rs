@@ -1,4 +1,5 @@
 mod browse_mode;
+mod chain_grid_columns;
 mod chain_grid_edges;
 mod chain_grid_layout;
 mod chain_grid_model;
