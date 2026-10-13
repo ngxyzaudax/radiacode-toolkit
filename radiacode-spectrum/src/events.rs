@@ -10,7 +10,7 @@ use crate::worker::{WorkerCommand, WorkerEvent};
 
 mod router;
 
-pub use router::EventRouter;
+pub use router::{EventOutcome, EventRouter};
 
 pub struct AppState {
     pub devices: Vec<DiscoveredDevice>,

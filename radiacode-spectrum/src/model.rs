@@ -47,10 +47,14 @@ impl DeviceInfo {
         self.rssi_dbm = merged.rssi_dbm;
     }
 
-    pub fn transport_label(&self) -> &'static str {
+    pub fn endpoint(&self) -> DeviceEndpoint {
         match self.transport {
-            TransportKind::Bluetooth => "Bluetooth",
-            TransportKind::Usb => "USB",
+            TransportKind::Bluetooth => DeviceEndpoint::Bluetooth {
+                address: self.address.clone(),
+            },
+            TransportKind::Usb => DeviceEndpoint::Usb {
+                serial: self.address.clone(),
+            },
         }
     }
 }
