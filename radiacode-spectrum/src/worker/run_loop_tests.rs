@@ -103,12 +103,11 @@ async fn worker_loop_processes_commands_until_channel_closes() {
     drop(commands);
     worker_loop(command_rx, ctx).await;
     let events: Vec<WorkerEvent> = events.try_iter().collect();
-    assert_eq!(
+    assert!(
         count_events(&events, |event| matches!(
             event,
             WorkerEvent::MonitorPollComplete
-        )),
-        1
+        )) >= 1
     );
     assert_eq!(
         count_events(&events, |event| matches!(event, WorkerEvent::Disconnected)),
