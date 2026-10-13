@@ -2,7 +2,8 @@ use egui::{Rect, Scene, Ui, Vec2};
 
 use radiacode_nuclides::NuclideId;
 
-use crate::catalogue::state::{CatalogueState, ChainFitMode};
+use crate::catalogue::chain_scene::ChainFitMode;
+use crate::catalogue::state::CatalogueState;
 use crate::catalogue::ui_chain_graph::{draw_chain_graph, fit_zoom};
 use crate::catalogue::ui_chain_legend::draw_legend;
 use crate::catalogue::ui_chain_toolbar::{ChainToolbarAction, draw_chain_toolbar};

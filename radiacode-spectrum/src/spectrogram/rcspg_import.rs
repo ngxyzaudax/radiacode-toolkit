@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use crate::spectrogram::model::{RowKind, SpectrogramHeader, SpectrogramRow, SpectrogramSeries};
+use crate::spectrogram::model::{SpectrogramHeader, SpectrogramSeries};
+use crate::spectrogram::rcspg_import_rows::parse_rows;
 use crate::spectrogram::storage::le_u32_words;
 
 pub fn import_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
@@ -43,43 +44,7 @@ pub fn import_recording(path: &Path) -> std::io::Result<SpectrogramSeries> {
         device_serial: serial,
         energies_kev: energies_kev.clone(),
     };
-    let mut rows = Vec::new();
-    let mut elapsed = 0.0;
-    for line in lines {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let values = parse_number_list(line);
-        if values.len() < 2 {
-            continue;
-        }
-        let row_interval = values[1];
-        let kind = if values.len() >= 4 {
-            let raw_total = values
-                .iter()
-                .skip(4)
-                .take(channels as usize)
-                .map(|&value| value.max(0.0) as u64)
-                .sum();
-            RowKind::from_storage_tag(values[2].round() as u8, values[3], raw_total)
-        } else {
-            RowKind::Normal
-        };
-        let count_offset = if values.len() >= 4 { 4 } else { 2 };
-        let counts: Vec<u32> = values
-            .iter()
-            .skip(count_offset)
-            .take(channels as usize)
-            .map(|&value| value.max(0.0).round() as u32)
-            .collect();
-        rows.push(SpectrogramRow {
-            elapsed_secs: elapsed,
-            interval_secs: row_interval,
-            kind,
-            counts,
-        });
-        elapsed += row_interval;
-    }
+    let rows = parse_rows(lines, channels as usize);
     Ok(SpectrogramSeries {
         header,
         energies_kev,
@@ -135,12 +100,6 @@ fn parse_header_field<'a>(line: &'a str, key: &str) -> Option<&'a str> {
             None
         }
     })
-}
-
-fn parse_number_list(line: &str) -> Vec<f64> {
-    line.split_whitespace()
-        .filter_map(|token| token.parse().ok())
-        .collect()
 }
 
 fn invalid(message: &str) -> std::io::Error {

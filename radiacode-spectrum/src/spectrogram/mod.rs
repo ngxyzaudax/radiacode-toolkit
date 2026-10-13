@@ -25,6 +25,7 @@ mod peak_cursor;
 mod peak_cursor_tests;
 pub mod preview;
 pub mod rcspg;
+mod rcspg_import_rows;
 pub mod recording;
 mod recording_control;
 mod recording_seed;

@@ -5,6 +5,7 @@ mod chain_grid_layout;
 mod chain_grid_model;
 #[cfg(test)]
 mod chain_grid_tests;
+mod chain_scene;
 #[cfg(test)]
 mod chain_spectrum_tests;
 mod chain_state;
