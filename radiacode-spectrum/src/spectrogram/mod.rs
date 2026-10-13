@@ -22,6 +22,8 @@ mod library_tests;
 pub mod model;
 pub mod overlays;
 pub mod peak_analysis;
+#[cfg(test)]
+mod peak_analysis_tests;
 mod peak_cursor;
 #[cfg(test)]
 mod peak_cursor_tests;

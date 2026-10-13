@@ -1,5 +1,7 @@
 mod cursor_lines;
 mod hover_text;
+#[cfg(test)]
+mod hover_text_tests;
 mod label_override;
 mod nearest;
 #[cfg(test)]

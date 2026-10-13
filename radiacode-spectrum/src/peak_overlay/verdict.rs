@@ -12,7 +12,7 @@ pub fn draw_verdict(ui: &mut Ui, sources: &SourceSummary) {
     );
 }
 
-fn verdict_color(confidence: Confidence, kind: VerdictKind) -> egui::Color32 {
+pub(super) fn verdict_color(confidence: Confidence, kind: VerdictKind) -> egui::Color32 {
     if kind == VerdictKind::Inconclusive {
         return MUTED;
     }
