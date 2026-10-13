@@ -1,6 +1,7 @@
 mod dispatch;
 pub mod encode;
 mod fake_transport;
+pub mod fixtures;
 mod virtual_device;
 
 pub use fake_transport::DeviceHandle;

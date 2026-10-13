@@ -8,6 +8,10 @@ mod seq;
 mod snapshot;
 
 #[cfg(test)]
+mod event_tests;
+#[cfg(test)]
+mod record_payload_tests;
+#[cfg(test)]
 mod record_tests;
 #[cfg(test)]
 mod tests;

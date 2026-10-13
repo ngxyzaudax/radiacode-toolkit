@@ -1,16 +1,9 @@
 use radiacode_protocol::{BytesBuffer, Command, Error as ProtocolError, VirtSfr, VirtString};
 
 use super::vsfr::{parse_spectrum_format_version, trim_trailing_nul_if_needed};
-use crate::error::Error;
 use crate::test_support::encode::{u32_words, virt_string_payload};
+use crate::test_support::fixtures::protocol_error;
 use crate::test_support::{ScriptedReply, VirtualDevice, open_device};
-
-fn protocol_error(error: Error) -> ProtocolError {
-    match error {
-        Error::Protocol(inner) => inner,
-        other => panic!("expected protocol error, got {other:?}"),
-    }
-}
 
 #[tokio::test(start_paused = true)]
 async fn read_virt_string_returns_payload() {
@@ -130,68 +123,6 @@ async fn read_vsfr_f32_reinterprets_bits() {
     let (mut device, _handle) =
         open_device(VirtualDevice::default().with_register(VirtSfr::TempDegC, raw)).await;
     assert_eq!(device.read_vsfr_f32(VirtSfr::TempDegC).await.unwrap(), 1.5);
-}
-
-#[tokio::test(start_paused = true)]
-async fn write_vsfr_stores_value() {
-    let (mut device, handle) = open_device(VirtualDevice::default()).await;
-    device
-        .write_vsfr(VirtSfr::DispBrt, &5u32.to_le_bytes())
-        .await
-        .expect("write");
-    assert_eq!(handle.device().register(VirtSfr::DispBrt), Some(5));
-}
-
-#[tokio::test(start_paused = true)]
-async fn write_vsfr_optional_reports_rejection() {
-    let (mut device, handle) = open_device(VirtualDevice::default()).await;
-    handle
-        .device()
-        .push_script(Command::WrVirtSfr, ScriptedReply::Payload(u32_words(&[0])));
-    handle
-        .device()
-        .push_script(Command::WrVirtSfr, ScriptedReply::Payload(u32_words(&[0])));
-    let accepted = device
-        .write_vsfr_optional(VirtSfr::DispBrt, &[1, 0, 0, 0])
-        .await
-        .expect("optional write");
-    assert!(!accepted);
-    let error = device
-        .write_vsfr(VirtSfr::DispBrt, &[1, 0, 0, 0])
-        .await
-        .expect_err("rejected");
-    assert!(matches!(
-        protocol_error(error),
-        ProtocolError::UnexpectedReturnCode(0)
-    ));
-}
-
-#[tokio::test(start_paused = true)]
-async fn write_vsfr_rejects_trailing_bytes_and_unknown_retcode() {
-    let (mut device, handle) = open_device(VirtualDevice::default()).await;
-    handle.device().push_script(
-        Command::WrVirtSfr,
-        ScriptedReply::Payload(u32_words(&[1, 9])),
-    );
-    handle
-        .device()
-        .push_script(Command::WrVirtSfr, ScriptedReply::Payload(u32_words(&[5])));
-    let trailing = device
-        .write_vsfr(VirtSfr::DispBrt, &[])
-        .await
-        .expect_err("trailing");
-    assert!(matches!(
-        protocol_error(trailing),
-        ProtocolError::ProtocolMismatch { .. }
-    ));
-    let unknown = device
-        .write_vsfr(VirtSfr::DispBrt, &[])
-        .await
-        .expect_err("retcode");
-    assert!(matches!(
-        protocol_error(unknown),
-        ProtocolError::UnexpectedReturnCode(5)
-    ));
 }
 
 #[test]

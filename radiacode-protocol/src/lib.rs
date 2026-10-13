@@ -2,6 +2,8 @@
 
 mod buffer;
 mod catalog;
+#[cfg(test)]
+mod catalog_tests;
 mod command;
 mod data_buf;
 #[cfg(test)]
