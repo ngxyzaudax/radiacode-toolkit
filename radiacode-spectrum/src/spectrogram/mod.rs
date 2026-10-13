@@ -40,6 +40,8 @@ pub mod storage;
 pub(crate) mod test_fixtures;
 pub mod texture;
 pub mod texture_sync;
+#[cfg(test)]
+mod texture_sync_tests;
 pub mod time_axis;
 pub mod transport_gating;
 pub mod ui_library;

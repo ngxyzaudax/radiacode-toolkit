@@ -1,18 +1,16 @@
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
-use directories::ProjectDirs;
 use time::OffsetDateTime;
 
+use crate::persist::json_store::data_dir;
 use crate::spectrogram::library_meta::load_meta;
 use crate::spectrogram::model::{RecordingEntry, SpectrogramHeader};
 
 use super::storage_format::read_recording_prefix;
 
 pub fn default_spectrograms_dir() -> PathBuf {
-    ProjectDirs::from("com", "radiacode", "radiacode-spectrum")
-        .map(|dirs| dirs.data_dir().join("spectrograms"))
-        .unwrap_or_else(|| PathBuf::from("spectrograms"))
+    data_dir().join("spectrograms")
 }
 
 pub fn spectrograms_dir(configured: &str) -> PathBuf {
@@ -25,9 +23,7 @@ pub fn spectrograms_dir(configured: &str) -> PathBuf {
 }
 
 fn legacy_spectrograms_dir() -> PathBuf {
-    ProjectDirs::from("com", "radiacode", "radiacode-spectrum")
-        .map(|dirs| dirs.data_dir().join("waterfalls"))
-        .unwrap_or_else(|| PathBuf::from("waterfalls"))
+    data_dir().join("waterfalls")
 }
 
 pub fn ensure_dir(configured: &str) -> std::io::Result<PathBuf> {

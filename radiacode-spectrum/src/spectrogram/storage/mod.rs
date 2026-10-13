@@ -11,4 +11,6 @@ pub use storage_dir::{
 pub use storage_format::{header_now, le_u32_words};
 
 #[cfg(test)]
+mod storage_dir_tests;
+#[cfg(test)]
 mod storage_tests;
