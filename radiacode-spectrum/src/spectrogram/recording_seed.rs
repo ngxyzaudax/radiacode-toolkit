@@ -32,16 +32,10 @@ pub fn recording_header(
     device_serial: Option<&str>,
     channel_count: u32,
 ) -> SpectrogramHeader {
-    capture
-        .progress
-        .lock()
-        .ok()
-        .and_then(|progress| {
-            progress
-                .live_series
-                .as_ref()
-                .map(|series| series.header.clone())
-        })
+    lock_progress(&capture.progress)
+        .live_series
+        .as_ref()
+        .map(|series| series.header.clone())
         .unwrap_or_else(|| {
             header_from_spectrum(
                 spectrum,

@@ -33,6 +33,8 @@ mod recording_control;
 mod recording_seed;
 pub mod settings;
 pub mod state;
+#[cfg(test)]
+mod state_recording_tests;
 pub mod storage;
 #[cfg(test)]
 pub(crate) mod test_fixtures;
