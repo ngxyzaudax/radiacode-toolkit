@@ -23,6 +23,8 @@ mod session;
 mod timers;
 
 #[cfg(test)]
+mod device_info_tests;
+#[cfg(test)]
 mod ops_config_tests;
 #[cfg(test)]
 mod ops_connect_tests;
