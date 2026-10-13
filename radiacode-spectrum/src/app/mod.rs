@@ -30,6 +30,8 @@ mod connection_tests;
 #[cfg(test)]
 mod events_tests;
 #[cfg(test)]
+mod spectrogram_actions_tests;
+#[cfg(test)]
 mod test_harness;
 
 pub struct SpectrumApp {
