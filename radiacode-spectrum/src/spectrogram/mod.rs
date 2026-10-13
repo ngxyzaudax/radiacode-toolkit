@@ -34,6 +34,8 @@ mod recording_seed;
 pub mod settings;
 pub mod state;
 #[cfg(test)]
+mod state_lifecycle_tests;
+#[cfg(test)]
 mod state_recording_tests;
 pub mod storage;
 #[cfg(test)]

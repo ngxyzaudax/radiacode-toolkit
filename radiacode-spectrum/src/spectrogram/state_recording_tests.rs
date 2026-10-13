@@ -1,47 +1,17 @@
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
 use crate::model::SpectrumView;
-use crate::persist::json_store::use_test_data_dir;
-use crate::spectrogram::capture::SpectrogramCapture;
 use crate::spectrogram::capture_lock::{lock_capture, lock_progress};
 use crate::spectrogram::model::SpectrogramDisplay;
 use crate::spectrogram::state::SpectrogramState;
-use crate::spectrogram::test_fixtures::write_fixture_recording;
+use crate::spectrogram::test_fixtures::{
+    StateFixture, spectrum_view, state_fixture, write_fixture_recording,
+};
 
-struct Fixture {
-    state: SpectrogramState,
-    _data_dir: tempfile::TempDir,
-    recordings_dir: tempfile::TempDir,
-}
-
-fn fixture() -> Fixture {
-    let data_dir = tempfile::tempdir().unwrap();
-    use_test_data_dir(data_dir.path().to_path_buf());
-    let recordings_dir = tempfile::tempdir().unwrap();
-    let capture = Arc::new(Mutex::new(SpectrogramCapture::new()));
-    let mut state = SpectrogramState::new(Arc::clone(&capture));
-    state.settings.recordings_dir = recordings_dir.path().display().to_string();
-    state.settings.capture_interval_secs = 10.0;
-    state.on_settings_changed();
-    lock_capture(&capture).on_session_connect("SN1");
-    state.sync_from_capture();
-    Fixture {
-        state,
-        _data_dir: data_dir,
-        recordings_dir,
-    }
+fn fixture() -> StateFixture {
+    state_fixture()
 }
 
 fn spectrum(total: u32, duration_secs: u64) -> SpectrumView {
-    SpectrumView {
-        duration: Duration::from_secs(duration_secs),
-        a0: 0.0,
-        a1: 1.0,
-        a2: 0.0,
-        counts: vec![total; 64],
-        total_counts: u64::from(total) * 64,
-    }
+    spectrum_view(total, duration_secs, 64)
 }
 
 fn is_capture_enabled(state: &SpectrogramState) -> bool {
