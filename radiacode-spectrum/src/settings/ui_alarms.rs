@@ -1,6 +1,6 @@
 use egui::Ui;
 
-use radiacode_core::{AlarmSignalMode, DeviceConfig, count_unit_label, dose_unit_label};
+use radiacode_lib::config::{AlarmSignalMode, DeviceConfig};
 
 use crate::layout::{breakpoint_for, column_count};
 use crate::settings::ui_alarm_card::{
@@ -68,8 +68,8 @@ fn draw_card(ui: &mut Ui, draft: &mut DeviceConfig, kind: AlarmCardKind, compact
 }
 
 fn card_values(draft: &mut DeviceConfig, kind: AlarmCardKind) -> AlarmCardValues<'_> {
-    let dose_unit = dose_unit_label(draft.alarms.dose_unit);
-    let count_unit = count_unit_label(draft.alarms.count_unit);
+    let dose_unit = draft.alarms.dose_unit.rate_label();
+    let count_unit = draft.alarms.count_unit.label();
     let DeviceConfig {
         alarms,
         sound_ctrl: sound,

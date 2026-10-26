@@ -1,4 +1,4 @@
-use radiacode_core::DeviceStatus;
+use radiacode_lib::DeviceStatus;
 
 use super::test_fixtures::{
     device_info, discovered, isolated_state, monitor_sample, spectrum_view,

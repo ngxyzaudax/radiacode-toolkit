@@ -1,8 +1,9 @@
 use std::time::Duration;
 
-use radiacode_core::{
-    AccumulatedDose, CountDisplayUnit, DeviceEndpoint, DeviceTicks, DiscoveredDevice,
-    DoseDisplayUnit, MonitorPollSample, TimedRates, TransportKind,
+use radiacode_lib::data_buf::DeviceTicks;
+use radiacode_lib::{
+    AccumulatedDose, CountDisplayUnit, DeviceEndpoint, DiscoveredDevice, DoseDisplayUnit,
+    MonitorPollSample, TimedRates, TransportKind,
 };
 
 use super::AppState;

@@ -1,5 +1,6 @@
-use radiacode_core::test_support::{ScriptedReply, VirtualDevice};
-use radiacode_core::{Command, DeviceEndpoint, TransportKind, VirtString};
+use crate::test_device::{ScriptedReply, VirtualDevice};
+use radiacode_lib::protocol::{Command, VirtString};
+use radiacode_lib::{DeviceEndpoint, TransportKind};
 
 use super::device_info::{load_device_info, load_device_info_with_retry};
 use super::messages::WorkerEvent;

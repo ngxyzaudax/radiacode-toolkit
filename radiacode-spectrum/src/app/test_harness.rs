@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceConfig, DeviceEndpoint, DiscoveredDevice, TransportKind};
+use radiacode_lib::config::DeviceConfig;
+use radiacode_lib::{DeviceEndpoint, DiscoveredDevice, TransportKind};
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use super::SpectrumApp;

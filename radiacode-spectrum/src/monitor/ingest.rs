@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use radiacode_core::{LiveRates, TimedRates};
+use radiacode_lib::{LiveRates, TimedRates};
 
 use crate::monitor::elapsed::resolve_elapsed;
 use crate::monitor::history::trim_history;
@@ -12,7 +12,7 @@ pub fn push_poll(
     decode_warnings: usize,
     rejected_records: usize,
     resync_count: usize,
-    seq_gaps: &[radiacode_core::SeqGap],
+    seq_gaps: &[radiacode_lib::data_buf::SeqGap],
 ) {
     state.decode_warnings = state.decode_warnings.saturating_add(decode_warnings as u64);
     state.rejected_records = state
@@ -74,20 +74,26 @@ fn push_timed_sample(state: &mut MonitorState, rate: TimedRates) {
     state.status = "Live monitor".into();
 }
 
-fn plot_elapsed(state: &mut MonitorState, device_ts: radiacode_core::DeviceTicks) -> Duration {
+fn plot_elapsed(
+    state: &mut MonitorState,
+    device_ts: radiacode_lib::data_buf::DeviceTicks,
+) -> Duration {
     let device = device_elapsed(state, device_ts);
     let wall = wall_elapsed(state);
     let last = state.history.back().map(|sample| sample.elapsed);
     resolve_elapsed(device, wall, last)
 }
 
-fn device_elapsed(state: &mut MonitorState, device_ts: radiacode_core::DeviceTicks) -> Duration {
+fn device_elapsed(
+    state: &mut MonitorState,
+    device_ts: radiacode_lib::data_buf::DeviceTicks,
+) -> Duration {
     let ticks = device_ts.raw();
     let epoch = *state.device_epoch_ticks.get_or_insert(ticks);
     if ticks < epoch {
         return Duration::ZERO;
     }
-    device_ts.duration_since(radiacode_core::DeviceTicks::new(epoch))
+    device_ts.duration_since(radiacode_lib::data_buf::DeviceTicks::new(epoch))
 }
 
 fn wall_elapsed(state: &MonitorState) -> Duration {

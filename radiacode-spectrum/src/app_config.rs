@@ -1,4 +1,4 @@
-use radiacode_core::DeviceEndpoint;
+use radiacode_lib::DeviceEndpoint;
 use serde::{Deserialize, Serialize};
 
 use crate::persist::json_store::{load_json, save_json};

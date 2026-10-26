@@ -1,6 +1,6 @@
 use egui::{Button, RichText, Ui};
 
-use radiacode_core::{DeviceEndpoint, DiscoveredDevice, TransportKind};
+use radiacode_lib::{DeviceEndpoint, DiscoveredDevice, TransportKind};
 
 use crate::theme::{MUTED, SPACE_MD};
 

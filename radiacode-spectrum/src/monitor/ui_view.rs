@@ -1,6 +1,6 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::{LiveRates, count_unit_label, dose_accum_unit_label, dose_unit_label};
+use radiacode_lib::LiveRates;
 
 use crate::dosimeter::DosimeterState;
 use crate::layout::page_scroll;
@@ -92,12 +92,12 @@ pub fn draw_monitor_view(
 
 fn plot_units<'a>(latest: LiveRates, dosimeter: &DosimeterState) -> PlotUnits<'a> {
     PlotUnits {
-        dose_rate: dose_unit_label(latest.dose_unit),
-        count_rate: count_unit_label(latest.count_unit),
+        dose_rate: latest.dose_unit.rate_label(),
+        count_rate: latest.count_unit.label(),
         accumulated: dosimeter
             .latest
             .as_ref()
-            .map(|value| dose_accum_unit_label(value.dose_unit))
+            .map(|value| value.dose_unit.dose_label())
             .unwrap_or(""),
     }
 }

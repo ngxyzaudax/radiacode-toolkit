@@ -1,6 +1,6 @@
 use egui::{Color32, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 
-use radiacode_core::TransportKind;
+use radiacode_lib::TransportKind;
 
 use crate::theme::{ACCENT, MUTED};
 

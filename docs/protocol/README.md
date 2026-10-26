@@ -1,6 +1,6 @@
 # RadiaCode Wire Protocol
 
-Reference for the `radiacode-protocol` crate. Field layouts mirror the device configuration INI (`VirtString::Configuration`, CP1251) and the SFR register directory (`VirtString::SfrFile`).
+Wire-format notes for the RadiaCode protocol implemented by [radiacode-lib](https://github.com/ngxyzaudax/radiacode-lib). Field layouts mirror the device configuration INI (`VirtString::Configuration`, CP1251) and the SFR register directory (`VirtString::SfrFile`).
 
 ## Contents
 

@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use radiacode_core::{DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample};
 use tracing::{debug, info, warn};
 
 use super::state::{AppState, scan_status};

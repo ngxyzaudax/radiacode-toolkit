@@ -1,6 +1,6 @@
 # VSFR registers
 
-VSFR (virtual special-function register) addresses mirror the device `SFR_FILE`. The static catalog in `radiacode-protocol` is validated against the device directory on connect; drift is logged at warn level.
+VSFR (virtual special-function register) addresses mirror the device `SFR_FILE`. The static catalog in `radiacode-lib` is validated against the device directory on connect; drift is logged at warn level.
 
 ## Common registers
 

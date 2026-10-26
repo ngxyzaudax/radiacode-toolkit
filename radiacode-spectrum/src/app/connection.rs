@@ -1,4 +1,5 @@
-use radiacode_core::{DeviceEndpoint, TransportKind, merge_discovered, resolve_usb_endpoint};
+use radiacode_lib::discovery::{merge_discovered, resolve_usb_endpoint};
+use radiacode_lib::{DeviceEndpoint, TransportKind};
 use tracing::{info, warn};
 
 use super::SpectrumApp;
@@ -60,7 +61,7 @@ impl SpectrumApp {
             .filter(|device| device.endpoint.transport() == TransportKind::Bluetooth)
             .cloned()
             .collect();
-        match radiacode_usb::scan_usb_devices() {
+        match crate::usb_access::scan_usb_devices() {
             Ok(usb) => self.state.devices = merge_discovered(usb, bluetooth),
             Err(error) => warn!(%error, "usb rescan failed"),
         }

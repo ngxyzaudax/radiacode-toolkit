@@ -1,5 +1,7 @@
-use radiacode_core::SessionRestore;
-use radiacode_core::{AlarmLimits, DataBufCursor, DeviceEndpoint, DeviceStatus, RadiaCode};
+use radiacode_lib::SessionRestore;
+use radiacode_lib::config::AlarmLimits;
+use radiacode_lib::data_buf::DataBufCursor;
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, RadiaCode};
 
 use crate::model::DeviceInfo;
 
@@ -59,7 +61,7 @@ impl WorkerSession {
 #[cfg(test)]
 mod tests {
     use super::WorkerSession;
-    use radiacode_core::DeviceStatus;
+    use radiacode_lib::DeviceStatus;
 
     fn populated_session() -> WorkerSession {
         let mut session = WorkerSession::new();

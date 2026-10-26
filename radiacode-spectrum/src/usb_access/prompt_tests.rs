@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
-use radiacode_core::DeviceEndpoint;
-use radiacode_usb::UsbAccessStatus;
+use radiacode_lib::DeviceEndpoint;
+use radiacode_lib::usb::UsbAccessStatus;
 
 use super::prompt::{UsbAccessOutcome, UsbAccessPrompt, prompt_message};
 

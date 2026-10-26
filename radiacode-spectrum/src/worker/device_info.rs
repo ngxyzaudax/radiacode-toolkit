@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceEndpoint, DeviceStatus, RadiaCode};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, RadiaCode};
 use tracing::{debug, warn};
 
 use super::messages::WorkerEvent;
@@ -14,7 +14,7 @@ pub async fn load_device_info_with_retry(
     endpoint: &DeviceEndpoint,
     hint_rssi: Option<i16>,
     events: &Sender<WorkerEvent>,
-) -> radiacode_core::Result<DeviceInfo> {
+) -> radiacode_lib::Result<DeviceInfo> {
     match load_device_info(device, endpoint, hint_rssi, events).await {
         Err(error) if error.is_transient() => {
             warn!(%error, "transient device info load failed, retrying once");
@@ -30,7 +30,7 @@ pub async fn load_device_info(
     endpoint: &DeviceEndpoint,
     hint_rssi: Option<i16>,
     events: &Sender<WorkerEvent>,
-) -> radiacode_core::Result<DeviceInfo> {
+) -> radiacode_lib::Result<DeviceInfo> {
     debug!(?endpoint, "loading device metadata");
     let metadata = device.metadata().await?;
     let status = load_link_status(device, endpoint, hint_rssi).await;

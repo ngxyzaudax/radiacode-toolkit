@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceEndpoint, Error, RadiaCode};
+use radiacode_lib::{DeviceEndpoint, Error, RadiaCode};
 use tracing::{debug, error, info, warn};
 
 use super::device_info::load_device_info;

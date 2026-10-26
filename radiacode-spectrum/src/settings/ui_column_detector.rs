@@ -8,7 +8,7 @@ use crate::settings::ui_device::{
 };
 use crate::settings::ui_layout::settings_section;
 use crate::theme::MUTED;
-use radiacode_core::DeviceConfig;
+use radiacode_lib::config::DeviceConfig;
 
 pub fn draw_detector_column(
     ui: &mut Ui,

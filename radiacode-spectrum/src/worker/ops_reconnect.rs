@@ -1,5 +1,5 @@
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceEndpoint, DeviceStatus, Error, RadiaCode};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, Error, RadiaCode};
 use tracing::{error, info, warn};
 
 use super::device_info::load_device_info_with_retry;

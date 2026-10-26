@@ -1,5 +1,5 @@
-use radiacode_core::test_support::VirtualDevice;
-use radiacode_core::{Command, VirtSfr};
+use crate::test_device::VirtualDevice;
+use radiacode_lib::protocol::{Command, VirtSfr};
 
 use super::messages::WorkerEvent;
 use super::ops_config::{
@@ -31,7 +31,7 @@ async fn fetch_device_config_publishes_limits_and_config() {
 async fn apply_device_config_writes_and_reloads() {
     let mut harness = Harness::connected(configured_device()).await;
     let mut device = harness.session.device.take().expect("device");
-    let config = radiacode_core::DeviceConfig {
+    let config = radiacode_lib::config::DeviceConfig {
         brightness: 9,
         ..device.load_device_config().await.expect("config")
     };

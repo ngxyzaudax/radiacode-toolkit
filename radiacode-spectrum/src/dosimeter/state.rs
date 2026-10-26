@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
-use radiacode_core::{AccumulatedDose, AlarmLimits, DoseDisplayUnit};
+use radiacode_lib::config::AlarmLimits;
+use radiacode_lib::{AccumulatedDose, DoseDisplayUnit};
 use tracing::info;
 
 use crate::dosimeter::append::{MAX_SAMPLES, session_restarted, should_append, unit_mismatch};

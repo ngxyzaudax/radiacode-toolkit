@@ -1,6 +1,4 @@
-use radiacode_core::{
-    DeviceEndpoint, DeviceMetadata, DeviceStatus, Spectrum, TransportKind, merge_status,
-};
+use radiacode_lib::{DeviceEndpoint, DeviceMetadata, DeviceStatus, Spectrum, TransportKind};
 
 #[derive(Debug, Clone)]
 pub struct DeviceInfo {
@@ -28,7 +26,7 @@ impl DeviceInfo {
             firmware,
             transport: endpoint.transport(),
             address: endpoint.address_label().to_string(),
-            energy_calib: metadata.energy_calib,
+            energy_calib: metadata.energy_calibration.coefficients(),
             battery_percent: status.battery_percent,
             temperature_c: status.temperature_c,
             rssi_dbm: status.rssi_dbm,
@@ -36,12 +34,12 @@ impl DeviceInfo {
     }
 
     pub fn apply_status(&mut self, status: DeviceStatus) {
-        let mut merged = DeviceStatus {
+        let merged = DeviceStatus {
             battery_percent: self.battery_percent,
             temperature_c: self.temperature_c,
             rssi_dbm: self.rssi_dbm,
-        };
-        merge_status(&mut merged, status);
+        }
+        .merged(status);
         self.battery_percent = merged.battery_percent;
         self.temperature_c = merged.temperature_c;
         self.rssi_dbm = merged.rssi_dbm;
@@ -81,12 +79,12 @@ pub struct SpectrumView {
 
 impl SpectrumView {
     pub fn from_spectrum(spectrum: Spectrum) -> Self {
-        let total_counts = spectrum.counts.iter().map(|&count| count as u64).sum();
+        let total_counts = spectrum.total_counts();
         Self {
             duration: spectrum.duration,
-            a0: spectrum.a0,
-            a1: spectrum.a1,
-            a2: spectrum.a2,
+            a0: spectrum.calibration.a0,
+            a1: spectrum.calibration.a1,
+            a2: spectrum.calibration.a2,
             counts: spectrum.counts,
             total_counts,
         }

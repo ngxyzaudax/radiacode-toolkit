@@ -1,4 +1,4 @@
-use radiacode_core::DeviceConfig;
+use radiacode_lib::config::DeviceConfig;
 
 use crate::app_config::{AppConfig, load_app_config, save_app_config};
 use crate::spectrogram::settings::{SpectrogramSettings, load_settings, save_settings};

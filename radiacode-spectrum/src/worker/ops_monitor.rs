@@ -1,5 +1,6 @@
 use crossbeam_channel::Sender;
-use radiacode_core::{AlarmLimits, DeviceStatus, MonitorPollSample, RadiaCode, merge_status};
+use radiacode_lib::config::AlarmLimits;
+use radiacode_lib::{DeviceStatus, MonitorPollSample, RadiaCode};
 use tracing::{debug, warn};
 
 use super::epoch::SessionEpoch;
@@ -26,7 +27,7 @@ pub async fn handle_monitor(
         }
     };
     let poll = device
-        .poll_monitor(&limits, &mut session.data_buf_cursor, false)
+        .poll_monitor(limits.display_units(), &mut session.data_buf_cursor, false)
         .await;
     session.device = match poll {
         Ok((sample, fresh)) => {
@@ -44,7 +45,7 @@ fn publish_monitor_poll(
     fresh: DeviceStatus,
     epoch: &SessionEpoch,
 ) {
-    merge_status(&mut session.link_status, fresh);
+    session.link_status = session.link_status.merged(fresh);
     if !epoch.active() {
         return;
     }
@@ -70,7 +71,7 @@ async fn ensure_alarm_limits(
     device: &mut RadiaCode,
     session: &mut WorkerSession,
     events: &Sender<WorkerEvent>,
-) -> radiacode_core::Result<AlarmLimits> {
+) -> radiacode_lib::Result<AlarmLimits> {
     if alarm_refresh_due(session.alarm_limits.as_ref(), session.monitor_polls) {
         let limits = device.alarm_limits().await?;
         session.alarm_limits = Some(limits);

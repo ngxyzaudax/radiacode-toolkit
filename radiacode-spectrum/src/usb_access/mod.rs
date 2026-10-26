@@ -1,5 +1,9 @@
+mod blocking;
+mod install;
 mod prompt;
 mod ui;
+
+pub(crate) use blocking::scan_usb_devices;
 
 #[cfg(test)]
 mod prompt_tests;

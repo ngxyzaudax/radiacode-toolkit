@@ -19,8 +19,8 @@ All methods are on `RadiaCode` unless noted. Free functions have matching inhere
 | `spectrum()` | Live `Spectrum` | `VirtString::Spectrum` |
 | `spectrum_accum()` | Accumulated `Spectrum` | `VirtString::SpecAccum` |
 | `spectrum_diff()` | Differential `Spectrum` | `VirtString::SpecDiff` |
-| `energy_calib()` | `[a0, a1, a2]` | `VirtString::EnergyCalib` |
-| `set_energy_calib([a0,a1,a2])` | — | `WrVirtString(EnergyCalib)` |
+| `energy_calibration()` | `EnergyCalibration` | `VirtString::EnergyCalib` |
+| `set_energy_calibration(calibration)` | — | `WrVirtString(EnergyCalib)` |
 | `spectrum_reset()` | — | `WrVirtString(Spectrum, len=0)` |
 | `spectrum_format_version()` | `u32` | Cached from Configuration |
 
@@ -29,7 +29,7 @@ All methods are on `RadiaCode` unless noted. Free functions have matching inhere
 | Method | Returns | Notes |
 | --- | --- | --- |
 | `live_rates(units)` | `LiveRates` | Latest snapshot rate with display units |
-| `poll_monitor(units, cursor, refresh_rssi)` | `(MonitorPollSample, DeviceStatus)` | RealTimeData series + status |
+| `poll_monitor(display_units, cursor, refresh_rssi)` | `(MonitorPollSample, DeviceStatus)` | RealTimeData series + status |
 | `device_status(refresh_rssi)` | `DeviceStatus` | One-shot status read |
 
 See [monitor.md](./monitor.md) for poll semantics.
@@ -104,10 +104,10 @@ Free functions:
 
 | Function | Module |
 | --- | --- |
-| `merge_status(carry, fresh)` | Status merge for sticky battery/temp/RSSI |
-| `merge_discovered(usb, ble)` | Dedupe scan results by serial |
-| `resolve_usb_endpoint(devices, preferred)` | Pick USB device when multiple attached |
-| `model_from_serial`, `serial_from_advertisement`, `model_from_advertisement` | BLE advertisement parsing |
-| `dose_unit_label`, `count_unit_label`, `dose_accum_unit_label` | Display strings |
+| `DeviceStatus::merged` | Status merge for sticky battery/temp/RSSI |
+| `discovery::merge_discovered` | Dedupe scan results by serial |
+| `discovery::resolve_usb_endpoint` | Pick USB device when multiple attached |
+| `discovery::{model_from_serial, serial_from_advertisement, model_from_advertisement}` | BLE advertisement parsing |
+| `DoseDisplayUnit::{rate_label, dose_label}`, `CountDisplayUnit::label` | Display strings |
 
-Protocol decode helpers (`decode_data_buf`, `latest_snapshot`, `channel_to_energy`, …) are re-exported from `radiacode-protocol`.
+Protocol decode helpers (`decode_data_buf`, `latest_snapshot`, `EnergyCalibration`) live in `radiacode_lib::data_buf` and `radiacode_lib::spectrum`.

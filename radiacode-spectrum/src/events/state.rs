@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
-use radiacode_core::{AlarmLimits, DeviceEndpoint, DiscoveredDevice};
+use radiacode_lib::config::AlarmLimits;
+use radiacode_lib::{DeviceEndpoint, DiscoveredDevice};
 
 use crate::dosimeter::DosimeterState;
 use crate::model::{ConnectionState, DeviceInfo, SpectrumView};

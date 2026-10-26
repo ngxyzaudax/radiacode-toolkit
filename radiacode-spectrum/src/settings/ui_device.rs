@@ -1,8 +1,7 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::{
-    BacklightOffTime, CountDisplayUnit, DeviceConfig, DisplayDirection, DoseDisplayUnit,
-};
+use radiacode_lib::config::{BacklightOffTime, DeviceConfig, DisplayDirection};
+use radiacode_lib::{CountDisplayUnit, DoseDisplayUnit};
 
 use crate::model::DeviceInfo;
 use crate::theme::MUTED;

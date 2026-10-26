@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use radiacode_core::{
-    DeviceEndpoint, DeviceMetadata, DeviceStatus, DeviceVersions, FirmwareVersion, Spectrum,
-    TransportKind,
+use radiacode_lib::protocol::{DeviceVersions, FirmwareVersion};
+use radiacode_lib::{
+    DeviceEndpoint, DeviceMetadata, DeviceStatus, EnergyCalibration, Spectrum, TransportKind,
 };
 
 use crate::model::{DeviceInfo, SpectrumView};
@@ -23,7 +23,7 @@ fn metadata() -> DeviceMetadata {
             boot: version(4, 0),
             target: version(4, 12),
         },
-        energy_calib: [1.0, 2.0, 3.0],
+        energy_calibration: EnergyCalibration::new(1.0, 2.0, 3.0),
     }
 }
 
@@ -79,9 +79,7 @@ fn apply_status_keeps_known_values_when_update_is_partial() {
 fn spectrum_view_sums_counts() {
     let view = SpectrumView::from_spectrum(Spectrum {
         duration: Duration::from_secs(30),
-        a0: 0.5,
-        a1: 3.0,
-        a2: 0.0,
+        calibration: EnergyCalibration::new(0.5, 3.0, 0.0),
         counts: vec![u32::MAX, 1, 2],
     });
     assert_eq!(view.total_counts, u64::from(u32::MAX) + 3);

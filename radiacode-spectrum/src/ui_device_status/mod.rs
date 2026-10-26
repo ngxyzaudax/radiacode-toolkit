@@ -6,7 +6,7 @@ use crate::device::LinkQuality;
 use crate::layout::draw_toolbar;
 use crate::model::DeviceInfo;
 use crate::theme::{ACCENT, MUTED};
-use radiacode_core::TransportKind;
+use radiacode_lib::TransportKind;
 
 use icons::{battery_color, paint_battery_icon, paint_thermometer_icon};
 pub(crate) use icons::{paint_signal_icon, signal_color};

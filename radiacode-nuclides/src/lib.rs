@@ -21,6 +21,7 @@ mod topology;
 pub use activity::strongest_gamma;
 pub use catalog::{catalog, nuclide_by_id};
 pub use chain_lines::{AttributedLine, chain_lines};
+pub use elements::element_symbol;
 pub use equilibrium::{MemberWeight, equilibrium_weights};
 pub use half_life::format_half_life;
 pub use identify::{

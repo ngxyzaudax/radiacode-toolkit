@@ -1,6 +1,6 @@
 use egui::Ui;
 
-use radiacode_core::DeviceConfig;
+use radiacode_lib::config::DeviceConfig;
 
 use crate::model::ConnectionState;
 use crate::monitor::state::MonitorState;

@@ -1,13 +1,15 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
+use crate::test_device::encode::{rare_record, real_time_record, spectrum_v0_payload};
+use crate::test_device::{DeviceHandle, ScriptedReply, VirtualDevice, open_device};
 use crossbeam_channel::{Receiver, Sender, unbounded};
-use radiacode_core::test_support::encode::{rare_record, real_time_record, spectrum_v0_payload};
-use radiacode_core::test_support::{DeviceHandle, ScriptedReply, VirtualDevice, open_device};
-use radiacode_core::{
-    AlarmLimits, AlarmSignalMode, BacklightOffTime, Command, CountDisplayUnit, DeviceConfig,
-    DeviceEndpoint, DisplayDirection, DoseDisplayUnit, SignalFlags, VirtSfr, VirtString,
+use radiacode_lib::config::{
+    AlarmLimits, AlarmSignalMode, BacklightOffTime, DeviceConfig, DisplayDirection, LightControl,
+    SignalFlags,
 };
+use radiacode_lib::protocol::{Command, VirtSfr, VirtString};
+use radiacode_lib::{CountDisplayUnit, DeviceEndpoint, DoseDisplayUnit};
 
 use super::epoch::SessionEpoch;
 use super::messages::WorkerEvent;
@@ -36,8 +38,7 @@ pub fn device_config() -> DeviceConfig {
         sound_on: true,
         vibro_on: false,
         leds_on: false,
-        leds_supported: false,
-        leds_uses_device_ctrl: false,
+        light_control: LightControl::DeviceCtrlBit,
         sound_ctrl: SignalFlags::from_raw(0x1f9d),
         vibro_ctrl: SignalFlags::from_raw(0x1fff),
     }

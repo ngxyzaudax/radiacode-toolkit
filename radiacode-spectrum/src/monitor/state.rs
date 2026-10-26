@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use radiacode_core::{AlarmLimits, LiveRates};
+use radiacode_lib::LiveRates;
+use radiacode_lib::config::AlarmLimits;
 
 use crate::monitor::alarm_level::{AlarmLevel, alarm_level};
 use crate::monitor::ingest;
@@ -70,11 +71,11 @@ impl MonitorState {
 
     pub fn push_poll(
         &mut self,
-        rates: &[radiacode_core::TimedRates],
+        rates: &[radiacode_lib::TimedRates],
         decode_warnings: usize,
         rejected_records: usize,
         resync_count: usize,
-        seq_gaps: &[radiacode_core::SeqGap],
+        seq_gaps: &[radiacode_lib::data_buf::SeqGap],
     ) {
         ingest::push_poll(
             self,

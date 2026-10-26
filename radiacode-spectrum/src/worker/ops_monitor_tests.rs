@@ -33,7 +33,7 @@ async fn monitor_poll_publishes_limits_sample_status_and_completion() {
 
 #[tokio::test(start_paused = true)]
 async fn monitor_poll_without_data_reports_status_only() {
-    let device = configured_device().with_string(radiacode_core::VirtString::DataBuf, &[]);
+    let device = configured_device().with_string(radiacode_lib::protocol::VirtString::DataBuf, &[]);
     let mut harness = Harness::connected(device).await;
     handle_monitor(
         &harness.sender,

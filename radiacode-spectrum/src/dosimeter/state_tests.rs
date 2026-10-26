@@ -1,4 +1,5 @@
-use radiacode_core::{AccumulatedDose, AlarmLimits, CountDisplayUnit, DoseDisplayUnit};
+use radiacode_lib::config::AlarmLimits;
+use radiacode_lib::{AccumulatedDose, CountDisplayUnit, DoseDisplayUnit};
 
 use crate::dosimeter::plot_bounds::{dose_points, plot_bounds};
 use crate::dosimeter::state::DosimeterState;

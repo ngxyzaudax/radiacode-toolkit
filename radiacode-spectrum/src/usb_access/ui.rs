@@ -1,5 +1,5 @@
 use egui::{Context, RichText, Ui};
-use radiacode_usb::UsbAccessStatus;
+use radiacode_lib::usb::UsbAccessStatus;
 
 use crate::theme::ACCENT;
 

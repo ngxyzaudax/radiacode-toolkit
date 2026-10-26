@@ -36,7 +36,4 @@ Full application tour as a GIF.
 | --- | --- |
 | `radiacode-spectrum` | [../radiacode-spectrum/README.md](../radiacode-spectrum/README.md) |
 | `radiacode-nuclides` | [../radiacode-nuclides/README.md](../radiacode-nuclides/README.md) |
-| `radiacode-protocol` | [../radiacode-protocol/README.md](../radiacode-protocol/README.md) |
-| `radiacode-core` | [../radiacode-core/README.md](../radiacode-core/README.md) |
-| `radiacode-usb` | [../radiacode-usb/README.md](../radiacode-usb/README.md) |
-| `radiacode-bluetooth` | [../radiacode-bluetooth/README.md](../radiacode-bluetooth/README.md) |
+| `radiacode-lib` | [github.com/ngxyzaudax/radiacode-lib](https://github.com/ngxyzaudax/radiacode-lib) |

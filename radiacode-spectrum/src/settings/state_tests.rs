@@ -1,4 +1,4 @@
-use radiacode_core::DeviceConfig;
+use radiacode_lib::config::DeviceConfig;
 
 use crate::app_config::load_app_config;
 use crate::persist::json_store::use_test_data_dir;

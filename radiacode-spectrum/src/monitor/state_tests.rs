@@ -1,4 +1,5 @@
-use radiacode_core::{CountDisplayUnit, DeviceTicks, DoseDisplayUnit, TimedRates};
+use radiacode_lib::data_buf::DeviceTicks;
+use radiacode_lib::{CountDisplayUnit, DoseDisplayUnit, TimedRates};
 
 use super::MonitorState;
 use std::time::Duration;

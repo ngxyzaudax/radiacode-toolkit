@@ -1,6 +1,6 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::DeviceConfig;
+use radiacode_lib::config::DeviceConfig;
 
 use crate::settings::ui_layout::toggle_switch;
 use crate::theme::MUTED;
@@ -17,9 +17,7 @@ pub fn draw_signals_panel(ui: &mut Ui, draft: &mut DeviceConfig) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 20.0;
         toggle_switch(ui, &mut draft.sound_ctrl.clicks, "Clicks (sound)");
-        if draft.leds_supported {
-            toggle_switch(ui, &mut draft.leds_on, "Light");
-        }
+        toggle_switch(ui, &mut draft.leds_on, "Light");
     });
     ui.add_space(10.0);
     ui.horizontal(|ui| {

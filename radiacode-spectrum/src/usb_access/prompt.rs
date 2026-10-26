@@ -1,8 +1,11 @@
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 
-use radiacode_core::DeviceEndpoint;
-use radiacode_usb::{UsbAccessStatus, access_status, install_access_rule};
+use radiacode_lib::DeviceEndpoint;
+use radiacode_lib::usb::UsbAccessStatus;
 use tracing::info;
+
+use super::blocking::access_status;
+use super::install::install_access_rule;
 
 type InstallResult = Result<(), String>;
 
