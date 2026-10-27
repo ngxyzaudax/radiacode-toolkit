@@ -50,12 +50,12 @@ async fn open_bluetooth_once(address: &str, fresh: bool) -> Result<BluetoothTran
 pub async fn reconnect_endpoint(
     endpoint: &DeviceEndpoint,
     epoch: &SessionEpoch,
-    restore: &SessionRestore,
+    _restore: &SessionRestore,
 ) -> Result<RadiaCode> {
     if !epoch.active() {
         return Err(Error::ConnectionClosed);
     }
-    connect_endpoint(endpoint, Some(restore)).await
+    connect_endpoint(endpoint, None).await
 }
 
 pub fn is_connection_lost(error: &Error) -> bool {
