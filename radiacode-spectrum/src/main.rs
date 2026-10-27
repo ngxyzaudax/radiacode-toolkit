@@ -1,6 +1,7 @@
 mod about;
 mod app;
 mod app_config;
+mod ble_rssi;
 mod compare;
 mod device;
 mod dosimeter;
@@ -36,6 +37,8 @@ mod spectrogram;
 mod spectrum;
 mod synthetic_spectrum;
 mod tabs;
+#[cfg(test)]
+mod test_device;
 mod theme;
 mod time_format;
 mod ui;

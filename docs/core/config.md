@@ -21,7 +21,7 @@ device.apply_device_config(&config).await?;
 | `sound_ctrl` | `SoundCtrl` | `SignalFlags` bitmask |
 | `vibro_ctrl` | `VibroCtrl` | `SignalFlags` without clicks/connection/power |
 | `leds_on` | `LedsOn` or `DeviceCtrl` bit 3 | Depends on hardware |
-| `leds_supported` | Derived from SFR_FILE | |
+| `light_control` | `LedsOnRegister` or `DeviceCtrlBit`, from SFR_FILE | |
 | `leds_uses_device_ctrl` | No `LedsOn` in SFR_FILE | Legacy light toggle |
 
 ### BacklightOffTime wire values
@@ -91,14 +91,14 @@ Sets host local time on the device and resets `DeviceTime` to 0. Does not update
 Use `read_vsfr_batch_raw` when debugging register encoding:
 
 ```bash
-cargo run -p radiacode-usb --example probe_settings
+See the `read_spectrum` and `live_monitor` examples in radiacode-lib.
 ```
 
 ## Energy calibration write
 
 ```rust
-let coef = device.energy_calib().await?;
-device.set_energy_calib(coef).await?;  // write only after intentional change
+let coef = device.energy_calibration().await?;
+device.set_energy_calibration(coef).await?;  // write only after intentional change
 ```
 
 Preserve existing coefficients before modifying. Calibration affects channel→energy mapping used by spectrum analysis.

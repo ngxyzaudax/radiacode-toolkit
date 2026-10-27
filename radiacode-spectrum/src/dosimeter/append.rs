@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use radiacode_core::{AccumulatedDose, DoseDisplayUnit};
+use radiacode_lib::{AccumulatedDose, DoseDisplayUnit};
 
 use crate::dosimeter::point::DoseHistoryPoint;
 

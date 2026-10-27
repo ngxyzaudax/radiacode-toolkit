@@ -1,6 +1,5 @@
-use radiacode_core::{
-    AlarmLimits, DeviceConfig, DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample,
-};
+use radiacode_lib::config::{AlarmLimits, DeviceConfig};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample};
 
 use crate::model::{DeviceInfo, SpectrumView};
 

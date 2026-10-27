@@ -1,6 +1,6 @@
-use radiacode_core::Command;
-use radiacode_core::test_support::ScriptedReply;
-use radiacode_core::test_support::encode::u32_words;
+use crate::test_device::ScriptedReply;
+use crate::test_device::encode::u32_words;
+use radiacode_lib::protocol::Command;
 
 use super::epoch::end_session;
 use super::messages::WorkerEvent;

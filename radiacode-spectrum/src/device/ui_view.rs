@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use egui::Ui;
 
-use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
+use radiacode_lib::{DeviceEndpoint, DiscoveredDevice};
 
 use crate::layout::page_scroll;
 use crate::model::{ConnectionState, DeviceInfo};

@@ -52,7 +52,7 @@ pub fn draw_accum_readout(
         ui.label(RichText::new(&dosimeter.status).small().color(MUTED));
         return false;
     };
-    let unit = radiacode_core::dose_accum_unit_label(latest.dose_unit);
+    let unit = latest.dose_unit.dose_label();
     ui.label(RichText::new("Accumulated dose").strong());
     ui.label(
         RichText::new(format!("{:.2}", latest.dose.max(0.0)))

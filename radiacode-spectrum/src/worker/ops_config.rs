@@ -1,5 +1,6 @@
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceConfig, Error, RadiaCode};
+use radiacode_lib::config::DeviceConfig;
+use radiacode_lib::{Error, RadiaCode};
 use tracing::{error, info, warn};
 
 use super::epoch::SessionEpoch;

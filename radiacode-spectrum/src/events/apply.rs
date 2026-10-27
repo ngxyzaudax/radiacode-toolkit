@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use radiacode_core::{DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, DiscoveredDevice, MonitorPollSample};
 use tracing::{debug, info, warn};
 
 use super::state::{AppState, scan_status};
@@ -114,7 +114,7 @@ impl AppState {
         self.monitor_fetch_pending = false;
         if let Some(info) = self.device_info.as_mut() {
             info.apply_status(status);
-            debug!(battery = ?info.battery_percent, temperature = ?info.temperature_c, rssi = ?info.rssi_dbm, "ui device status updated");
+            debug!(battery = ?info.battery_percent, temperature = ?info.temperature_c, rssi = ?info.rssi, "ui device status updated");
         }
         None
     }

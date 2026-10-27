@@ -1,4 +1,4 @@
-use radiacode_core::Error;
+use radiacode_lib::Error;
 
 use super::epoch;
 use super::messages::WorkerEvent;
@@ -71,7 +71,7 @@ async fn link_loss_without_session_endpoint_is_not_reconnected() {
         &harness.sender,
         &mut harness.session,
         device,
-        Error::connection_closed(),
+        Error::ConnectionClosed,
         &epoch,
     )
     .await;
@@ -90,7 +90,7 @@ async fn link_loss_after_session_end_drops_device_silently() {
         &harness.sender,
         &mut harness.session,
         device,
-        Error::connection_closed(),
+        Error::ConnectionClosed,
         &epoch,
     )
     .await;
@@ -109,7 +109,7 @@ async fn link_loss_without_cached_session_reports_disconnected() {
         &harness.sender,
         &mut harness.session,
         device,
-        Error::timeout(),
+        Error::Timeout,
         &epoch,
     )
     .await;

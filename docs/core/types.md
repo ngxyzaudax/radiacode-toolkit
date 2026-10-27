@@ -9,7 +9,7 @@
 | `serial` | User-visible serial |
 | `model` | Derived from serial prefix |
 | `versions` | `DeviceVersions` (boot + target) |
-| `energy_calib` | `[a0, a1, a2]` keV calibration |
+| `energy_calibration` | `EnergyCalibration` (`a0`, `a1`, `a2`) in keV |
 
 `firmware_label()` formats target version for display.
 
@@ -68,18 +68,18 @@ Batch result from `poll_monitor` — rate series, optional accumulation, decode 
 
 ## Display units
 
-Re-exported from `radiacode-protocol`:
+Defined in `radiacode-lib` (`units`, re-exported at the crate root):
 
 | Enum | Variants |
 | --- | --- |
 | `DoseDisplayUnit` | `MicroSievertPerHour`, `MicroRoentgenPerHour` |
 | `CountDisplayUnit` | `Cps`, `Cpm` |
 
-Label helpers: `dose_unit_label`, `count_unit_label`, `dose_accum_unit_label`.
+Labels: `DoseDisplayUnit::rate_label` / `dose_label` and `CountDisplayUnit::label`.
 
-Encode/decode for alarm registers: `encode_dose_alarm`, `decode_dose_alarm`, `encode_count_alarm`, `decode_count_alarm`, `encode_dose_accum`, `decode_dose_accum`.
+Encode/decode for alarm registers lives in `radiacode_lib::units`: `encode_dose_alarm`, `decode_dose_alarm`, `encode_count_alarm`, `decode_count_alarm`, `encode_dose_accum`, `decode_dose_accum`.
 
-Real-time DataBuf conversion: `dose_display_from_rh`, `count_display_from_cps`.
+Real-time DataBuf conversion: `radiacode_lib::units::dose_display_from_rh`, `count_display_from_cps`.
 
 ## DataBufCursor / SeqGap
 
@@ -94,37 +94,34 @@ See [monitor.md](./monitor.md).
 
 ## Error
 
-```rust
-pub enum Error {
-    Protocol(ProtocolError),
-    DeviceNotFound,
-    IncompatibleFirmware { major, minor },
-    MonitorDataPending,
-    UsbPermissionDenied,
-}
-```
+`radiacode_lib::Error` is a flat, non-exhaustive enum. Protocol failures are variants of that enum, not a nested protocol error.
 
 | Variant | When |
 | --- | --- |
-| `Protocol` | Wire errors, timeouts, unexpected retcodes |
+| `Timeout` | The device did not answer before the transport deadline |
+| `ConnectionClosed` | The link was closed or lost |
+| `ProtocolMismatch` | A frame or payload did not have the expected shape |
+| `UnexpectedReturnCode` | Device return code other than success |
+| `BufferUnderrun` | A payload ended before a field could be read |
+| `VsfrBatchEmpty` | A batch register read reported no readable register |
+| `TransportUnavailable` | Transport failure that is not a link loss |
 | `DeviceNotFound` | No matching transport target |
 | `IncompatibleFirmware` | Target < 4.8 on first connect |
 | `MonitorDataPending` | DataBuf has no rate records yet |
 | `UsbPermissionDenied` | Missing udev rule |
+| `InvalidArgument` | A caller supplied a value the device cannot accept |
 
 Helpers:
 
 | Method | Meaning |
 | --- | --- |
-| `is_transient()` | Safe to retry (timeout, underrun) |
+| `is_transient()` | Safe to retry (timeout, mismatch, underrun) |
 | `is_connection_lost()` | Link dropped |
 | `is_usb_permission_denied()` | Linux USB access |
-| `timeout()`, `connection_closed()` | Constructors |
-
-Protocol-level errors (`BufferUnderrun`, `UnexpectedReturnCode`, `VsfrBatchEmpty`, …) are wrapped in `Error::Protocol`.
+| `is_timeout()` | `Error::Timeout` |
 
 ## Result alias
 
 `type Result<T> = std::result::Result<T, Error>`
 
-Used throughout the core and transport crates.
+Used throughout `radiacode-lib` and the spectrum worker.

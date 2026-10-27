@@ -2,13 +2,13 @@
 
 ## DataBuf read path
 
-Monitor data comes from `VirtString::DataBuf`. The core crate never substitutes transport-specific polling — it decodes frames with `decode_data_buf` from `radiacode-protocol`.
+Monitor data comes from `VirtString::DataBuf`. The client decodes frames with `radiacode_lib::data_buf::decode_data_buf`.
 
 ## live_rates
 
 ```rust
-let units = device.alarm_limits().await?;
-let rates = device.live_rates(&units).await?;
+let units = device.alarm_limits().await?.display_units();
+let rates = device.live_rates(units).await?;
 ```
 
 Returns the **best available rate snapshot** from the latest DataBuf frame:
@@ -23,7 +23,7 @@ Rates are converted to the device's configured display units (`AlarmLimits.dose_
 
 ```rust
 let mut cursor = DataBufCursor::default();
-let (sample, status) = device.poll_monitor(&units, &mut cursor, true).await?;
+let (sample, status) = device.poll_monitor(units.display_units(), &mut cursor, true).await?;
 ```
 
 Returns:
@@ -93,7 +93,7 @@ let units = device.alarm_limits().await?;
 let mut cursor = DataBufCursor::default();
 
 loop {
-    let (sample, status) = device.poll_monitor(&units, &mut cursor, true).await?;
+    let (sample, status) = device.poll_monitor(units.display_units(), &mut cursor, true).await?;
     for rate in &sample.rates {
         let when = device.wall_clock(rate.device_ts);
         // use rate.dose_rate, rate.count_rate, when

@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use radiacode_core::DeviceEndpoint;
+use radiacode_lib::DeviceEndpoint;
 
 use super::test_fixtures::{device_info, isolated_state, monitor_sample, spectrum_view};
 use crate::model::ConnectionState;

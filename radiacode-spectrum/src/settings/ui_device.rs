@@ -1,8 +1,7 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::{
-    BacklightOffTime, CountDisplayUnit, DeviceConfig, DisplayDirection, DoseDisplayUnit,
-};
+use radiacode_lib::config::{BacklightOffTime, DeviceConfig, DisplayDirection};
+use radiacode_lib::{CountDisplayUnit, DoseDisplayUnit, RssiStatus};
 
 use crate::model::DeviceInfo;
 use crate::theme::MUTED;
@@ -26,8 +25,9 @@ pub fn draw_device_info(ui: &mut Ui, info: Option<&DeviceInfo>) {
         if let Some(temp) = info.temperature_c {
             meta_chip(ui, "Temp", &format!("{temp:.1} °C"));
         }
-        if let Some(rssi) = info.rssi_dbm {
-            meta_chip(ui, "RSSI", &format!("{rssi} dBm"));
+        match info.rssi {
+            RssiStatus::NotReported => {}
+            rssi => meta_chip(ui, "RSSI", &rssi.to_string()),
         }
         meta_chip(
             ui,

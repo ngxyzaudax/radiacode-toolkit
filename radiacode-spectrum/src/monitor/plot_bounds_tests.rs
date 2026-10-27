@@ -15,15 +15,15 @@ fn sample(seconds: f64, dose: f32, count: f32) -> MonitorSample {
     }
 }
 
-fn timed(seconds: f64, dose: f32, count: f32) -> radiacode_core::TimedRates {
-    radiacode_core::TimedRates {
-        device_ts: radiacode_core::DeviceTicks::new((seconds * 100.0) as i32),
+fn timed(seconds: f64, dose: f32, count: f32) -> radiacode_lib::TimedRates {
+    radiacode_lib::TimedRates {
+        device_ts: radiacode_lib::data_buf::DeviceTicks::new((seconds * 100.0) as i32),
         dose_rate: dose,
         count_rate: count,
         dose_rate_err_pct: 0.0,
         count_rate_err_pct: 0.0,
-        dose_unit: radiacode_core::DoseDisplayUnit::MicroSievertPerHour,
-        count_unit: radiacode_core::CountDisplayUnit::Cps,
+        dose_unit: radiacode_lib::DoseDisplayUnit::MicroSievertPerHour,
+        count_unit: radiacode_lib::CountDisplayUnit::Cps,
     }
 }
 
@@ -71,15 +71,15 @@ fn window_scrolls_with_latest_sample() {
 #[test]
 fn y_max_uses_alarm_when_data_is_lower() {
     let mut monitor = MonitorState::default_for_tests();
-    monitor.limits = Some(radiacode_core::AlarmLimits {
+    monitor.limits = Some(radiacode_lib::config::AlarmLimits {
         l1_count_rate: 20.0,
         l2_count_rate: 40.0,
         l1_dose_rate: 0.15,
         l2_dose_rate: 0.3,
         l1_dose: 100.0,
         l2_dose: 200.0,
-        dose_unit: radiacode_core::DoseDisplayUnit::MicroSievertPerHour,
-        count_unit: radiacode_core::CountDisplayUnit::Cps,
+        dose_unit: radiacode_lib::DoseDisplayUnit::MicroSievertPerHour,
+        count_unit: radiacode_lib::CountDisplayUnit::Cps,
     });
     monitor.history.push_back(sample(1.0, 0.09, 17.0));
     monitor.history.push_back(sample(2.0, 0.09, 17.0));

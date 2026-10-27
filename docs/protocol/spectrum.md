@@ -39,7 +39,7 @@ Coefficients `[a0, a1, a2]` map channel `c` to energy in keV:
 E = a0 + a1 * c + a2 * c²
 ```
 
-Use `channel_to_energy(channel, a0, a1, a2)` from `radiacode-protocol`.
+Use `EnergyCalibration::channel_energy` from `radiacode-lib`.
 
 Write calibration via `WrVirtString(EnergyCalib)` with payload length and three `f32` values.
 

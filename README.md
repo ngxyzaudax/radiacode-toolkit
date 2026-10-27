@@ -114,10 +114,9 @@ Shared Rust crates sit behind the desktop app and handle protocol, transport, nu
 | --- | --- |
 | [`radiacode-spectrum`](./radiacode-spectrum/README.md) | Desktop application (egui) |
 | [`radiacode-nuclides`](./radiacode-nuclides/README.md) | Bundled nuclide catalogue, decay chains, peak matching |
-| [`radiacode-protocol`](./radiacode-protocol/README.md) | Wire protocol — framing, opcodes, payload decoders, `Transport` trait ([reference](./docs/protocol/README.md)) |
-| [`radiacode-core`](./radiacode-core/README.md) | Device client (`RadiaCode`) and domain models ([reference](./docs/core/README.md)) |
-| [`radiacode-usb`](./radiacode-usb/README.md) | USB transport |
-| [`radiacode-bluetooth`](./radiacode-bluetooth/README.md) | Bluetooth LE transport |
+| [`radiacode-lib`](https://github.com/ngxyzaudax/radiacode-lib) | Wire protocol, USB and Bluetooth transports, discovery, and the `RadiaCode` client ([protocol notes](./docs/protocol/README.md), [client notes](./docs/core/README.md)) |
+
+`radiacode-lib` is a git dependency pinned in the workspace `Cargo.toml`. It is not published on crates.io. The application enables the `usb`, `bluetooth`, and `serde` features.
 
 ---
 

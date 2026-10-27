@@ -1,9 +1,8 @@
 use std::time::Duration;
 
 use crossbeam_channel::Sender;
-use radiacode_bluetooth::{BleError, scan_radiacode_devices};
-use radiacode_core::{DiscoveredDevice, merge_discovered};
-use radiacode_usb::scan_usb_devices;
+use radiacode_lib::DiscoveredDevice;
+use radiacode_lib::discovery::merge_discovered;
 use tracing::{info, warn};
 
 use super::messages::WorkerEvent;
@@ -42,22 +41,21 @@ fn merge_scan_results(
 }
 
 async fn scan_usb_async() -> Result<Vec<DiscoveredDevice>, String> {
-    tokio::task::spawn_blocking(scan_usb_devices)
+    radiacode_lib::usb::scan_usb_devices()
         .await
-        .map_err(|error| error.to_string())?
         .map_err(|error| error.to_string())
 }
 
 async fn scan_bluetooth_async() -> Result<Vec<DiscoveredDevice>, String> {
-    scan_radiacode_devices(BLUETOOTH_SCAN_DURATION)
+    radiacode_lib::bluetooth::scan_bluetooth_devices(BLUETOOTH_SCAN_DURATION)
         .await
-        .map_err(|error: BleError| error.to_string())
+        .map_err(|error| error.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::{devices_or_empty, merge_scan_results};
-    use radiacode_core::{DeviceEndpoint, DiscoveredDevice};
+    use radiacode_lib::{DeviceEndpoint, DiscoveredDevice};
 
     fn usb_device(serial: &str) -> DiscoveredDevice {
         DiscoveredDevice {

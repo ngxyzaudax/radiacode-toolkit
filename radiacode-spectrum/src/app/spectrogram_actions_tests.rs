@@ -1,5 +1,5 @@
-use radiacode_core::DeviceEndpoint;
-use radiacode_usb::UsbAccessStatus;
+use radiacode_lib::DeviceEndpoint;
+use radiacode_lib::usb::UsbAccessStatus;
 
 use super::test_harness::{AppHarness, has_command};
 use crate::events::test_fixtures::spectrum_view;

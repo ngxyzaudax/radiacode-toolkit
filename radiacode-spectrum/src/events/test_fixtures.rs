@@ -1,8 +1,9 @@
 use std::time::Duration;
 
-use radiacode_core::{
-    AccumulatedDose, CountDisplayUnit, DeviceEndpoint, DeviceTicks, DiscoveredDevice,
-    DoseDisplayUnit, MonitorPollSample, TimedRates, TransportKind,
+use radiacode_lib::data_buf::DeviceTicks;
+use radiacode_lib::{
+    AccumulatedDose, CountDisplayUnit, DeviceEndpoint, DiscoveredDevice, DoseDisplayUnit,
+    MonitorPollSample, RssiStatus, TimedRates, TransportKind,
 };
 
 use super::AppState;
@@ -30,7 +31,7 @@ pub fn device_info() -> DeviceInfo {
         energy_calib: [0.0, 3.0, 0.0],
         battery_percent: Some(90.0),
         temperature_c: None,
-        rssi_dbm: None,
+        rssi: RssiStatus::NotReported,
     }
 }
 

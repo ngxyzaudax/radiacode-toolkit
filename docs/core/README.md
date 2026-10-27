@@ -1,17 +1,13 @@
-# radiacode-core Reference
+# Device client reference
 
-High-level device client and domain models for RadiaCode RC-1xx detectors.
+High-level device client and domain models for RadiaCode RC-1xx detectors. The implementation is [radiacode-lib](https://github.com/ngxyzaudax/radiacode-lib); this toolkit depends on that crate and keeps the GUI, nuclide catalogue, and spectrum analysis.
 
 ## Architecture
 
 ```text
-radiacode-spectrum (GUI)
+radiacode-spectrum (GUI, nuclides, analysis)
         │
-radiacode-usb / radiacode-bluetooth  ← Transport implementations
-        │
-   radiacode-core  ← this crate
-        │
- radiacode-protocol  ← wire format
+   radiacode-lib  ← protocol, USB, Bluetooth, RadiaCode client
 ```
 
 `RadiaCode` owns a `Box<dyn Transport>`, a command sequence counter, cached firmware info, parsed SFR catalog entries, and a DataBuf base timestamp.
@@ -32,8 +28,8 @@ radiacode-usb / radiacode-bluetooth  ← Transport implementations
 - Wire protocol: [protocol/README.md](../protocol/README.md)
 - Nuclide catalogue: [NUCLIDES.md](../NUCLIDES.md)
 
-## Re-exports
+## Where the types live
 
-`radiacode-core` re-exports commonly used protocol types (`Spectrum`, `Transport`, `VirtSfr`, `decode_data_buf`, …) so application code can depend on a single crate when appropriate.
+`radiacode-lib` exports the session types from the crate root (`RadiaCode`, `Spectrum`, `DeviceEndpoint`, …). Registers and opcodes are under `radiacode_lib::protocol`, settings under `radiacode_lib::config`, and the transports under `radiacode_lib::usb` and `radiacode_lib::bluetooth`.
 
-Low-level framing and opcode tables are documented under [protocol/](../protocol/README.md), not duplicated here.
+Low-level framing and opcode tables are documented under [protocol/](../protocol/README.md).

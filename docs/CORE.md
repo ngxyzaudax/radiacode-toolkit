@@ -1,4 +1,4 @@
-# radiacode-core Reference
+# Device client reference
 
 This document moved to a split reference:
 

@@ -1,6 +1,6 @@
 use egui::{RichText, Ui};
 
-use radiacode_core::DeviceEndpoint;
+use radiacode_lib::DeviceEndpoint;
 
 use crate::theme::{MUTED, SPACE_SM};
 

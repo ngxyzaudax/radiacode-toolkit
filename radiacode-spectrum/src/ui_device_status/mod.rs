@@ -6,7 +6,7 @@ use crate::device::LinkQuality;
 use crate::layout::draw_toolbar;
 use crate::model::DeviceInfo;
 use crate::theme::{ACCENT, MUTED};
-use radiacode_core::TransportKind;
+use radiacode_lib::{RssiStatus, TransportKind};
 
 use icons::{battery_color, paint_battery_icon, paint_thermometer_icon};
 pub(crate) use icons::{paint_signal_icon, signal_color};
@@ -25,19 +25,22 @@ pub fn draw_status_row(ui: &mut Ui, info: &DeviceInfo) {
             draw_temperature_chip(ui, temperature);
         }
         match info.transport {
-            TransportKind::Bluetooth => draw_bluetooth_link_row(ui, info.rssi_dbm),
+            TransportKind::Bluetooth => draw_bluetooth_link_row(ui, info.rssi),
             TransportKind::Usb => draw_usb_link_row(ui),
         }
     });
 }
 
-fn draw_bluetooth_link_row(ui: &mut Ui, rssi_dbm: Option<i16>) {
-    match rssi_dbm {
-        Some(rssi) => {
-            draw_link_quality_chip(ui, rssi);
-            draw_signal_strength_chip(ui, rssi);
+fn draw_bluetooth_link_row(ui: &mut Ui, rssi: RssiStatus) {
+    match rssi {
+        RssiStatus::Measured(value) => {
+            draw_link_quality_chip(ui, value);
+            draw_signal_strength_chip(ui, value);
         }
-        None => {
+        RssiStatus::PermissionDenied => {
+            draw_labelled_muted_chip(ui, "Link", &rssi.to_string());
+        }
+        RssiStatus::NotReported => {
             draw_labelled_muted_chip(ui, "Link", PENDING_TEXT);
             draw_labelled_muted_chip(ui, "Signal", PENDING_TEXT);
         }

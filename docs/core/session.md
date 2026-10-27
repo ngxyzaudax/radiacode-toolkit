@@ -3,21 +3,10 @@
 ## Opening a connection
 
 ```rust
-RadiaCode::open(
-    transport: Box<dyn Transport>,
-    ignore_firmware_check: bool,
-    restore: Option<&SessionRestore>,
-) -> Result<RadiaCode>
+RadiaCode::open(transport: BoxedTransport, options: OpenOptions) -> Result<RadiaCode>
 ```
 
-Transport crates provide convenience wrappers:
-
-| Crate | Function | Notes |
-| --- | --- | --- |
-| `radiacode-usb` | `connect(serial)` | First connect, full init |
-| `radiacode-usb` | `reconnect_session(serial, restore)` | Fast reconnect |
-| `radiacode-bluetooth` | `connect(address)` | Same as USB `connect` |
-| `radiacode-bluetooth` | `reconnect_session(address, restore)` | Same as USB reconnect |
+`OpenOptions` carries `ignore_firmware_check` and an optional `SessionRestore`. `radiacode_lib::connect(endpoint, options)` opens the transport for that endpoint and then calls `open`. A Bluetooth reconnect in this application uses `BluetoothTransport::connect_fresh` so the link is scanned again before `open` restores the cached session.
 
 ## Initialization sequence
 
@@ -66,7 +55,7 @@ Fields:
 | `versions` | Boot and target firmware from first connect |
 | `spectrum_format_version` | Spectrum compression format (0 or 1) |
 
-On reconnect, pass `Some(&restore)` to `RadiaCode::open` or use `reconnect_session` from a transport crate.
+On reconnect, pass the saved value through `OpenOptions::restore` to `RadiaCode::open` or `connect`.
 
 ## Timestamps
 

@@ -53,9 +53,8 @@ Configuration is stored under the XDG config directory (`radiacode-spectrum/app_
 
 ## Dependencies
 
-- `radiacode-core` — device client
+- `radiacode-lib` — device client, protocol, and USB / Bluetooth transports
 - `radiacode-nuclides` — catalogue and peak matching
-- `radiacode-usb` / `radiacode-bluetooth` — transports
 
 ## Tests
 

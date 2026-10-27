@@ -1,5 +1,7 @@
+use std::time::Duration;
+
 use crossbeam_channel::Sender;
-use radiacode_core::{DeviceEndpoint, DeviceStatus, Error, RadiaCode};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, Error, RadiaCode};
 use tracing::{error, info, warn};
 
 use super::device_info::load_device_info_with_retry;
@@ -9,6 +11,8 @@ use super::messages::WorkerEvent;
 use super::ops_spectrum::fetch_spectrum_with_retries;
 use super::session::WorkerSession;
 use crate::model::SpectrumView;
+
+const RELEASE_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub async fn handle_device_error(
     events: &Sender<WorkerEvent>,
@@ -23,7 +27,7 @@ pub async fn handle_device_error(
         return Some(device);
     }
     warn!(%error, ?session.session_endpoint, "connection lost during device operation");
-    drop(device);
+    let _ = tokio::time::timeout(RELEASE_TIMEOUT, device.disconnect()).await;
     if !epoch.active() {
         warn!("skipping reconnect: session ended");
         return None;

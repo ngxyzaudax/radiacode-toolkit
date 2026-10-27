@@ -91,7 +91,7 @@ fn series_value(sample: &MonitorSample, series: PlotSeries) -> f64 {
     }
 }
 
-fn alarm_ceiling(limits: radiacode_core::AlarmLimits, series: PlotSeries) -> f64 {
+fn alarm_ceiling(limits: radiacode_lib::config::AlarmLimits, series: PlotSeries) -> f64 {
     match series {
         PlotSeries::Dose => f64::from(limits.l1_dose_rate.max(limits.l2_dose_rate).max(0.0)),
         PlotSeries::Count => f64::from(limits.l1_count_rate.max(limits.l2_count_rate).max(0.0)),

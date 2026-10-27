@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossbeam_channel::Sender;
-use radiacode_core::{Error, RadiaCode, Spectrum};
+use radiacode_lib::{Error, RadiaCode, Spectrum};
 use tracing::{debug, info, warn};
 
 use super::epoch::SessionEpoch;
@@ -87,7 +87,7 @@ pub async fn handle_reset(
 
 pub async fn fetch_spectrum_with_retries(
     device: &mut RadiaCode,
-) -> radiacode_core::Result<Spectrum> {
+) -> radiacode_lib::Result<Spectrum> {
     let mut last_error: Option<Error> = None;
     for attempt in 0..=TRANSIENT_RETRIES {
         if attempt > 0 {
@@ -103,5 +103,5 @@ pub async fn fetch_spectrum_with_retries(
             Err(error) => return Err(error),
         }
     }
-    Err(last_error.unwrap_or_else(Error::timeout))
+    Err(last_error.unwrap_or(Error::Timeout))
 }

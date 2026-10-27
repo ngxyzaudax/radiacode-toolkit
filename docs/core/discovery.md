@@ -12,15 +12,15 @@
 
 ## Scanning
 
-| Crate | Function | Returns |
+| Module | Function | Returns |
 | --- | --- | --- |
-| `radiacode-usb` | `scan_usb_devices()` | `Vec<DiscoveredDevice>` |
-| `radiacode-bluetooth` | `scan_radiacode_devices()` | `Vec<DiscoveredDevice>` |
+| `radiacode_lib::usb` | `scan_usb_devices().await` | `Vec<DiscoveredDevice>` |
+| `radiacode_lib::bluetooth` | `scan_bluetooth_devices(duration).await` | `Vec<DiscoveredDevice>` |
 
 Merge USB and Bluetooth results:
 
 ```rust
-use radiacode_core::merge_discovered;
+use radiacode_lib::discovery::merge_discovered;
 
 let all = merge_discovered(usb_devices, ble_devices);
 ```
@@ -32,11 +32,11 @@ Bluetooth entries whose serial matches an already-seen USB device are dropped.
 ### USB
 
 ```rust
-use radiacode_usb::{connect, scan_usb_devices};
+use radiacode_lib::usb::scan_usb_devices;
+use radiacode_lib::{OpenOptions, connect};
 
-let devices = scan_usb_devices()?;
-let serial = devices[0].endpoint.address_label();
-let device = connect(serial).await?;
+let devices = scan_usb_devices().await?;
+let device = connect(&devices[0].endpoint, OpenOptions::default()).await?;
 ```
 
 Requires udev rule on Linux — see [README.md](../../README.md#usb-access-on-linux).
@@ -46,18 +46,18 @@ Permission errors surface as `Error::UsbPermissionDenied`.
 ### Bluetooth
 
 ```rust
-use radiacode_bluetooth::{connect, scan_radiacode_devices};
+use radiacode_lib::bluetooth::scan_bluetooth_devices;
+use radiacode_lib::{OpenOptions, connect};
 
-let devices = scan_radiacode_devices().await?;
-let address = devices[0].endpoint.address_label();
-let device = connect(address).await?;
+let devices = scan_bluetooth_devices(std::time::Duration::from_secs(5)).await?;
+let device = connect(&devices[0].endpoint, OpenOptions::default()).await?;
 ```
 
 On macOS, `address` is the CoreBluetooth UUID, not a MAC address.
 
 ## Transport trait
 
-Defined in `radiacode-protocol`, implemented by `UsbTransport` and `BluetoothTransport`:
+Defined in `radiacode-lib`, implemented by `UsbTransport` and `BluetoothTransport`:
 
 | Method | Purpose |
 | --- | --- |
@@ -74,7 +74,7 @@ Custom transports can be passed directly to `RadiaCode::open`.
 When more than one detector is attached:
 
 ```rust
-use radiacode_core::resolve_usb_endpoint;
+use radiacode_lib::discovery::resolve_usb_endpoint;
 
 let endpoint = resolve_usb_endpoint(&devices, &preferred_endpoint);
 ```
@@ -83,19 +83,24 @@ Matches by USB serial key or user-visible serial string; falls back to the first
 
 ## Reconnect
 
-After an unexpected disconnect, avoid full firmware probing:
+After an unexpected disconnect, avoid full firmware probing by passing the saved session:
 
 ```rust
+use radiacode_lib::bluetooth::BluetoothTransport;
+use radiacode_lib::{OpenOptions, RadiaCode, connect};
+
 let restore = device.session_restore().expect("initialized");
+let options = OpenOptions::default().restore(restore);
 
 // USB:
-radiacode_usb::reconnect_session(serial, &restore).await?;
+let device = connect(&endpoint, options).await?;
 
-// Bluetooth:
-radiacode_bluetooth::reconnect_session(address, &restore).await?;
+// Bluetooth (rescan, then restore):
+let transport = BluetoothTransport::connect_fresh(address).await?;
+let device = RadiaCode::open(Box::new(transport), options).await?;
 ```
 
-Reconnect skips `GetVersion` and Configuration reads but still runs the exchange handshake, clock sync, and SFR cache reload.
+Reconnect skips `GetVersion` and Configuration reads but still runs the exchange handshake, clock sync, and SFR cache reload. `connect` uses the cached Bluetooth peripheral; `BluetoothTransport::connect_fresh` scans again.
 
 ## Advertisement parsing
 
