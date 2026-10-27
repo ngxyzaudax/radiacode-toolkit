@@ -68,7 +68,7 @@ mod tests {
         session.link_status = DeviceStatus {
             battery_percent: Some(80.0),
             temperature_c: Some(25.0),
-            rssi_dbm: Some(-50),
+            rssi: radiacode_lib::RssiStatus::Measured(-50),
         };
         session.monitor_polls = 5;
         session

@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use async_trait::async_trait;
 use radiacode_lib::protocol::BytesBuffer;
-use radiacode_lib::{BoxedTransport, Result, Transport};
+use radiacode_lib::{BoxedTransport, Result, RssiStatus, Transport};
 
 use super::dispatch::respond;
 use super::virtual_device::{RecordedRequest, ScriptedReply, VirtualDevice};
@@ -90,11 +90,13 @@ impl Transport for FakeTransport {
         Ok(())
     }
 
-    async fn link_rssi_dbm(&mut self) -> Option<i16> {
-        self.rssi_dbm
+    async fn link_rssi(&mut self) -> RssiStatus {
+        self.rssi_dbm.map(RssiStatus::Measured).unwrap_or_default()
     }
 
-    async fn sample_link_rssi_dbm(&mut self) -> Option<i16> {
-        self.rssi_dbm.map(|value| value - 1)
+    async fn sample_link_rssi(&mut self) -> RssiStatus {
+        self.rssi_dbm
+            .map(|value| RssiStatus::Measured(value - 1))
+            .unwrap_or_default()
     }
 }

@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use radiacode_lib::bluetooth::BluetoothTransport;
 use radiacode_lib::protocol::BytesBuffer;
-use radiacode_lib::{Result, Transport};
+use radiacode_lib::{Result, RssiStatus, Transport};
 
-use super::read_mgmt_rssi_dbm;
+use super::{combine_rssi, read_mgmt_rssi};
 
 /// Bluetooth transport that samples RSSI through BlueZ before falling back to btleplug.
 pub struct SamplingBluetoothTransport {
@@ -30,15 +30,13 @@ impl Transport for SamplingBluetoothTransport {
         Box::new(self.inner).disconnect().await
     }
 
-    async fn link_rssi_dbm(&mut self) -> Option<i16> {
-        self.inner.link_rssi_dbm().await
+    async fn link_rssi(&mut self) -> RssiStatus {
+        self.inner.link_rssi().await
     }
 
-    async fn sample_link_rssi_dbm(&mut self) -> Option<i16> {
+    async fn sample_link_rssi(&mut self) -> RssiStatus {
         let address = self.inner.address();
-        match read_mgmt_rssi_dbm(&address).await {
-            Some(rssi) => Some(rssi),
-            None => self.inner.link_rssi_dbm().await,
-        }
+        let cached = self.inner.link_rssi().await;
+        combine_rssi(read_mgmt_rssi(&address).await, cached)
     }
 }

@@ -1,4 +1,6 @@
-use radiacode_lib::{DeviceEndpoint, DeviceMetadata, DeviceStatus, Spectrum, TransportKind};
+use radiacode_lib::{
+    DeviceEndpoint, DeviceMetadata, DeviceStatus, RssiStatus, Spectrum, TransportKind,
+};
 
 #[derive(Debug, Clone)]
 pub struct DeviceInfo {
@@ -10,7 +12,7 @@ pub struct DeviceInfo {
     pub energy_calib: [f32; 3],
     pub battery_percent: Option<f32>,
     pub temperature_c: Option<f32>,
-    pub rssi_dbm: Option<i16>,
+    pub rssi: RssiStatus,
 }
 
 impl DeviceInfo {
@@ -29,7 +31,7 @@ impl DeviceInfo {
             energy_calib: metadata.energy_calibration.coefficients(),
             battery_percent: status.battery_percent,
             temperature_c: status.temperature_c,
-            rssi_dbm: status.rssi_dbm,
+            rssi: status.rssi,
         }
     }
 
@@ -37,12 +39,12 @@ impl DeviceInfo {
         let merged = DeviceStatus {
             battery_percent: self.battery_percent,
             temperature_c: self.temperature_c,
-            rssi_dbm: self.rssi_dbm,
+            rssi: self.rssi,
         }
         .merged(status);
         self.battery_percent = merged.battery_percent;
         self.temperature_c = merged.temperature_c;
-        self.rssi_dbm = merged.rssi_dbm;
+        self.rssi = merged.rssi;
     }
 
     pub fn endpoint(&self) -> DeviceEndpoint {
@@ -62,7 +64,7 @@ impl From<&DeviceInfo> for DeviceStatus {
         Self {
             battery_percent: info.battery_percent,
             temperature_c: info.temperature_c,
-            rssi_dbm: info.rssi_dbm,
+            rssi: info.rssi,
         }
     }
 }

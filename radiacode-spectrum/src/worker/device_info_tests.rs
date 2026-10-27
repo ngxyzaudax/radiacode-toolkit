@@ -1,6 +1,6 @@
 use crate::test_device::{ScriptedReply, VirtualDevice};
 use radiacode_lib::protocol::{Command, VirtString};
-use radiacode_lib::{DeviceEndpoint, TransportKind};
+use radiacode_lib::{DeviceEndpoint, RssiStatus, TransportKind};
 
 use super::device_info::{load_device_info, load_device_info_with_retry};
 use super::messages::WorkerEvent;
@@ -36,7 +36,7 @@ async fn device_info_combines_metadata_status_and_alarm_limits() {
     assert_eq!(info.serial, "RC-103-001234");
     assert_eq!(info.transport, TransportKind::Usb);
     assert_eq!(info.energy_calib, [1.5, 2.5, 3.5]);
-    assert_eq!(info.rssi_dbm, Some(-60));
+    assert_eq!(info.rssi, RssiStatus::Measured(-60));
     assert_eq!(count_events(&harness.drain(), is_alarm_limits), 1);
 }
 
@@ -53,7 +53,25 @@ async fn bluetooth_info_samples_fresh_link_rssi() {
     .await
     .expect("device info");
     assert_eq!(info.transport, TransportKind::Bluetooth);
-    assert_eq!(info.rssi_dbm, Some(-61));
+    assert_eq!(info.rssi, RssiStatus::Measured(-61));
+}
+
+#[test]
+fn advertisement_hint_fills_only_a_missing_rssi() {
+    use super::device_info::advertised_rssi;
+
+    assert_eq!(
+        advertised_rssi(RssiStatus::NotReported, Some(-40)),
+        RssiStatus::Measured(-40)
+    );
+    assert_eq!(
+        advertised_rssi(RssiStatus::PermissionDenied, Some(-40)),
+        RssiStatus::PermissionDenied
+    );
+    assert_eq!(
+        advertised_rssi(RssiStatus::Measured(-61), Some(-40)),
+        RssiStatus::Measured(-61)
+    );
 }
 
 #[tokio::test(start_paused = true)]

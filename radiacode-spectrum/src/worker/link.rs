@@ -1,4 +1,4 @@
-use radiacode_lib::bluetooth::BluetoothTransport;
+use radiacode_lib::bluetooth::{BluetoothTransport, retry_connect};
 use radiacode_lib::{
     DeviceEndpoint, Error, OpenOptions, RadiaCode, Result, SessionRestore, connect,
 };
@@ -27,15 +27,24 @@ fn open_options(restore: Option<&SessionRestore>) -> OpenOptions {
 }
 
 async fn open_bluetooth(address: &str, fresh: bool, options: OpenOptions) -> Result<RadiaCode> {
-    let transport = match fresh {
-        true => BluetoothTransport::connect_fresh(address).await?,
-        false => BluetoothTransport::connect(address).await?,
-    };
+    let address = address.to_string();
+    let transport = retry_connect(fresh, move |use_fresh| {
+        let address = address.clone();
+        async move { open_bluetooth_once(&address, use_fresh).await }
+    })
+    .await?;
     RadiaCode::open(
         Box::new(SamplingBluetoothTransport::new(transport)),
         options,
     )
     .await
+}
+
+async fn open_bluetooth_once(address: &str, fresh: bool) -> Result<BluetoothTransport> {
+    match fresh {
+        true => BluetoothTransport::connect_fresh_once(address).await,
+        false => BluetoothTransport::connect_once(address).await,
+    }
 }
 
 pub async fn reconnect_endpoint(
@@ -90,6 +99,28 @@ mod tests {
             Some(&endpoint())
         ));
         assert!(!should_reconnect(&Error::DeviceNotFound, Some(&endpoint())));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn fast_reconnect_retries_device_not_found_then_scans_fresh() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        use radiacode_lib::bluetooth::retry_connect;
+
+        let calls = AtomicUsize::new(0);
+        let outcome = retry_connect(false, |fresh| {
+            let index = calls.fetch_add(1, Ordering::SeqCst);
+            async move {
+                match (index, fresh) {
+                    (0, false) => Err(Error::DeviceNotFound),
+                    (1, true) => Ok("open"),
+                    _ => Err(Error::InvalidArgument("extra attempt".into())),
+                }
+            }
+        })
+        .await;
+        assert_eq!(outcome.expect("retried connect"), "open");
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
     }
 
     #[tokio::test(start_paused = true)]

@@ -6,4 +6,4 @@ members = [
 ]
 
 [workspace.dependencies]
-radiacode-lib = { git = "https://github.com/ngxyzaudax/radiacode-lib", rev = "9d84bb3f6db1f6bbdc5848c0dcc63d808faa36d5", default-features = false }
+radiacode-lib = { git = "https://github.com/ngxyzaudax/radiacode-lib", rev = "bf0e0e2d357f456ac23cd3678a94a98c00140fc8", default-features = false }

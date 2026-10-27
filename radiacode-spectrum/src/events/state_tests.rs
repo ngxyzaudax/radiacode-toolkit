@@ -1,4 +1,4 @@
-use radiacode_lib::DeviceStatus;
+use radiacode_lib::{DeviceStatus, RssiStatus};
 
 use super::test_fixtures::{
     device_info, discovered, isolated_state, monitor_sample, spectrum_view,
@@ -92,7 +92,7 @@ fn device_status_merges_into_device_info() {
         WorkerEvent::DeviceStatus(DeviceStatus {
             battery_percent: None,
             temperature_c: Some(27.5),
-            rssi_dbm: None,
+            rssi: RssiStatus::NotReported,
         }),
         true,
     );

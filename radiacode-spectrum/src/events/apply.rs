@@ -114,7 +114,7 @@ impl AppState {
         self.monitor_fetch_pending = false;
         if let Some(info) = self.device_info.as_mut() {
             info.apply_status(status);
-            debug!(battery = ?info.battery_percent, temperature = ?info.temperature_c, rssi = ?info.rssi_dbm, "ui device status updated");
+            debug!(battery = ?info.battery_percent, temperature = ?info.temperature_c, rssi = ?info.rssi, "ui device status updated");
         }
         None
     }

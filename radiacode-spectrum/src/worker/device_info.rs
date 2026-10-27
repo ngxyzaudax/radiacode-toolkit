@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossbeam_channel::Sender;
-use radiacode_lib::{DeviceEndpoint, DeviceStatus, RadiaCode};
+use radiacode_lib::{DeviceEndpoint, DeviceStatus, RadiaCode, RssiStatus};
 use tracing::{debug, warn};
 
 use super::messages::WorkerEvent;
@@ -45,10 +45,17 @@ async fn load_link_status(
 ) -> DeviceStatus {
     let refresh_rssi = matches!(endpoint, DeviceEndpoint::Bluetooth { .. });
     let mut status = device.device_status(refresh_rssi).await.unwrap_or_default();
-    if status.rssi_dbm.is_none() && refresh_rssi {
-        status.rssi_dbm = device.sample_rssi_dbm().await.or(hint_rssi);
+    if refresh_rssi && status.rssi == RssiStatus::NotReported {
+        status.rssi = advertised_rssi(device.sample_rssi().await, hint_rssi);
     }
     status
+}
+
+pub(super) fn advertised_rssi(sampled: RssiStatus, hint: Option<i16>) -> RssiStatus {
+    match sampled {
+        RssiStatus::NotReported => hint.map(RssiStatus::Measured).unwrap_or_default(),
+        other => other,
+    }
 }
 
 async fn publish_alarm_limits(device: &mut RadiaCode, events: &Sender<WorkerEvent>) {

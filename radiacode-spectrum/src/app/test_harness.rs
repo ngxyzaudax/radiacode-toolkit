@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use crossbeam_channel::Sender;
 use radiacode_lib::config::DeviceConfig;
-use radiacode_lib::{DeviceEndpoint, DiscoveredDevice, TransportKind};
+use radiacode_lib::{DeviceEndpoint, DiscoveredDevice, RssiStatus, TransportKind};
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use super::SpectrumApp;
@@ -68,7 +68,7 @@ pub fn connected_info() -> DeviceInfo {
     DeviceInfo {
         transport: TransportKind::Bluetooth,
         address: BLUETOOTH_ADDRESS.into(),
-        rssi_dbm: Some(-55),
+        rssi: RssiStatus::Measured(-55),
         ..device_info()
     }
 }
